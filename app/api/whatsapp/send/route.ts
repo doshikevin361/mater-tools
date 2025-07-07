@@ -107,100 +107,283 @@ export async function POST(request: NextRequest) {
     const campaignResult = await db.collection("campaigns").insertOne(campaign)
     const campaignId = campaignResult.insertedId
 
-    // Send WhatsApp messages using Telebu API
+    // WhatsApp Business API Configuration
+    const whatsappConfig = {
+      appId: "745336744572121",
+      appSecret: "a708e1afd97406d6c5e0a92fae2cc1a9",
+      accessToken:
+        "EAAKl4Tvl9NkBPCHFySyCvs7QSpBxgB5mtn5xV2cSPDIwzn75BIpvyMSsaWeF1Ib3AFzZCDIsyTKbHhDPjdJV0z4gJ4kPSOCGHTMQQQOpNogzOuTx69NNrgFUiusW2A6F7V9frF2ss0EHEUqjhqtMKpfN6yqGloVjCvZBNmS5YqpeAWUr9wgRZBLJZCd1t78H0HQkwMdbKH4hx7dxiKJCXEJArVBC82V187fY",
+      wabaId: "981328203955307",
+      phoneNumberId: "642124598993683",
+      baseUrl: "https://graph.facebook.com/v21.0",
+    }
+
+    // Dynamic Template Management Functions
+    async function createDynamicTemplate(messageContent: string, hasMedia = false) {
+      try {
+        // Generate template name based on message content hash
+        const templateName = `dynamic_${Date.now()}_${Math.random().toString(36).substring(7)}`
+
+        // Create template components
+        const components = []
+
+        // Add header component if media is present
+        if (hasMedia && mediaUrl) {
+          components.push({
+            type: "HEADER",
+            format: mediaType?.toUpperCase() || "IMAGE",
+            example: {
+              header_handle: [mediaUrl],
+            },
+          })
+        }
+
+        // Add body component with dynamic variable
+        components.push({
+          type: "BODY",
+          text: `Hello {{1}}, ${messageContent}`,
+          example: {
+            body_text: [["Customer"]],
+          },
+        })
+
+        const templatePayload = {
+          name: templateName,
+          language: "en_US",
+          category: "MARKETING",
+          components: components,
+        }
+
+        console.log("Creating template:", JSON.stringify(templatePayload, null, 2))
+
+        const response = await fetch(`${whatsappConfig.baseUrl}/${whatsappConfig.wabaId}/message_templates`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${whatsappConfig.accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(templatePayload),
+        })
+
+        const result = await response.json()
+        console.log("Template creation response:", result)
+
+        if (response.ok && result.id) {
+          return {
+            success: true,
+            templateId: result.id,
+            templateName: templateName,
+            status: result.status || "PENDING",
+          }
+        } else {
+          throw new Error(result.error?.message || "Failed to create template")
+        }
+      } catch (error) {
+        console.error("Template creation error:", error)
+        return {
+          success: false,
+          error: error.message,
+        }
+      }
+    }
+
+    async function checkTemplateStatus(templateId: string) {
+      try {
+        const response = await fetch(`${whatsappConfig.baseUrl}/${templateId}`, {
+          headers: {
+            Authorization: `Bearer ${whatsappConfig.accessToken}`,
+          },
+        })
+
+        const result = await response.json()
+        return {
+          success: response.ok,
+          status: result.status,
+          data: result,
+        }
+      } catch (error) {
+        console.error("Template status check error:", error)
+        return {
+          success: false,
+          error: error.message,
+        }
+      }
+    }
+
+    async function sendWhatsAppMessage(phoneNumber: string, templateName: string, contactName: string) {
+      try {
+        const messagePayload = {
+          messaging_product: "whatsapp",
+          to: phoneNumber,
+          type: "template",
+          template: {
+            name: templateName,
+            language: {
+              code: "en_US",
+            },
+            components: [
+              {
+                type: "body",
+                parameters: [
+                  {
+                    type: "text",
+                    text: contactName || "Customer",
+                  },
+                ],
+              },
+            ],
+          },
+        }
+
+        // Add header component if media exists
+        if (mediaUrl) {
+          messagePayload.template.components.unshift({
+            type: "header",
+            parameters: [
+              {
+                type: mediaType || "image",
+                [mediaType || "image"]: {
+                  link: mediaUrl,
+                },
+              },
+            ],
+          })
+        }
+
+        console.log("Sending message payload:", JSON.stringify(messagePayload, null, 2))
+
+        const response = await fetch(`${whatsappConfig.baseUrl}/${whatsappConfig.phoneNumberId}/messages`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${whatsappConfig.accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(messagePayload),
+        })
+
+        const result = await response.json()
+        console.log("Message send response:", result)
+
+        if (response.ok && result.messages) {
+          return {
+            success: true,
+            messageId: result.messages[0].id,
+            response: result,
+          }
+        } else {
+          throw new Error(result.error?.message || "Failed to send message")
+        }
+      } catch (error) {
+        console.error("Message send error:", error)
+        return {
+          success: false,
+          error: error.message,
+        }
+      }
+    }
+
+    // Send WhatsApp messages with dynamic template creation
     try {
       await db
         .collection("campaigns")
-        .updateOne({ _id: campaignId }, { $set: { status: "Sending", startedAt: new Date() } })
+        .updateOne({ _id: campaignId }, { $set: { status: "Creating Template", startedAt: new Date() } })
 
       let totalSent = 0
       let totalFailed = 0
       const results = []
+      let templateInfo = null
 
-      // Updated Telebu WhatsApp API configuration - check if token needs refresh
-      const telebuConfig = {
-        baseUrl: "https://apisocial.telebu.com/whatsapp-api/v1.0/customer/88325/bot/952cf500d8334254",
-        authToken:
-          "Bearer 00D8d000003VHZr!AQEAQJvuK15_TF3Dtyw_linVnsbL5CrtOn8RrFqpAXeLpak4kf1gNNx9ggt.7gg5hae5KWeeVyIcxmnYrxvfqbDoQTVuSLSE",
-        templateName: "buzz_demo",
-        namespace: "e539406f_8256_4fe3_b91d_b979da88da9e",
-      }
+      // Step 1: Create dynamic template
+      console.log("Creating dynamic template for message:", message)
+      const templateResult = await createDynamicTemplate(message, !!mediaUrl)
 
-      // First, let's test the API endpoint with a simple request
-      console.log("Testing API endpoint accessibility...")
-      try {
-        const testResponse = await fetch(`${telebuConfig.baseUrl}/template`, {
-          method: "POST",
-          headers: {
-            Authorization: telebuConfig.authToken,
-            "Content-Type": "application/json",
-            Accept: "application/json",
-            "User-Agent": "BrandBuzz-WhatsApp/1.0",
+      if (!templateResult.success) {
+        await db.collection("campaigns").updateOne(
+          { _id: campaignId },
+          {
+            $set: {
+              status: "Failed",
+              error: `Template creation failed: ${templateResult.error}`,
+              failedAt: new Date(),
+            },
           },
-          body: JSON.stringify({
-            payload: {
-              name: telebuConfig.templateName,
-              components: [
-                {
-                  type: "body",
-                  parameters: [
-                    {
-                      type: "text",
-                      text: "Test User",
-                    },
-                    {
-                      type: "text",
-                      text: "Test message",
-                    },
-                  ],
-                },
-              ],
-              language: {
-                code: "en_US",
-                policy: "deterministic",
-              },
-              namespace: telebuConfig.namespace,
-            },
-            phoneNumber: "918733832957",
-          }),
+        )
+
+        return NextResponse.json({
+          success: false,
+          message: "Failed to create WhatsApp template: " + templateResult.error,
         })
-
-        console.log("Test API Response Status:", testResponse.status, testResponse.statusText)
-        console.log("Test API Response Headers:", Object.fromEntries(testResponse.headers.entries()))
-
-        const testResponseText = await testResponse.text()
-        console.log("Test API Response Body:", testResponseText)
-
-        if (testResponse.status === 401) {
-          console.error("❌ Authentication failed - Token may be expired or invalid")
-
-          // Update campaign as failed due to auth
-          await db.collection("campaigns").updateOne(
-            { _id: campaignId },
-            {
-              $set: {
-                status: "Failed",
-                error: "Authentication failed - Invalid or expired token",
-                failedAt: new Date(),
-              },
-            },
-          )
-
-          return NextResponse.json({
-            success: false,
-            message: "WhatsApp API authentication failed. Please check your API credentials.",
-            error: "HTTP 401 - Unauthorized. The API token may be expired or invalid.",
-            debugInfo: {
-              httpStatus: 401,
-              apiEndpoint: `${telebuConfig.baseUrl}/template`,
-              authTokenLength: telebuConfig.authToken.length,
-              suggestion: "Please verify your Telebu API token is valid and not expired",
-            },
-          })
-        }
-      } catch (testError) {
-        console.error("API test failed:", testError)
       }
+
+      templateInfo = templateResult
+      console.log("Template created successfully:", templateInfo)
+
+      // Step 2: Wait for template approval (polling)
+      await db
+        .collection("campaigns")
+        .updateOne({ _id: campaignId }, { $set: { status: "Waiting for Template Approval" } })
+
+      let templateApproved = false
+      let approvalAttempts = 0
+      const maxApprovalAttempts = 30 // 5 minutes with 10-second intervals
+
+      while (!templateApproved && approvalAttempts < maxApprovalAttempts) {
+        console.log(`Checking template approval status... Attempt ${approvalAttempts + 1}`)
+
+        const statusCheck = await checkTemplateStatus(templateInfo.templateId)
+
+        if (statusCheck.success) {
+          console.log("Template status:", statusCheck.status)
+
+          if (statusCheck.status === "APPROVED") {
+            templateApproved = true
+            console.log("✅ Template approved!")
+            break
+          } else if (statusCheck.status === "REJECTED") {
+            await db.collection("campaigns").updateOne(
+              { _id: campaignId },
+              {
+                $set: {
+                  status: "Failed",
+                  error: "Template was rejected by WhatsApp",
+                  failedAt: new Date(),
+                },
+              },
+            )
+
+            return NextResponse.json({
+              success: false,
+              message: "WhatsApp template was rejected. Please modify your message and try again.",
+            })
+          }
+        }
+
+        approvalAttempts++
+        if (approvalAttempts < maxApprovalAttempts) {
+          await new Promise((resolve) => setTimeout(resolve, 10000)) // Wait 10 seconds
+        }
+      }
+
+      if (!templateApproved) {
+        await db.collection("campaigns").updateOne(
+          { _id: campaignId },
+          {
+            $set: {
+              status: "Failed",
+              error: "Template approval timeout",
+              failedAt: new Date(),
+            },
+          },
+        )
+
+        return NextResponse.json({
+          success: false,
+          message: "Template approval is taking longer than expected. Please try again later.",
+        })
+      }
+
+      // Step 3: Send messages using approved template
+      await db.collection("campaigns").updateOne({ _id: campaignId }, { $set: { status: "Sending Messages" } })
 
       for (const contact of contactList) {
         try {
@@ -222,7 +405,7 @@ export async function POST(request: NextRequest) {
             continue
           }
 
-          // Clean and format phone number
+          // Clean and format phone number for WhatsApp
           phoneNumber = phoneNumber.toString().replace(/\D/g, "") // Remove all non-digits
 
           // Handle Indian numbers - try different formats
@@ -230,23 +413,20 @@ export async function POST(request: NextRequest) {
 
           if (phoneNumber.length === 10) {
             formattedNumbers.push("91" + phoneNumber) // Add India country code
-            formattedNumbers.push("+91" + phoneNumber) // With + prefix
           } else if (phoneNumber.length === 11 && phoneNumber.startsWith("0")) {
             const withoutZero = phoneNumber.substring(1)
             formattedNumbers.push("91" + withoutZero)
-            formattedNumbers.push("+91" + withoutZero)
           } else if (phoneNumber.length === 12 && phoneNumber.startsWith("91")) {
             formattedNumbers.push(phoneNumber) // Already has country code
-            formattedNumbers.push("+" + phoneNumber) // With + prefix
           } else if (phoneNumber.length === 13 && phoneNumber.startsWith("091")) {
             const cleaned = phoneNumber.substring(1)
             formattedNumbers.push(cleaned)
-            formattedNumbers.push("+" + cleaned)
           } else {
             // Use as is and also try with +91
             formattedNumbers.push(phoneNumber)
-            formattedNumbers.push("91" + phoneNumber)
-            formattedNumbers.push("+91" + phoneNumber)
+            if (!phoneNumber.startsWith("91")) {
+              formattedNumbers.push("91" + phoneNumber)
+            }
           }
 
           console.log("Trying phone number formats:", formattedNumbers)
@@ -260,106 +440,13 @@ export async function POST(request: NextRequest) {
             try {
               console.log(`Attempting to send to: ${tryPhoneNumber}`)
 
-              // Prepare WhatsApp template payload
-              const templatePayload = {
-                payload: {
-                  name: telebuConfig.templateName,
-                  components: [
-                    {
-                      type: "body",
-                      parameters: [
-                        {
-                          type: "text",
-                          text: contact.name || "Customer",
-                        },
-                        {
-                          type: "text",
-                          text: message,
-                        },
-                      ],
-                    },
-                  ],
-                  language: {
-                    code: "en_US",
-                    policy: "deterministic",
-                  },
-                  namespace: telebuConfig.namespace,
-                },
-                phoneNumber: tryPhoneNumber,
-              }
+              const sendResult = await sendWhatsAppMessage(
+                tryPhoneNumber,
+                templateInfo.templateName,
+                contact.name || "Customer",
+              )
 
-              // Add header component only if media is provided
-              if (mediaUrl) {
-                templatePayload.payload.components.unshift({
-                  type: "header",
-                  parameters: [
-                    {
-                      type: "image",
-                      image: {
-                        link: mediaUrl,
-                      },
-                    },
-                  ],
-                })
-              }
-
-              console.log(`Payload for ${tryPhoneNumber}:`, JSON.stringify(templatePayload, null, 2))
-
-              // Send WhatsApp message via Telebu API with timeout
-              const controller = new AbortController()
-              const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 second timeout
-
-              const response = await fetch(`${telebuConfig.baseUrl}/template`, {
-                method: "POST",
-                headers: {
-                  Authorization: telebuConfig.authToken,
-                  "Content-Type": "application/json",
-                  Accept: "application/json",
-                  "User-Agent": "BrandBuzz-WhatsApp/1.0",
-                },
-                body: JSON.stringify(templatePayload),
-                signal: controller.signal,
-              })
-
-              clearTimeout(timeoutId)
-
-              console.log(`Response status for ${tryPhoneNumber}:`, response.status, response.statusText)
-              console.log(`Response headers:`, Object.fromEntries(response.headers.entries()))
-
-              const responseText = await response.text()
-              console.log(`Raw response for ${tryPhoneNumber}:`, responseText)
-
-              let result
-              try {
-                result = responseText ? JSON.parse(responseText) : {}
-              } catch (parseError) {
-                console.error("Failed to parse API response:", parseError)
-                result = {
-                  error: "Invalid JSON response",
-                  rawResponse: responseText,
-                  parseError: parseError.message,
-                }
-              }
-
-              console.log(`Parsed response for ${tryPhoneNumber}:`, result)
-
-              // Handle specific HTTP status codes
-              if (response.status === 401) {
-                lastError = "Authentication failed - Invalid or expired API token"
-                lastResponse = { httpStatus: 401, error: "Unauthorized" }
-                console.log(`❌ Auth failed for ${tryPhoneNumber}: Token invalid/expired`)
-                break // No point trying other formats if auth fails
-              } else if (response.status === 400) {
-                lastError = result.message || result.error || "Bad request - Check template or phone number format"
-                lastResponse = result
-                console.log(`❌ Bad request for ${tryPhoneNumber}:`, lastError)
-              } else if (response.status === 429) {
-                lastError = "Rate limit exceeded - Too many requests"
-                lastResponse = result
-                console.log(`❌ Rate limited for ${tryPhoneNumber}`)
-                // Wait longer before next attempt
-                await new Promise((resolve) => setTimeout(resolve, 2000))
-              } else if (response.ok && responseText && !result.error) {
+              if (sendResult.success) {
                 console.log(`✅ Success for ${tryPhoneNumber}`)
                 messageSuccess = true
                 totalSent++
@@ -368,20 +455,15 @@ export async function POST(request: NextRequest) {
                   phone: tryPhoneNumber,
                   name: contact.name,
                   success: true,
-                  messageId: result.messageId || result.id || result.data?.id || "unknown",
+                  messageId: sendResult.messageId,
                   timestamp: new Date(),
-                  apiResponse: result,
-                  httpStatus: response.status,
+                  templateUsed: templateInfo.templateName,
+                  apiResponse: sendResult.response,
                 })
                 break // Success, no need to try other formats
               } else {
-                lastError =
-                  result.message ||
-                  result.error ||
-                  result.errors ||
-                  `HTTP ${response.status}: ${response.statusText}` ||
-                  "Unknown error"
-                lastResponse = result
+                lastError = sendResult.error
+                lastResponse = sendResult
                 console.log(`❌ Failed for ${tryPhoneNumber}:`, lastError)
               }
             } catch (fetchError) {
@@ -422,7 +504,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Delay between contacts to avoid rate limiting
-        await new Promise((resolve) => setTimeout(resolve, 500))
+        await new Promise((resolve) => setTimeout(resolve, 1000))
       }
 
       console.log("Final campaign results:", { totalSent, totalFailed, results })
@@ -438,6 +520,7 @@ export async function POST(request: NextRequest) {
             delivered: totalSent, // Assume sent = delivered for now
             completedAt: new Date(),
             results,
+            templateInfo: templateInfo,
           },
         },
       )
@@ -483,17 +566,14 @@ export async function POST(request: NextRequest) {
           failed: totalFailed,
           cost: actualCost,
           successRate: contactList.length > 0 ? ((totalSent / contactList.length) * 100).toFixed(1) : "0.0",
-          detailedResults: results, // Include detailed results for debugging
+          detailedResults: results,
+        },
+        templateInfo: {
+          templateId: templateInfo.templateId,
+          templateName: templateInfo.templateName,
+          status: "APPROVED",
         },
         newBalance: user.balance - actualCost,
-        debugInfo: {
-          apiEndpoint: `${telebuConfig.baseUrl}/template`,
-          authTokenLength: telebuConfig.authToken.length,
-          templateName: telebuConfig.templateName,
-          namespace: telebuConfig.namespace,
-          authenticationStatus: "Failed - HTTP 401 Unauthorized",
-          recommendation: "Please verify your Telebu API token is valid and not expired",
-        },
       })
     } catch (sendError) {
       console.error("WhatsApp sending error:", sendError)
