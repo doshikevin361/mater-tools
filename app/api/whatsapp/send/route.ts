@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
       appId: "745336744572121",
       appSecret: "a708e1afd97406d6c5e0a92fae2cc1a9",
       accessToken:
-        "EAAKl4Tvl9NkBPCHFySyCvs7QSpBxgB5mtn5xV2cSPDIwzn75BIpvyMSsaWeF1Ib3AFzZCDIsyTKbHhDPjdJV0z4gJ4kPSOCGHTMQQQOpNogzOuTx69NNrgFUiusW2A6F7V9frF2ss0EHEUqjhqtMKpfN6yqGloVjCvZBNmS5YqpeAWUr9wgRZBLJZCd1t78H0HQkwMdbKH4hx7dxiKJCXEJArVBC82V187fY",
+        "EAAKl4Tvl9NkBPMSPBrl6wqAFiTv4Sqz0f91tMpeOktLZCLNoQzzUFMH0hDgZAPSH5XofGWywtaksMjDPGzlStGTo2YKwyzOpFWhxm3NE6C38UJUMndom12NZAJMq7GVkObbE4KGbf2hYihbcWarWxV7NY88GyopKwjX3NnuPzFkzcnnIgO5PI9skMy19AZDZD",
       wabaId: "981328203955307",
       phoneNumberId: "642124598993683",
       baseUrl: "https://graph.facebook.com/v21.0",
