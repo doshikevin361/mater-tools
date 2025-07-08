@@ -1,7 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
 import axios from "axios"
-import puppeteer from "puppeteer"
+import puppeteer from "puppeteer-core"
+import chromium from "@sparticuz/chromium"
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -14,53 +15,102 @@ const wait = (ms, variance = 0.3) => {
 }
 
 async function createStealthBrowser() {
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-accelerated-2d-canvas',
-      '--no-first-run',
-      '--no-zygote',
-      '--disable-gpu',
-      '--disable-web-security',
-      '--disable-features=VizDisplayCompositor',
-      '--disable-extensions',
-      '--disable-plugins',
-      '--disable-background-timer-throttling',
-      '--disable-backgrounding-occluded-windows',
-      '--disable-renderer-backgrounding',
-      '--disable-default-apps',
-      '--disable-sync',
-      '--disable-translate',
-      '--disable-ipc-flooding-protection',
-      '--enable-features=NetworkService',
-      '--disable-blink-features=AutomationControlled',
-      '--disable-component-extensions-with-background-pages',
-      '--no-default-browser-check',
-      '--mute-audio',
-      '--disable-client-side-phishing-detection',
-      '--disable-hang-monitor',
-      '--disable-popup-blocking',
-      '--disable-prompt-on-repost',
-      '--disable-domain-reliability',
-      '--disable-component-update',
-      '--disable-background-downloads',
-      '--disable-add-to-shelf',
-      '--disable-office-editing-component-extension',
-      '--disable-background-media-suspend',
-      '--disable-password-generation',
-      '--disable-password-manager-reauthentication'
-    ],
-    ignoreDefaultArgs: [
-      '--enable-automation',
-      '--enable-blink-features=IdleDetection'
-    ],
-    defaultViewport: null,
-    ignoreHTTPSErrors: true
-  })
+  const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV || process.env.AWS_LAMBDA_FUNCTION_NAME
+  
+  let browserConfig
+  
+  if (isVercel) {
+    // VERCEL: Force use of @sparticuz/chromium
+    browserConfig = {
+      args: [
+        ...chromium.args,
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--disable-web-security',
+        '--disable-features=VizDisplayCompositor',
+        '--disable-extensions',
+        '--disable-plugins',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding',
+        '--disable-default-apps',
+        '--disable-sync',
+        '--disable-translate',
+        '--disable-ipc-flooding-protection',
+        '--enable-features=NetworkService',
+        '--disable-blink-features=AutomationControlled',
+        '--disable-component-extensions-with-background-pages',
+        '--no-default-browser-check',
+        '--mute-audio',
+        '--disable-client-side-phishing-detection',
+        '--disable-hang-monitor',
+        '--disable-popup-blocking',
+        '--disable-prompt-on-repost',
+        '--disable-domain-reliability',
+        '--disable-component-update',
+        '--disable-background-downloads',
+        '--disable-add-to-shelf',
+        '--disable-office-editing-component-extension',
+        '--disable-background-media-suspend',
+        '--disable-password-generation',
+        '--disable-password-manager-reauthentication'
+      ],
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath(),
+      headless: true,
+      ignoreDefaultArgs: ['--enable-automation', '--enable-blink-features=IdleDetection'],
+      ignoreHTTPSErrors: true
+    }
+  } else {
+    // LOCAL: Use system Chrome
+    browserConfig = {
+      headless: false,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--disable-gpu',
+        '--disable-web-security',
+        '--disable-features=VizDisplayCompositor',
+        '--disable-extensions',
+        '--disable-plugins',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding',
+        '--disable-default-apps',
+        '--disable-sync',
+        '--disable-translate',
+        '--disable-ipc-flooding-protection',
+        '--enable-features=NetworkService',
+        '--disable-blink-features=AutomationControlled',
+        '--disable-component-extensions-with-background-pages',
+        '--no-default-browser-check',
+        '--mute-audio',
+        '--disable-client-side-phishing-detection',
+        '--disable-hang-monitor',
+        '--disable-popup-blocking',
+        '--disable-prompt-on-repost',
+        '--disable-domain-reliability',
+        '--disable-component-update',
+        '--disable-background-downloads',
+        '--disable-add-to-shelf',
+        '--disable-office-editing-component-extension',
+        '--disable-background-media-suspend',
+        '--disable-password-generation',
+        '--disable-password-manager-reauthentication'
+      ],
+      ignoreDefaultArgs: ['--enable-automation', '--enable-blink-features=IdleDetection'],
+      defaultViewport: null,
+      ignoreHTTPSErrors: true
+    }
+  }
 
+  const browser = await puppeteer.launch(browserConfig)
   const pages = await browser.pages()
   const page = pages[0] || await browser.newPage()
 
@@ -469,7 +519,6 @@ async function handleBirthdaySelectionEnhanced(page, profile) {
         return false
       })
     } catch (e) {
-      // Fallback methods
       if (!nextClicked) {
         const nextSelectors = [
           'button[type="submit"]',
@@ -766,9 +815,11 @@ async function createRealInstagramAccountEnhanced(accountData) {
     browser = browserSetup.browser
     page = browserSetup.page
 
+    const timeout = process.env.VERCEL ? 20000 : 30000
+
     await page.goto('https://www.instagram.com/accounts/emailsignup/', { 
       waitUntil: 'networkidle2',
-      timeout: 30000
+      timeout: timeout
     })
     
     await wait(3000, 0.5)
@@ -964,13 +1015,14 @@ async function createRealInstagramAccountEnhanced(accountData) {
     }
   } finally {
     if (browser) {
+      const closeTimeout = process.env.VERCEL ? 5000 : 90000
       setTimeout(async () => {
         try {
           await browser.close()
         } catch (e) {
           // Ignore
         }
-      }, 90000)
+      }, closeTimeout)
     }
   }
 }
@@ -1079,7 +1131,7 @@ export async function POST(request) {
         }
 
         if (i < count - 1) {
-          const delay = 120000 + Math.random() * 60000
+          const delay = process.env.VERCEL ? 60000 : 120000
           console.log(`⏳ Waiting ${Math.round(delay / 1000)} seconds...`)
           await wait(delay)
         }
@@ -1104,10 +1156,11 @@ export async function POST(request) {
       totalCreated: successCount,
       platform: platform,
       accounts: results,
-      provider: "Enhanced Instagram Account Creator",
+      provider: "Vercel-Ready Instagram Account Creator",
       realAccounts: true,
       emailOnly: true,
-      enhanced: true
+      enhanced: true,
+      vercelOptimized: true
     })
   } catch (error) {
     console.error("Error creating social accounts:", error)
