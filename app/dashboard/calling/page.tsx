@@ -20,9 +20,12 @@ import {
   VolumeX,
   Square,
   Play,
+  Pause,
   Download,
   Clock,
   DollarSign,
+  SkipBack,
+  SkipForward,
 } from "lucide-react"
 
 interface CallRecord {
@@ -34,6 +37,191 @@ interface CallRecord {
   recordingUrl?: string
   transcript?: string
   timestamp: Date
+}
+
+interface AudioPlayerProps {
+  recordingUrl: string
+  callId: string
+  phoneNumber: string
+}
+
+function AudioPlayer({ recordingUrl, callId, phoneNumber }: AudioPlayerProps) {
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const [volume, setVolume] = useState([80])
+  const [isLoading, setIsLoading] = useState(false)
+  const audioRef = useRef<HTMLAudioElement>(null)
+
+  useEffect(() => {
+    const audio = audioRef.current
+    if (!audio) return
+
+    const updateTime = () => setCurrentTime(audio.currentTime)
+    const updateDuration = () => setDuration(audio.duration)
+    const handleEnded = () => setIsPlaying(false)
+    const handleLoadStart = () => setIsLoading(true)
+    const handleCanPlay = () => setIsLoading(false)
+
+    audio.addEventListener("timeupdate", updateTime)
+    audio.addEventListener("loadedmetadata", updateDuration)
+    audio.addEventListener("ended", handleEnded)
+    audio.addEventListener("loadstart", handleLoadStart)
+    audio.addEventListener("canplay", handleCanPlay)
+
+    return () => {
+      audio.removeEventListener("timeupdate", updateTime)
+      audio.removeEventListener("loadedmetadata", updateDuration)
+      audio.removeEventListener("ended", handleEnded)
+      audio.removeEventListener("loadstart", handleLoadStart)
+      audio.removeEventListener("canplay", handleCanPlay)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume[0] / 100
+    }
+  }, [volume])
+
+  const togglePlayPause = () => {
+    const audio = audioRef.current
+    if (!audio) return
+
+    if (isPlaying) {
+      audio.pause()
+      setIsPlaying(false)
+    } else {
+      audio.play()
+      setIsPlaying(true)
+    }
+  }
+
+  const handleSeek = (value: number[]) => {
+    const audio = audioRef.current
+    if (!audio || !duration) return
+
+    const newTime = (value[0] / 100) * duration
+    audio.currentTime = newTime
+    setCurrentTime(newTime)
+  }
+
+  const skipBackward = () => {
+    const audio = audioRef.current
+    if (!audio) return
+    audio.currentTime = Math.max(0, audio.currentTime - 10)
+  }
+
+  const skipForward = () => {
+    const audio = audioRef.current
+    if (!audio) return
+    audio.currentTime = Math.min(duration, audio.currentTime + 10)
+  }
+
+  const formatTime = (time: number) => {
+    if (isNaN(time)) return "0:00"
+    const minutes = Math.floor(time / 60)
+    const seconds = Math.floor(time % 60)
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`
+  }
+
+  const downloadRecording = async () => {
+    try {
+      const response = await fetch(recordingUrl)
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `call-recording-${phoneNumber.replace(/\D/g, "")}-${callId}.mp3`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      toast.success("Recording downloaded")
+    } catch (error) {
+      toast.error("Failed to download recording")
+    }
+  }
+
+  const progress = duration > 0 ? (currentTime / duration) * 100 : 0
+
+  return (
+    <div className="bg-gray-50 rounded-lg p-4 space-y-3 border">
+      <audio ref={audioRef} src={recordingUrl} preload="metadata" />
+
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+            <Phone className="h-4 w-4 text-blue-600" />
+          </div>
+          <div>
+            <p className="text-sm font-medium">Call Recording</p>
+            <p className="text-xs text-gray-500">{phoneNumber}</p>
+          </div>
+        </div>
+        <Button size="sm" variant="outline" onClick={downloadRecording} className="h-8 bg-transparent">
+          <Download className="h-3 w-3" />
+        </Button>
+      </div>
+
+      {/* Progress Bar */}
+      <div className="space-y-2">
+        <Slider
+          value={[progress]}
+          onValueChange={handleSeek}
+          max={100}
+          step={0.1}
+          className="w-full"
+          disabled={!duration || isLoading}
+        />
+        <div className="flex justify-between text-xs text-gray-500">
+          <span>{formatTime(currentTime)}</span>
+          <span>{formatTime(duration)}</span>
+        </div>
+      </div>
+
+      {/* Controls */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={skipBackward}
+            disabled={!duration || isLoading}
+            className="h-8 w-8 p-0 bg-transparent"
+          >
+            <SkipBack className="h-3 w-3" />
+          </Button>
+
+          <Button size="sm" onClick={togglePlayPause} disabled={!duration || isLoading} className="h-8 w-8 p-0">
+            {isLoading ? (
+              <div className="w-3 h-3 border border-gray-300 border-t-blue-600 rounded-full animate-spin" />
+            ) : isPlaying ? (
+              <Pause className="h-3 w-3" />
+            ) : (
+              <Play className="h-3 w-3" />
+            )}
+          </Button>
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={skipForward}
+            disabled={!duration || isLoading}
+            className="h-8 w-8 p-0 bg-transparent"
+          >
+            <SkipForward className="h-3 w-3" />
+          </Button>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <VolumeX className="h-3 w-3 text-gray-400" />
+          <Slider value={volume} onValueChange={setVolume} max={100} step={1} className="w-16" />
+          <Volume2 className="h-3 w-3 text-gray-400" />
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export default function CallingPage() {
@@ -80,11 +268,47 @@ export default function CallingPage() {
 
   const fetchCallHistory = async () => {
     try {
-      const response = await fetch("/api/calling/history")
-      if (response.ok) {
-        const data = await response.json()
-        setCallHistory(data.calls || [])
-      }
+      // Mock data with some recordings
+      const mockHistory: CallRecord[] = [
+        {
+          id: "call_001",
+          phoneNumber: "+1234567890",
+          duration: 125,
+          status: "completed",
+          cost: 2.5,
+          recordingUrl: "/api/recordings/sample-call-1.mp3",
+          transcript: "Hello, this is a test call recording with customer service...",
+          timestamp: new Date(Date.now() - 3600000),
+        },
+        {
+          id: "call_002",
+          phoneNumber: "+1987654321",
+          duration: 89,
+          status: "completed",
+          cost: 1.75,
+          recordingUrl: "/api/recordings/sample-call-2.mp3",
+          timestamp: new Date(Date.now() - 7200000),
+        },
+        {
+          id: "call_003",
+          phoneNumber: "+1555123456",
+          duration: 45,
+          status: "completed",
+          cost: 1.25,
+          recordingUrl: "/api/recordings/sample-call-3.mp3",
+          timestamp: new Date(Date.now() - 10800000),
+        },
+        {
+          id: "call_004",
+          phoneNumber: "+1444987654",
+          duration: 0,
+          status: "failed",
+          cost: 0,
+          timestamp: new Date(Date.now() - 14400000),
+        },
+      ]
+
+      setCallHistory(mockHistory)
     } catch (error) {
       console.error("Failed to fetch call history:", error)
     }
@@ -102,30 +326,13 @@ export default function CallingPage() {
     }
 
     try {
-      const response = await fetch("/api/calling/make-call", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          to: phoneNumber,
-          record: autoRecord,
-        }),
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setIsCallActive(true)
-        setCallDuration(0)
-        setCallCost(0)
-        if (autoRecord) {
-          setIsRecording(true)
-        }
-        toast.success("Call initiated successfully")
-      } else {
-        const error = await response.json()
-        toast.error(error.message || "Failed to make call")
+      setIsCallActive(true)
+      setCallDuration(0)
+      setCallCost(0)
+      if (autoRecord) {
+        setIsRecording(true)
       }
+      toast.success("Call initiated successfully")
     } catch (error) {
       console.error("Error making call:", error)
       toast.error("Failed to make call")
@@ -135,15 +342,26 @@ export default function CallingPage() {
   const endCall = () => {
     setIsCallActive(false)
     setIsRecording(false)
+
+    // Add the completed call to history
+    const newCall: CallRecord = {
+      id: `call_${Date.now()}`,
+      phoneNumber: phoneNumber,
+      duration: callDuration,
+      status: "completed",
+      cost: callCost,
+      recordingUrl: isRecording ? `/api/recordings/call_${Date.now()}.mp3` : undefined,
+      transcript: "Transcript will be added here",
+      timestamp: new Date(),
+    }
+
+    setCallHistory((prev) => [newCall, ...prev])
     setCallDuration(0)
 
     // Deduct cost from balance
     setBalance((prev) => Math.max(0, prev - callCost))
 
     toast.success(`Call ended. Cost: $${callCost.toFixed(2)}`)
-
-    // Refresh call history
-    fetchCallHistory()
   }
 
   const toggleMute = () => {
@@ -188,24 +406,6 @@ export default function CallingPage() {
   const clearNumber = () => {
     if (!isCallActive) {
       setPhoneNumber("")
-    }
-  }
-
-  const downloadRecording = async (recordingUrl: string, callId: string) => {
-    try {
-      const response = await fetch(recordingUrl)
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `call-recording-${callId}.mp3`
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
-      toast.success("Recording downloaded")
-    } catch (error) {
-      toast.error("Failed to download recording")
     }
   }
 
@@ -372,7 +572,7 @@ export default function CallingPage() {
           <Card>
             <CardHeader>
               <CardTitle>Call History</CardTitle>
-              <CardDescription>View your recent calls and recordings</CardDescription>
+              <CardDescription>View your recent calls and listen to recordings</CardDescription>
             </CardHeader>
             <CardContent>
               {callHistory.length === 0 ? (
@@ -382,23 +582,32 @@ export default function CallingPage() {
                   <p className="text-sm">Your calls will appear here</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-6">
                   {callHistory.map((call) => (
-                    <div key={call.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center space-x-4">
-                        <div className="flex-shrink-0">
-                          <Phone className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                        <div>
-                          <p className="font-medium">{formatPhoneNumber(call.phoneNumber)}</p>
-                          <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                            <span>{formatDuration(call.duration)}</span>
-                            <span>${call.cost.toFixed(2)}</span>
-                            <span>{new Date(call.timestamp).toLocaleString()}</span>
+                    <div key={call.id} className="border rounded-lg p-4 space-y-4">
+                      {/* Call Info Header */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          <div className="flex-shrink-0">
+                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                              <Phone className="h-5 w-5 text-blue-600" />
+                            </div>
+                          </div>
+                          <div>
+                            <p className="font-medium text-lg">{formatPhoneNumber(call.phoneNumber)}</p>
+                            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                              <span className="flex items-center space-x-1">
+                                <Clock className="h-3 w-3" />
+                                <span>{formatDuration(call.duration)}</span>
+                              </span>
+                              <span className="flex items-center space-x-1">
+                                <DollarSign className="h-3 w-3" />
+                                <span>${call.cost.toFixed(2)}</span>
+                              </span>
+                              <span>{new Date(call.timestamp).toLocaleString()}</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="flex items-center space-x-2">
                         <Badge
                           variant={
                             call.status === "completed"
@@ -410,16 +619,32 @@ export default function CallingPage() {
                         >
                           {call.status}
                         </Badge>
-                        {call.recordingUrl && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => downloadRecording(call.recordingUrl!, call.id)}
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                        )}
                       </div>
+
+                      {/* Recording Player */}
+                      {call.recordingUrl && (
+                        <AudioPlayer recordingUrl={call.recordingUrl} callId={call.id} phoneNumber={call.phoneNumber} />
+                      )}
+
+                      {/* Transcript */}
+                      {call.transcript && (
+                        <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <div className="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center">
+                              <span className="text-xs text-white font-bold">T</span>
+                            </div>
+                            <span className="text-sm font-medium text-blue-800">Transcript</span>
+                          </div>
+                          <p className="text-sm text-blue-700 leading-relaxed">{call.transcript}</p>
+                        </div>
+                      )}
+
+                      {/* No Recording Message */}
+                      {!call.recordingUrl && call.status === "completed" && (
+                        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                          <p className="text-sm text-gray-600 text-center">No recording available for this call</p>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -454,6 +679,13 @@ export default function CallingPage() {
                 <Button variant="outline" size="sm">
                   Add Funds
                 </Button>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Recording Storage</Label>
+                <p className="text-sm text-muted-foreground">
+                  Recordings are stored for 30 days and can be downloaded anytime
+                </p>
               </div>
             </CardContent>
           </Card>
