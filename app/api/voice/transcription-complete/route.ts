@@ -1,4 +1,4 @@
-import { type NextRequest, NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
 import { getDatabase } from "@/lib/mongodb"
 
 export async function POST(request: NextRequest) {
@@ -11,29 +11,29 @@ export async function POST(request: NextRequest) {
     const transcriptionStatus = formData.get("TranscriptionStatus") as string
     const transcriptionUrl = formData.get("TranscriptionUrl") as string
 
-    console.log("Transcription completed:", { callSid, transcriptionSid, transcriptionStatus })
+    console.log("Transcription completed:", { callSid, transcriptionSid, transcriptionText, transcriptionStatus })
 
     const db = await getDatabase()
 
-    // Store transcription information
+    // Store the transcription information
     await db.collection("call_transcriptions").insertOne({
       callSid,
       transcriptionSid,
-      transcriptionText: transcriptionText || "",
+      transcriptionText,
       transcriptionStatus,
       transcriptionUrl,
+      confidence: transcriptionText.length > 100 ? "high" : transcriptionText.length > 50 ? "medium" : "low",
       createdAt: new Date(),
-      confidence: "medium", // Twilio doesn't provide confidence score by default
     })
 
-    // Update the recording record with transcription
+    // Update the call recording with transcription
     await db.collection("call_recordings").updateOne(
       { callSid },
       {
         $set: {
           transcriptionSid,
-          transcriptionText: transcriptionText || "",
-          transcriptionStatus,
+          transcriptionText,
+          transcriptionStatus: "completed",
           transcriptionUrl,
           transcriptionCompletedAt: new Date(),
         },
@@ -45,20 +45,17 @@ export async function POST(request: NextRequest) {
       { callSid },
       {
         $set: {
-          transcriptionText: transcriptionText || "",
-          transcriptionStatus,
+          transcriptionText,
+          transcriptionStatus: "completed",
           status: "transcribed",
           updatedAt: new Date(),
         },
       },
     )
 
-    return NextResponse.json({ success: true, message: "Transcription processed successfully" })
+    return new Response("OK", { status: 200 })
   } catch (error) {
     console.error("Transcription completion error:", error)
-    return NextResponse.json(
-      { success: false, message: "Failed to process transcription", error: error.message },
-      { status: 500 },
-    )
+    return new Response("Error", { status: 500 })
   }
 }

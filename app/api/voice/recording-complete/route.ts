@@ -8,24 +8,20 @@ export async function POST(request: NextRequest) {
     const callSid = formData.get("CallSid") as string
     const recordingSid = formData.get("RecordingSid") as string
     const recordingUrl = formData.get("RecordingUrl") as string
-    const recordingDuration = formData.get("RecordingDuration") as string
-    const from = formData.get("From") as string
-    const to = formData.get("To") as string
+    const recordingDuration = Number.parseInt(formData.get("RecordingDuration") as string) || 0
 
     console.log("Recording completed:", { callSid, recordingSid, recordingUrl, recordingDuration })
 
     const db = await getDatabase()
 
-    // Store recording information
+    // Store the recording information
     await db.collection("call_recordings").insertOne({
       callSid,
       recordingSid,
-      recordingUrl: recordingUrl + ".mp3", // Twilio MP3 format
-      recordingDuration: Number.parseInt(recordingDuration) || 0,
-      from,
-      to,
-      createdAt: new Date(),
+      recordingUrl,
+      recordingDuration,
       status: "completed",
+      createdAt: new Date(),
       transcriptionStatus: "pending",
     })
 
@@ -35,37 +31,17 @@ export async function POST(request: NextRequest) {
       {
         $set: {
           recordingSid,
-          recordingUrl: recordingUrl + ".mp3",
-          recordingDuration: Number.parseInt(recordingDuration) || 0,
+          recordingUrl,
+          recordingDuration,
           status: "recorded",
           updatedAt: new Date(),
         },
       },
     )
 
-    // Generate TwiML response
-    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-    <Say voice="alice">Your message has been recorded. Thank you for calling!</Say>
-</Response>`
-
-    return new Response(twiml, {
-      headers: {
-        "Content-Type": "application/xml",
-      },
-    })
+    return new Response("OK", { status: 200 })
   } catch (error) {
     console.error("Recording completion error:", error)
-
-    const errorTwiml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-    <Say voice="alice">Thank you for your call. Goodbye!</Say>
-</Response>`
-
-    return new Response(errorTwiml, {
-      headers: {
-        "Content-Type": "application/xml",
-      },
-    })
+    return new Response("Error", { status: 500 })
   }
 }

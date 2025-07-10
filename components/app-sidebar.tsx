@@ -76,6 +76,10 @@ const data = {
           title: "Voice",
           url: "/dashboard/voice",
         },
+        {
+          title: "Voice 2 Way",
+          url: "/dashboard/voice-2way",
+        },
       ],
     },
     {
