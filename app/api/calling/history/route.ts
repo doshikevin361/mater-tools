@@ -3,22 +3,26 @@ import { connectToDatabase } from "@/lib/mongodb"
 
 export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url)
+    const userId = request.headers.get("user-id")
+
+    if (!userId) {
+      return NextResponse.json({ error: "User ID is required" }, { status: 401 })
+    }
+
     const { db } = await connectToDatabase()
 
-    // Get current user ID from session (replace with actual session handling)
-    const userId = "current-user-id"
+    // Get call history for the user
+    const calls = await db.collection("call_history").find({ userId }).sort({ timestamp: -1 }).limit(50).toArray()
 
-    const calls = await db.collection("calls").find({ userId: userId }).sort({ timestamp: -1 }).limit(50).toArray()
-
-    // Transform the data for frontend consumption
     const formattedCalls = calls.map((call) => ({
-      id: call._id.toString(),
-      phoneNumber: call.phoneNumber,
+      id: call.callSid,
+      phoneNumber: call.to,
       duration: call.duration || 0,
-      status: call.status || "unknown",
+      status: call.status === "completed" ? "completed" : call.status === "failed" ? "failed" : "completed",
       cost: call.cost || 0,
-      recordingUrl: call.recordingUrl,
-      transcript: call.transcript,
+      recordingUrl: call.recordingUrl || null,
+      transcript: call.transcript || null,
       timestamp: call.timestamp,
     }))
 

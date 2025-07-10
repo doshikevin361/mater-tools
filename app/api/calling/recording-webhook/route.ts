@@ -6,29 +6,34 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData()
     const callSid = formData.get("CallSid") as string
     const recordingUrl = formData.get("RecordingUrl") as string
+    const recordingSid = formData.get("RecordingSid") as string
     const recordingDuration = formData.get("RecordingDuration") as string
 
+    console.log("Recording webhook received:", {
+      callSid,
+      recordingUrl,
+      recordingSid,
+      recordingDuration,
+    })
+
+    // Connect to database and update call record with recording info
     const { db } = await connectToDatabase()
 
-    // Update call record with recording information
-    await db.collection("calls").updateOne(
-      { callSid: callSid },
+    await db.collection("call_history").updateOne(
+      { callSid },
       {
         $set: {
-          recordingUrl: recordingUrl,
-          recordingDuration: Number.parseInt(recordingDuration || "0"),
-          hasRecording: true,
-          updatedAt: new Date(),
+          recordingUrl: recordingUrl + ".mp3",
+          recordingSid,
+          recordingDuration: Number.parseInt(recordingDuration) || 0,
+          recordingAvailable: true,
         },
       },
     )
 
-    // Here you could also trigger transcription services
-    // await transcribeRecording(recordingUrl, callSid)
-
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Recording webhook error:", error)
-    return NextResponse.json({ error: "Recording webhook processing failed" }, { status: 500 })
+    console.error("Error processing recording webhook:", error)
+    return NextResponse.json({ error: "Failed to process recording webhook" }, { status: 500 })
   }
 }
