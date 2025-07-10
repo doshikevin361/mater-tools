@@ -370,6 +370,200 @@ class VoiceService {
     }
   }
 
+  async createTwoWayCall(
+    toNumber: string,
+    options?: {
+      record?: boolean
+      transcribe?: boolean
+      statusCallback?: string
+      userId?: string
+      timeout?: number
+    },
+  ) {
+    try {
+      const cleanNumber = this.formatPhoneNumber(toNumber)
+
+      console.log(`Creating two-way call to ${cleanNumber}`)
+
+      // Create TwiML for two-way conversation with recording and transcription
+      const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="alice">Hello! You are now connected to BrandBuzz Ventures. Please wait while we connect you to a representative.</Say>
+  <Pause length="2"/>
+  <Dial record="${options?.record ? "record-from-answer" : "do-not-record"}" 
+        recordingStatusCallback="${options?.statusCallback || ""}"
+        timeout="${options?.timeout || 30}">
+    <Number>${this.phoneNumber}</Number>
+  </Dial>
+  <Say voice="alice">The call has ended. Thank you for contacting BrandBuzz Ventures. Goodbye!</Say>
+</Response>`
+
+      console.log(`Generated TwiML for two-way call:`, twiml)
+
+      const call = await this.client.calls.create({
+        to: cleanNumber,
+        from: this.phoneNumber,
+        twiml: twiml,
+        timeout: options?.timeout || 30,
+        record: options?.record || false,
+        recordingStatusCallback: options?.statusCallback,
+        statusCallback: options?.statusCallback,
+        statusCallbackEvent: ["initiated", "ringing", "answered", "completed"],
+        statusCallbackMethod: "POST",
+        machineDetection: "Enable",
+        machineDetectionTimeout: 5,
+      })
+
+      console.log(`Two-way call initiated: ${call.sid}`)
+
+      return {
+        success: true,
+        callSid: call.sid,
+        status: call.status,
+        to: call.to,
+        from: call.from,
+        response: call,
+      }
+    } catch (error) {
+      console.error("Two-way call error:", error)
+      return {
+        success: false,
+        error: error.message,
+      }
+    }
+  }
+
+  async enableCallRecording(callSid: string) {
+    try {
+      const recording = await this.client.calls(callSid).recordings.create({
+        recordingStatusCallback: `${this.baseUrl}/api/voice/recording-complete`,
+        recordingStatusCallbackMethod: "POST",
+      })
+
+      return {
+        success: true,
+        recordingSid: recording.sid,
+        status: recording.status,
+      }
+    } catch (error) {
+      console.error("Enable recording error:", error)
+      throw error
+    }
+  }
+
+  async getCallTranscriptions(callSid: string) {
+    try {
+      const recordings = await this.client.calls(callSid).recordings.list()
+      const transcriptions = []
+
+      for (const recording of recordings) {
+        try {
+          const recordingTranscriptions = await this.client.transcriptions.list({
+            recordingSid: recording.sid,
+          })
+          transcriptions.push(...recordingTranscriptions)
+        } catch (error) {
+          console.error(`Failed to get transcriptions for recording ${recording.sid}:`, error)
+        }
+      }
+
+      return {
+        success: true,
+        transcriptions: transcriptions.map((transcription) => ({
+          sid: transcription.sid,
+          transcriptionText: transcription.transcriptionText,
+          status: transcription.status,
+          dateCreated: transcription.dateCreated,
+          dateUpdated: transcription.dateUpdated,
+          price: transcription.price,
+          priceUnit: transcription.priceUnit,
+        })),
+      }
+    } catch (error) {
+      console.error("Get transcriptions error:", error)
+      throw error
+    }
+  }
+
+  async createConferenceCall(
+    participants: string[],
+    options?: {
+      record?: boolean
+      transcribe?: boolean
+      statusCallback?: string
+      friendlyName?: string
+      moderatorNumber?: string
+    },
+  ) {
+    try {
+      const conferenceName = options?.friendlyName || `Conference-${Date.now()}`
+
+      console.log(`Creating conference call: ${conferenceName}`)
+
+      // Create the conference
+      const conference = await this.client.conferences.create({
+        friendlyName: conferenceName,
+        record: options?.record || false,
+        statusCallback: options?.statusCallback,
+        statusCallbackEvent: ["start", "end", "join", "leave", "participant-join", "participant-leave"],
+        statusCallbackMethod: "POST",
+      })
+
+      const calls = []
+
+      // If there's a moderator, call them first
+      if (options?.moderatorNumber) {
+        const moderatorCall = await this.client.calls.create({
+          to: this.formatPhoneNumber(options.moderatorNumber),
+          from: this.phoneNumber,
+          twiml: `<Response>
+          <Say voice="alice">You are joining as the moderator of conference ${conferenceName}.</Say>
+          <Dial>
+            <Conference startConferenceOnEnter="true" endConferenceOnExit="true">${conferenceName}</Conference>
+          </Dial>
+        </Response>`,
+          statusCallback: options?.statusCallback,
+          statusCallbackMethod: "POST",
+        })
+        calls.push({ type: "moderator", call: moderatorCall })
+      }
+
+      // Add all participants
+      for (const participant of participants) {
+        const call = await this.client.calls.create({
+          to: this.formatPhoneNumber(participant),
+          from: this.phoneNumber,
+          twiml: `<Response>
+          <Say voice="alice">You are joining a conference call. Please wait while we connect you.</Say>
+          <Dial>
+            <Conference startConferenceOnEnter="${!options?.moderatorNumber}" waitUrl="http://twimlets.com/holdmusic?Bucket=com.twilio.music.ambient">${conferenceName}</Conference>
+          </Dial>
+        </Response>`,
+          statusCallback: options?.statusCallback,
+          statusCallbackMethod: "POST",
+        })
+        calls.push({ type: "participant", call })
+
+        // Add delay between calls to prevent rate limiting
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+      }
+
+      return {
+        success: true,
+        conferenceSid: conference.sid,
+        conferenceName,
+        calls,
+        totalParticipants: participants.length + (options?.moderatorNumber ? 1 : 0),
+      }
+    } catch (error) {
+      console.error("Conference call creation error:", error)
+      return {
+        success: false,
+        error: error.message,
+      }
+    }
+  }
+
   private formatPhoneNumber(phoneNumber: string): string {
     const cleaned = phoneNumber.replace(/\D/g, "")
 

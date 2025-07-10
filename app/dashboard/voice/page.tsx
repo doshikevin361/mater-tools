@@ -57,10 +57,18 @@ export default function VoicePage() {
   const [isLoading, setIsLoading] = useState(false)
   const [userBalance, setUserBalance] = useState(0)
 
+  // Add these new state variables after the existing ones
+  const [recordings, setRecordings] = useState<any[]>([])
+  const [incomingCalls, setIncomingCalls] = useState<any[]>([])
+  const [twoWayCallNumber, setTwoWayCallNumber] = useState("")
+  const [isLoadingRecordings, setIsLoadingRecordings] = useState(false)
+  const [isInitiatingCall, setIsInitiatingCall] = useState(false)
+
   // Load user data and campaigns
   useEffect(() => {
     loadUserData()
     loadCampaigns()
+    loadRecordings() // Add this line
   }, [])
 
   const loadUserData = async () => {
@@ -111,6 +119,84 @@ export default function VoicePage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // Add these new functions
+  const loadRecordings = async () => {
+    try {
+      setIsLoadingRecordings(true)
+      const userId = localStorage.getItem("userId")
+      if (!userId) return
+
+      const response = await fetch(`/api/voice/recordings?userId=${userId}`)
+      if (response.ok) {
+        const data = await response.json()
+        setRecordings(data.recordings || [])
+        setIncomingCalls(data.incomingCalls || [])
+      }
+    } catch (error) {
+      console.error("Failed to load recordings:", error)
+      toast.error("Failed to load recordings")
+    } finally {
+      setIsLoadingRecordings(false)
+    }
+  }
+
+  const initiateTwoWayCall = async () => {
+    if (!twoWayCallNumber.trim()) {
+      toast.error("Please enter a phone number")
+      return
+    }
+
+    setIsInitiatingCall(true)
+    try {
+      const userId = localStorage.getItem("userId")
+      if (!userId) {
+        toast.error("Please log in to make calls")
+        return
+      }
+
+      const response = await fetch("/api/voice/two-way-call", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          toNumber: twoWayCallNumber,
+          userId,
+          record: true,
+          transcribe: true,
+        }),
+      })
+
+      const result = await response.json()
+      if (result.success) {
+        toast.success("Two-way call initiated successfully!")
+        setTwoWayCallNumber("")
+        loadRecordings() // Refresh recordings
+      } else {
+        toast.error(result.message || "Failed to initiate call")
+      }
+    } catch (error) {
+      console.error("Two-way call error:", error)
+      toast.error("Failed to initiate call")
+    } finally {
+      setIsInitiatingCall(false)
+    }
+  }
+
+  const formatDuration = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60)
+    const remainingSeconds = seconds % 60
+    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`
+  }
+
+  const playRecording = (url: string) => {
+    const audio = new Audio(url)
+    audio.play().catch((error) => {
+      console.error("Failed to play recording:", error)
+      toast.error("Failed to play recording")
+    })
   }
 
   const handleAudioReady = (blob: Blob, url: string) => {
@@ -251,13 +337,20 @@ export default function VoicePage() {
         </div>
 
         <Tabs defaultValue="create" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 bg-white border border-purple-200">
+          <TabsList className="grid w-full grid-cols-3 bg-white border border-purple-200">
             <TabsTrigger
               value="create"
               className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white"
             >
               <Phone className="h-4 w-4 mr-2" />
               Create Campaign
+            </TabsTrigger>
+            <TabsTrigger
+              value="two-way"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white"
+            >
+              <Users className="h-4 w-4 mr-2" />
+              Two-Way Calls
             </TabsTrigger>
             <TabsTrigger
               value="history"
@@ -476,6 +569,187 @@ export default function VoicePage() {
                       {campaignName.trim() === "" && "Please enter a campaign name."}
                       {userBalance < calculateCost() && "Insufficient balance for this campaign."}
                     </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="two-way" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Two-Way Call Initiator */}
+              <Card className="border border-purple-200 shadow-md overflow-hidden bg-white">
+                <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-100">
+                  <CardTitle className="flex items-center space-x-2">
+                    <Phone className="h-5 w-5 text-purple-600" />
+                    <span>Initiate Two-Way Call</span>
+                  </CardTitle>
+                  <CardDescription>Start a two-way conversation with recording and transcription</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4 p-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="twoWayNumber">Phone Number</Label>
+                    <Input
+                      id="twoWayNumber"
+                      placeholder="Enter phone number"
+                      value={twoWayCallNumber}
+                      onChange={(e) => setTwoWayCallNumber(e.target.value)}
+                      className="border-purple-200 focus:border-purple-400 focus:ring-purple-400"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Call Features</Label>
+                    <div className="flex flex-wrap gap-2">
+                      <Badge className="bg-green-100 text-green-800">📞 Two-Way Conversation</Badge>
+                      <Badge className="bg-blue-100 text-blue-800">🎙️ Call Recording</Badge>
+                      <Badge className="bg-purple-100 text-purple-800">📝 Transcription</Badge>
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={initiateTwoWayCall}
+                    disabled={isInitiatingCall || !twoWayCallNumber.trim()}
+                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                  >
+                    {isInitiatingCall ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Initiating Call...
+                      </>
+                    ) : (
+                      <>
+                        <Phone className="h-4 w-4 mr-2" />
+                        Start Two-Way Call
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Call Recordings */}
+              <Card className="border border-purple-200 shadow-md overflow-hidden bg-white">
+                <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-100">
+                  <CardTitle className="flex items-center space-x-2">
+                    <Volume2 className="h-5 w-5 text-purple-600" />
+                    <span>Recent Recordings</span>
+                  </CardTitle>
+                  <CardDescription>Listen to and view transcriptions of recent calls</CardDescription>
+                </CardHeader>
+                <CardContent className="p-6">
+                  {isLoadingRecordings ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                      <span className="ml-2 text-gray-600">Loading recordings...</span>
+                    </div>
+                  ) : recordings.length === 0 ? (
+                    <div className="text-center py-8">
+                      <Volume2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-600">No recordings found</p>
+                      <p className="text-sm text-gray-500">Make some calls to see recordings here</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4 max-h-96 overflow-y-auto">
+                      {recordings.slice(0, 5).map((recording) => (
+                        <div key={recording._id} className="p-3 border border-purple-100 rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center space-x-2">
+                              <Badge className="bg-purple-100 text-purple-800">
+                                {formatDuration(recording.recordingDuration)}
+                              </Badge>
+                              <span className="text-sm text-gray-600">
+                                {recording.from} → {recording.to}
+                              </span>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => playRecording(recording.recordingUrl)}
+                              className="text-purple-600 border-purple-200 hover:bg-purple-50"
+                            >
+                              <Volume2 className="h-3 w-3 mr-1" />
+                              Play
+                            </Button>
+                          </div>
+                          {recording.transcriptionText && (
+                            <div className="mt-2 p-2 bg-gray-50 rounded text-sm">
+                              <strong>Transcription:</strong> {recording.transcriptionText}
+                            </div>
+                          )}
+                          <div className="text-xs text-gray-500 mt-1">{formatDate(recording.createdAt)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <Button
+                    onClick={loadRecordings}
+                    variant="outline"
+                    className="w-full mt-4 border-purple-200 text-purple-600 hover:bg-purple-50 bg-transparent"
+                  >
+                    Refresh Recordings
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Incoming Calls */}
+            <Card className="border border-purple-200 shadow-md overflow-hidden bg-white">
+              <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-100">
+                <CardTitle className="flex items-center space-x-2">
+                  <Users className="h-5 w-5 text-purple-600" />
+                  <span>Incoming Calls</span>
+                </CardTitle>
+                <CardDescription>View and manage incoming calls with transcriptions</CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                {incomingCalls.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Phone className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600">No incoming calls</p>
+                    <p className="text-sm text-gray-500">Incoming calls will appear here</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {incomingCalls.map((call) => (
+                      <div key={call._id} className="p-4 border border-purple-100 rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center space-x-2">
+                            <Badge
+                              className={`${call.status === "transcribed" ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"}`}
+                            >
+                              {call.status}
+                            </Badge>
+                            <span className="font-medium">{call.from}</span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            {call.recordingUrl && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => playRecording(call.recordingUrl)}
+                                className="text-purple-600 border-purple-200 hover:bg-purple-50"
+                              >
+                                <Volume2 className="h-3 w-3 mr-1" />
+                                Play
+                              </Button>
+                            )}
+                            <span className="text-sm text-gray-600">
+                              {call.recordingDuration ? formatDuration(call.recordingDuration) : "N/A"}
+                            </span>
+                          </div>
+                        </div>
+
+                        {call.transcriptionText && (
+                          <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+                            <strong className="text-sm">Transcription:</strong>
+                            <p className="text-sm mt-1">{call.transcriptionText}</p>
+                          </div>
+                        )}
+
+                        <div className="text-xs text-gray-500 mt-2">Received: {formatDate(call.receivedAt)}</div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </CardContent>

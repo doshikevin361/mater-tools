@@ -275,6 +275,92 @@ export interface SocialAccount {
   lastActivity?: Date
 }
 
+// Two-way call logs
+export interface TwoWayCall {
+  _id?: string
+  callSid: string
+  toNumber: string
+  fromNumber: string
+  userId: string
+  status: "initiated" | "ringing" | "answered" | "completed" | "failed"
+  record: boolean
+  transcribe: boolean
+  duration?: number
+  recordingSid?: string
+  recordingUrl?: string
+  transcriptionText?: string
+  createdAt: Date
+  answeredAt?: Date
+  completedAt?: Date
+}
+
+// Incoming call logs
+export interface IncomingCall {
+  _id?: string
+  callSid: string
+  from: string
+  to: string
+  callStatus: string
+  direction: string
+  receivedAt: Date
+  status: "received" | "recorded" | "transcribed"
+  recordingSid?: string
+  recordingUrl?: string
+  recordingDuration?: number
+  transcriptionText?: string
+  transcriptionStatus?: string
+  updatedAt?: Date
+}
+
+// Call recordings
+export interface CallRecording {
+  _id?: string
+  callSid: string
+  recordingSid: string
+  recordingUrl: string
+  recordingDuration: number
+  from: string
+  to: string
+  createdAt: Date
+  status: "completed" | "failed"
+  transcriptionStatus?: "pending" | "completed" | "failed"
+  transcriptionSid?: string
+  transcriptionText?: string
+  transcriptionUrl?: string
+  transcriptionCompletedAt?: Date
+}
+
+// Call transcriptions
+export interface CallTranscription {
+  _id?: string
+  callSid: string
+  transcriptionSid: string
+  transcriptionText: string
+  transcriptionStatus: string
+  transcriptionUrl?: string
+  confidence: "low" | "medium" | "high"
+  createdAt: Date
+}
+
+// Conference calls
+export interface ConferenceCall {
+  _id?: string
+  conferenceSid: string
+  conferenceName: string
+  moderatorNumber?: string
+  participants: string[]
+  status: "initiated" | "active" | "completed"
+  record: boolean
+  transcribe: boolean
+  userId: string
+  createdAt: Date
+  startedAt?: Date
+  endedAt?: Date
+  duration?: number
+  recordingUrl?: string
+  transcriptionText?: string
+}
+
 // Database indexes for optimal performance
 export const DatabaseIndexes = {
   users: [
@@ -315,4 +401,9 @@ export const DatabaseIndexes = {
     { email: 1 },
     { platform: 1, status: 1 },
   ],
+  two_way_calls: [{ userId: 1, createdAt: -1 }, { callSid: 1 }, { status: 1, createdAt: -1 }],
+  incoming_calls: [{ receivedAt: -1 }, { callSid: 1 }, { status: 1, receivedAt: -1 }, { from: 1, receivedAt: -1 }],
+  call_recordings: [{ callSid: 1 }, { createdAt: -1 }, { status: 1 }, { transcriptionStatus: 1 }],
+  call_transcriptions: [{ callSid: 1 }, { createdAt: -1 }, { transcriptionStatus: 1 }],
+  conference_calls: [{ userId: 1, createdAt: -1 }, { conferenceSid: 1 }, { status: 1, createdAt: -1 }],
 }
