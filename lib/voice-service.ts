@@ -1,14 +1,19 @@
-import twilio from "twilio"
-
 const accountSid = process.env.TWILIO_ACCOUNT_SID
 const authToken = process.env.TWILIO_AUTH_TOKEN
 const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER
 
 if (!accountSid || !authToken || !twilioPhoneNumber) {
-  throw new Error("Missing Twilio configuration")
+  // Don’t crash the build – just warn.
+  console.warn(
+    "[voice-service] Twilio environment variables are not fully configured. " +
+      "Voice features will be disabled until TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN " +
+      "and TWILIO_PHONE_NUMBER are provided.",
+  )
 }
 
-const client = twilio(accountSid, authToken)
+// Initialise the Twilio client only when credentials are present.
+// This prevents runtime errors when the vars are missing.
+const client = accountSid && authToken ? require("twilio")(accountSid, authToken) : (null as any)
 
 export interface VoiceOptions {
   voice?: "alice" | "man" | "woman"
@@ -26,6 +31,9 @@ export interface TwoWayCallOptions {
 
 export const voiceService = {
   async sendVoiceMessage(to: string, message: string, options: VoiceOptions = {}) {
+    if (!client) {
+      return { success: false, error: "Twilio is not configured on the server" }
+    }
     try {
       const call = await client.calls.create({
         to,
@@ -50,6 +58,9 @@ export const voiceService = {
   },
 
   async sendAudioMessage(to: string, audioUrl: string, options: VoiceOptions = {}) {
+    if (!client) {
+      return { success: false, error: "Twilio is not configured on the server" }
+    }
     try {
       const call = await client.calls.create({
         to,
@@ -74,6 +85,9 @@ export const voiceService = {
   },
 
   async createTwoWayCall(to: string, options: TwoWayCallOptions = {}) {
+    if (!client) {
+      return { success: false, error: "Twilio is not configured on the server" }
+    }
     try {
       const baseUrl =
         process.env.NEXT_PUBLIC_BASE_URL ||
@@ -121,6 +135,9 @@ export const voiceService = {
       fallbackUrl?: string
     },
   ) {
+    if (!client) {
+      return { success: false, error: "Twilio is not configured on the server" }
+    }
     try {
       const cleanNumber = formatPhoneNumber(toNumber)
 
@@ -192,6 +209,9 @@ export const voiceService = {
       statusCallback?: string
     },
   ) {
+    if (!client) {
+      return { success: false, error: "Twilio is not configured on the server" }
+    }
     try {
       const cleanNumber = formatPhoneNumber(toNumber)
 
@@ -248,6 +268,9 @@ export const voiceService = {
       friendlyName?: string
     },
   ) {
+    if (!client) {
+      return { success: false, error: "Twilio is not configured on the server" }
+    }
     try {
       const conferenceName = options?.friendlyName || `Conference-${Date.now()}`
 
@@ -284,6 +307,9 @@ export const voiceService = {
   },
 
   async forwardCall(fromNumber: string, toNumber: string, options?: { record?: boolean }) {
+    if (!client) {
+      return { success: false, error: "Twilio is not configured on the server" }
+    }
     try {
       const call = await client.calls.create({
         to: formatPhoneNumber(toNumber),
@@ -310,6 +336,9 @@ export const voiceService = {
     menuOptions: Array<{ key: string; action: string; message: string }>,
     welcomeMessage: string,
   ) {
+    if (!client) {
+      return { success: false, error: "Twilio is not configured on the server" }
+    }
     try {
       let twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
@@ -362,6 +391,9 @@ export const voiceService = {
       statusCallback?: string
     },
   ) {
+    if (!client) {
+      return { success: false, error: "Twilio is not configured on the server" }
+    }
     const results = []
     let successful = 0
     let failed = 0
@@ -426,6 +458,9 @@ export const voiceService = {
   },
 
   async getCallRecordings(callSid: string) {
+    if (!client) {
+      throw new Error("Twilio is not configured on the server")
+    }
     try {
       const recordings = await client.recordings.list({ callSid: callSid })
       return {
@@ -445,6 +480,9 @@ export const voiceService = {
   },
 
   async getCallAnalytics(callSid: string) {
+    if (!client) {
+      throw new Error("Twilio is not configured on the server")
+    }
     try {
       const call = await client.calls(callSid).fetch()
       return {
@@ -468,6 +506,9 @@ export const voiceService = {
   },
 
   async enableCallRecording(callSid: string) {
+    if (!client) {
+      throw new Error("Twilio is not configured on the server")
+    }
     try {
       const recording = await client.calls(callSid).recordings.create({
         recordingStatusCallback: `${process.env.NEXT_PUBLIC_BASE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")}/api/voice/recording-complete`,
@@ -486,6 +527,9 @@ export const voiceService = {
   },
 
   async getCallTranscriptions(callSid: string) {
+    if (!client) {
+      throw new Error("Twilio is not configured on the server")
+    }
     try {
       const recordings = await client.calls(callSid).recordings.list()
       const transcriptions = []
@@ -529,6 +573,9 @@ export const voiceService = {
       moderatorNumber?: string
     },
   ) {
+    if (!client) {
+      return { success: false, error: "Twilio is not configured on the server" }
+    }
     try {
       const conferenceName = options?.friendlyName || `Conference-${Date.now()}`
 
@@ -599,6 +646,9 @@ export const voiceService = {
   },
 
   async getAccountInfo() {
+    if (!client) {
+      throw new Error("Twilio is not configured on the server")
+    }
     try {
       const account = await client.api.accounts(accountSid).fetch()
       const usage = await client.usage.records.list({ category: "calls" })
