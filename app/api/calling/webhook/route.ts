@@ -6,43 +6,59 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData()
     const callSid = formData.get("CallSid") as string
     const callStatus = formData.get("CallStatus") as string
-    const callDuration = formData.get("CallDuration") as string
-    const recordingUrl = formData.get("RecordingUrl") as string
+    const duration = formData.get("CallDuration") as string
+    const from = formData.get("From") as string
+    const to = formData.get("To") as string
+
+    if (!callSid) {
+      return NextResponse.json({ error: "Call SID is required" }, { status: 400 })
+    }
 
     const { db } = await connectToDatabase()
 
-    // Update call record with status
+    // Calculate cost based on duration (₹1.5 per minute)
+    const durationSeconds = Number.parseInt(duration) || 0
+    const cost = Math.ceil(durationSeconds / 60) * 1.5
+
+    // Update call record based on status
     const updateData: any = {
       status: callStatus,
       updatedAt: new Date(),
     }
 
-    if (callDuration) {
-      updateData.duration = Number.parseInt(callDuration)
-      updateData.cost = (Number.parseInt(callDuration) * 0.05) / 60 // $0.05 per minute
-    }
-
-    if (recordingUrl) {
-      updateData.recordingUrl = recordingUrl
+    if (callStatus === "completed" && duration) {
+      updateData.duration = durationSeconds
+      updateData.cost = cost
+      updateData.endTime = new Date()
     }
 
     await db.collection("calls").updateOne({ callSid: callSid }, { $set: updateData })
 
-    // Return TwiML response for call handling
-    const twimlResponse = `<?xml version="1.0" encoding="UTF-8"?>
-    <Response>
-      <Say voice="alice">Hello! You are connected to BrandBuzz calling system.</Say>
-      <Pause length="1"/>
-      <Say voice="alice">Please hold while we connect you.</Say>
-    </Response>`
+    // If call completed, deduct cost from user balance
+    if (callStatus === "completed" && cost > 0) {
+      const callRecord = await db.collection("calls").findOne({ callSid: callSid })
+      if (callRecord && callRecord.userId) {
+        await db.collection("users").updateOne(
+          { _id: callRecord.userId },
+          {
+            $inc: { balance: -cost },
+            $set: { updatedAt: new Date() },
+          },
+        )
+      }
+    }
 
-    return new NextResponse(twimlResponse, {
-      headers: {
-        "Content-Type": "text/xml",
-      },
-    })
+    console.log(`Call ${callSid} status updated to ${callStatus}`)
+
+    return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Webhook error:", error)
-    return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 })
+    return NextResponse.json(
+      {
+        error: "Webhook processing failed",
+        details: error.message,
+      },
+      { status: 500 },
+    )
   }
 }
