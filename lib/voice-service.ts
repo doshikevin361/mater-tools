@@ -1,68 +1,31 @@
 import twilio from "twilio"
 
-// Check for required environment variables
+// Configuration
 const accountSid = process.env.TWILIO_ACCOUNT_SID
 const authToken = process.env.TWILIO_AUTH_TOKEN
 const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER
 
-// Only warn during build, don't throw
-if (!accountSid || !authToken || !twilioPhoneNumber) {
-  console.warn(
-    "Warning: Twilio configuration missing. Voice features will not work until TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER are set.",
-  )
-}
-
-// Initialize client only if we have credentials
+// Initialize Twilio client only if credentials are available
 let client: twilio.Twilio | null = null
+
 if (accountSid && authToken) {
   client = twilio(accountSid, authToken)
+} else {
+  console.warn("Twilio credentials not found. Voice services will not work.")
 }
 
-export interface VoiceMessage {
-  to: string
-  message: string
-  voice?: "alice" | "man" | "woman"
-  language?: string
-}
-
-export interface VoiceCallOptions {
-  to: string
-  audioUrl?: string
-  message?: string
-  voice?: "alice" | "man" | "woman"
-  language?: string
-  record?: boolean
-}
-
-export interface TwoWayCallOptions {
-  to: string
-  record?: boolean
-  transcribe?: boolean
-}
-
-export class VoiceService {
-  private validateConfig() {
+export const voiceService = {
+  // Send voice message (existing functionality)
+  async sendVoiceMessage(to: string, message: string, voice = "alice") {
     if (!client || !twilioPhoneNumber) {
-      throw new Error(
-        "Twilio configuration is missing. Please set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER environment variables.",
-      )
+      throw new Error("Twilio not configured properly")
     }
-  }
-
-  async sendVoiceMessage(options: VoiceMessage): Promise<any> {
-    this.validateConfig()
 
     try {
-      const call = await client!.calls.create({
-        to: options.to,
-        from: twilioPhoneNumber!,
-        twiml: `
-          <Response>
-            <Say voice="${options.voice || "alice"}" language="${options.language || "en-US"}">
-              ${options.message}
-            </Say>
-          </Response>
-        `,
+      const call = await client.calls.create({
+        twiml: `<Response><Say voice="${voice}">${message}</Say></Response>`,
+        to,
+        from: twilioPhoneNumber,
       })
 
       return {
@@ -70,36 +33,23 @@ export class VoiceService {
         callSid: call.sid,
         status: call.status,
       }
-    } catch (error: any) {
-      console.error("Voice message error:", error)
-      return {
-        success: false,
-        error: error.message,
-      }
+    } catch (error) {
+      console.error("Error sending voice message:", error)
+      throw error
     }
-  }
+  },
 
-  async sendVoiceCall(options: VoiceCallOptions): Promise<any> {
-    this.validateConfig()
+  // Send audio file (existing functionality)
+  async sendAudioFile(to: string, audioUrl: string) {
+    if (!client || !twilioPhoneNumber) {
+      throw new Error("Twilio not configured properly")
+    }
 
     try {
-      let twiml = "<Response>"
-
-      if (options.audioUrl) {
-        twiml += `<Play>${options.audioUrl}</Play>`
-      }
-
-      if (options.message) {
-        twiml += `<Say voice="${options.voice || "alice"}" language="${options.language || "en-US"}">${options.message}</Say>`
-      }
-
-      twiml += "</Response>"
-
-      const call = await client!.calls.create({
-        to: options.to,
-        from: twilioPhoneNumber!,
-        twiml: twiml,
-        record: options.record || false,
+      const call = await client.calls.create({
+        twiml: `<Response><Play>${audioUrl}</Play></Response>`,
+        to,
+        from: twilioPhoneNumber,
       })
 
       return {
@@ -107,48 +57,68 @@ export class VoiceService {
         callSid: call.sid,
         status: call.status,
       }
-    } catch (error: any) {
-      console.error("Voice call error:", error)
-      return {
-        success: false,
-        error: error.message,
-      }
+    } catch (error) {
+      console.error("Error sending audio file:", error)
+      throw error
     }
-  }
+  },
 
-  async createTwoWayCall(options: TwoWayCallOptions): Promise<any> {
-    this.validateConfig()
+  // Create two-way call (new functionality)
+  async createTwoWayCall(to: string, record = true) {
+    if (!client || !twilioPhoneNumber) {
+      throw new Error("Twilio not configured properly")
+    }
 
     try {
-      const call = await client!.calls.create({
-        to: options.to,
-        from: twilioPhoneNumber!,
-        url: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/voice/twiml`,
-        record: options.record || true,
-        recordingStatusCallback: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/voice/recording-complete`,
-        transcribe: options.transcribe || true,
-        transcribeCallback: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/voice/transcription-complete`,
+      const call = await client.calls.create({
+        url: `${process.env.NEXT_PUBLIC_APP_URL}/api/voice/incoming`,
+        to,
+        from: twilioPhoneNumber,
+        record: record,
+        recordingStatusCallback: `${process.env.NEXT_PUBLIC_APP_URL}/api/voice/recording-complete`,
       })
 
       return {
-        success: true,
-        callSid: call.sid,
+        sid: call.sid,
         status: call.status,
+        to: call.to,
+        from: call.from,
       }
-    } catch (error: any) {
-      console.error("Two-way call error:", error)
-      return {
-        success: false,
-        error: error.message,
-      }
+    } catch (error) {
+      console.error("Error creating two-way call:", error)
+      throw error
     }
-  }
+  },
 
-  async endCall(callSid: string): Promise<any> {
-    this.validateConfig()
+  // Get call status
+  async getCallStatus(callSid: string) {
+    if (!client) {
+      throw new Error("Twilio not configured properly")
+    }
 
     try {
-      const call = await client!.calls(callSid).update({
+      const call = await client.calls(callSid).fetch()
+
+      return {
+        status: call.status,
+        duration: call.duration,
+        startTime: call.startTime,
+        endTime: call.endTime,
+      }
+    } catch (error) {
+      console.error("Error fetching call status:", error)
+      throw error
+    }
+  },
+
+  // End call
+  async endCall(callSid: string) {
+    if (!client) {
+      throw new Error("Twilio not configured properly")
+    }
+
+    try {
+      const call = await client.calls(callSid).update({
         status: "completed",
       })
 
@@ -156,71 +126,34 @@ export class VoiceService {
         success: true,
         status: call.status,
       }
-    } catch (error: any) {
-      console.error("End call error:", error)
-      return {
-        success: false,
-        error: error.message,
-      }
+    } catch (error) {
+      console.error("Error ending call:", error)
+      throw error
     }
-  }
+  },
 
-  async getCallDetails(callSid: string): Promise<any> {
-    this.validateConfig()
+  // Get call recordings
+  async getCallRecordings(callSid?: string) {
+    if (!client) {
+      throw new Error("Twilio not configured properly")
+    }
 
     try {
-      const call = await client!.calls(callSid).fetch()
+      const recordings = await client.recordings.list({
+        callSid: callSid,
+        limit: 50,
+      })
 
-      return {
-        success: true,
-        call: {
-          sid: call.sid,
-          to: call.to,
-          from: call.from,
-          status: call.status,
-          duration: call.duration,
-          startTime: call.startTime,
-          endTime: call.endTime,
-        },
-      }
-    } catch (error: any) {
-      console.error("Get call details error:", error)
-      return {
-        success: false,
-        error: error.message,
-      }
+      return recordings.map((recording) => ({
+        sid: recording.sid,
+        callSid: recording.callSid,
+        duration: recording.duration,
+        dateCreated: recording.dateCreated,
+        uri: recording.uri,
+      }))
+    } catch (error) {
+      console.error("Error fetching recordings:", error)
+      throw error
     }
-  }
-
-  async getRecordings(callSid?: string): Promise<any> {
-    this.validateConfig()
-
-    try {
-      let recordings
-      if (callSid) {
-        recordings = await client!.recordings.list({ callSid: callSid })
-      } else {
-        recordings = await client!.recordings.list({ limit: 50 })
-      }
-
-      return {
-        success: true,
-        recordings: recordings.map((recording) => ({
-          sid: recording.sid,
-          callSid: recording.callSid,
-          duration: recording.duration,
-          dateCreated: recording.dateCreated,
-          uri: recording.uri,
-        })),
-      }
-    } catch (error: any) {
-      console.error("Get recordings error:", error)
-      return {
-        success: false,
-        error: error.message,
-      }
-    }
-  }
+  },
 }
-
-export const voiceService = new VoiceService()
