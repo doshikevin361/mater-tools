@@ -3,62 +3,31 @@ import { connectToDatabase } from "@/lib/mongodb"
 
 export async function POST(request: NextRequest) {
   try {
-    const formData = await request.formData()
-    const callSid = formData.get("CallSid") as string
-    const callStatus = formData.get("CallStatus") as string
-    const duration = formData.get("CallDuration") as string
-    const from = formData.get("From") as string
-    const to = formData.get("To") as string
-
-    if (!callSid) {
-      return NextResponse.json({ error: "Call SID is required" }, { status: 400 })
-    }
+    const body = await request.json()
+    const { CallSid, CallStatus, Duration, RecordingUrl } = body
 
     const { db } = await connectToDatabase()
 
-    // Calculate cost based on duration (₹1.5 per minute)
-    const durationSeconds = Number.parseInt(duration) || 0
-    const cost = Math.ceil(durationSeconds / 60) * 1.5
-
-    // Update call record based on status
+    // Update call record with status
     const updateData: any = {
-      status: callStatus,
+      status: CallStatus?.toLowerCase(),
       updatedAt: new Date(),
     }
 
-    if (callStatus === "completed" && duration) {
-      updateData.duration = durationSeconds
-      updateData.cost = cost
-      updateData.endTime = new Date()
+    if (Duration) {
+      updateData.duration = Number.parseInt(Duration)
+      updateData.cost = (Number.parseInt(Duration) / 60) * 2.5 // ₹2.5 per minute
     }
 
-    await db.collection("calls").updateOne({ callSid: callSid }, { $set: updateData })
-
-    // If call completed, deduct cost from user balance
-    if (callStatus === "completed" && cost > 0) {
-      const callRecord = await db.collection("calls").findOne({ callSid: callSid })
-      if (callRecord && callRecord.userId) {
-        await db.collection("users").updateOne(
-          { _id: callRecord.userId },
-          {
-            $inc: { balance: -cost },
-            $set: { updatedAt: new Date() },
-          },
-        )
-      }
+    if (RecordingUrl) {
+      updateData.recordingUrl = RecordingUrl
     }
 
-    console.log(`Call ${callSid} status updated to ${callStatus}`)
+    await db.collection("calls").updateOne({ callSid: CallSid }, { $set: updateData })
 
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Webhook error:", error)
-    return NextResponse.json(
-      {
-        error: "Webhook processing failed",
-        details: error.message,
-      },
-      { status: 500 },
-    )
+    return NextResponse.json({ success: false, message: "Webhook processing failed" }, { status: 500 })
   }
 }
