@@ -77,8 +77,8 @@ const data = {
           url: "/dashboard/voice",
         },
         {
-          title: "Voice 2 Way",
-          url: "/dashboard/voice-2way",
+          title: "Calling",
+          url: "/dashboard/calling",
         },
       ],
     },

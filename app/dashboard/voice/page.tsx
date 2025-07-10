@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import { ContactSelector } from "@/components/contact-selector"
 import { VoiceRecorder } from "@/components/voice-recorder"
-import { Phone, MessageSquare, Users, Clock, Volume2, Mic } from "lucide-react"
+import { Phone, MessageSquare, Users, Clock, Volume2, Mic, PhoneCall } from "lucide-react"
 import { toast } from "sonner"
 
 interface Contact {
@@ -241,6 +241,14 @@ export default function VoicePage() {
             <p className="text-gray-600 mt-1">Send voice messages and audio campaigns to your contacts</p>
           </div>
           <div className="flex items-center space-x-4">
+            <Button
+              onClick={() => (window.location.href = "/dashboard/calling")}
+              variant="outline"
+              className="border-purple-200 text-purple-600 hover:bg-purple-50"
+            >
+              <PhoneCall className="h-4 w-4 mr-2" />
+              Live Calling
+            </Button>
             <Badge className="bg-gradient-to-r from-green-500 to-green-600 text-white px-3 py-1">
               Balance: ₹{userBalance.toFixed(2)}
             </Badge>
