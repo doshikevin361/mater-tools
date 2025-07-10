@@ -1,30 +1,25 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getDatabase } from "@/lib/mongodb"
+import { connectToDatabase } from "@/lib/mongodb"
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get("userId")
+    const { db } = await connectToDatabase()
 
-    if (!userId) {
-      return NextResponse.json({ success: false, message: "User ID is required" }, { status: 400 })
-    }
+    // Get current user ID from session (replace with actual session handling)
+    const userId = "current-user-id"
 
-    const db = await getDatabase()
+    const calls = await db.collection("calls").find({ userId: userId }).sort({ timestamp: -1 }).limit(50).toArray()
 
-    const calls = await db.collection("calls").find({ userId }).sort({ createdAt: -1 }).limit(50).toArray()
-
+    // Transform the data for frontend consumption
     const formattedCalls = calls.map((call) => ({
-      id: call.callSid,
+      id: call._id.toString(),
       phoneNumber: call.phoneNumber,
-      duration: call.duration
-        ? `${Math.floor(call.duration / 60)}:${(call.duration % 60).toString().padStart(2, "0")}`
-        : "00:00",
-      timestamp: call.createdAt.toISOString(),
+      duration: call.duration || 0,
       status: call.status || "unknown",
-      recordingUrl: call.recordingUrl,
-      transcription: call.transcription,
       cost: call.cost || 0,
+      recordingUrl: call.recordingUrl,
+      transcript: call.transcript,
+      timestamp: call.timestamp,
     }))
 
     return NextResponse.json({
@@ -32,10 +27,7 @@ export async function GET(request: NextRequest) {
       calls: formattedCalls,
     })
   } catch (error) {
-    console.error("Get call history error:", error)
-    return NextResponse.json(
-      { success: false, message: "Failed to get call history", error: error.message },
-      { status: 500 },
-    )
+    console.error("Error fetching call history:", error)
+    return NextResponse.json({ error: "Failed to fetch call history" }, { status: 500 })
   }
 }

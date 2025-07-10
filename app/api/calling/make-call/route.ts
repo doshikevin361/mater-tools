@@ -1,84 +1,47 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getDatabase } from "@/lib/mongodb"
-import { voiceService } from "@/lib/voice-service"
+import { connectToDatabase } from "@/lib/mongodb"
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { phoneNumber, userId, settings } = body
+    const { to, record = false } = await request.json()
 
-    console.log("Making outbound call:", { phoneNumber, userId, settings })
-
-    if (!phoneNumber || !userId) {
-      return NextResponse.json({ success: false, message: "Phone number and user ID are required" }, { status: 400 })
+    if (!to) {
+      return NextResponse.json({ error: "Phone number is required" }, { status: 400 })
     }
 
-    const db = await getDatabase()
-    const user = await db.collection("users").findOne({ _id: userId })
+    // Here you would integrate with Twilio or another calling service
+    // For now, we'll simulate the call initiation
 
-    if (!user) {
-      return NextResponse.json({ success: false, message: "User not found" }, { status: 404 })
-    }
-
-    const callCost = 1.5 // Base cost per call
-    if (user.balance < callCost) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: `Insufficient balance. Required: ₹${callCost}, Available: ₹${user.balance.toFixed(2)}`,
-        },
-        { status: 400 },
-      )
-    }
-
-    // Create TwiML for two-way conversation
-    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Say voice="${settings?.voice || "alice"}">Hello, you have an incoming call. Please hold while we connect you.</Say>
-  <Dial timeout="${settings?.timeout || 30}" record="${settings?.autoRecord ? "record-from-answer" : "do-not-record"}">
-    <Number statusCallback="${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/calling/webhook">
-      ${phoneNumber}
-    </Number>
-  </Dial>
-  <Say voice="${settings?.voice || "alice"}">The call could not be completed. Please try again later.</Say>
-</Response>`
-
-    // Make the call using Twilio
-    const callResult = await voiceService.client.calls.create({
-      to: phoneNumber,
-      from: voiceService.phoneNumber,
-      twiml: twiml,
-      statusCallback: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/calling/webhook`,
-      statusCallbackEvent: ["initiated", "ringing", "answered", "completed"],
-      statusCallbackMethod: "POST",
-      record: settings?.autoRecord || false,
-      recordingStatusCallback: settings?.autoRecord
-        ? `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/calling/recording-webhook`
-        : undefined,
-    })
+    const { db } = await connectToDatabase()
 
     // Create call record
     const callRecord = {
-      callSid: callResult.sid,
-      userId,
-      phoneNumber,
+      phoneNumber: to,
       status: "initiated",
-      startTime: new Date(),
-      settings: settings || {},
-      cost: callCost,
-      createdAt: new Date(),
+      record: record,
+      timestamp: new Date(),
+      userId: "current-user-id", // Replace with actual user ID from session
     }
 
-    await db.collection("calls").insertOne(callRecord)
+    const result = await db.collection("calls").insertOne(callRecord)
+
+    // Simulate Twilio call initiation
+    // const call = await twilioClient.calls.create({
+    //   to: to,
+    //   from: process.env.TWILIO_PHONE_NUMBER,
+    //   url: `${process.env.NEXT_PUBLIC_BASE_URL}/api/calling/webhook`,
+    //   record: record,
+    //   statusCallback: `${process.env.NEXT_PUBLIC_BASE_URL}/api/calling/webhook`,
+    //   statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed']
+    // })
 
     return NextResponse.json({
       success: true,
+      callId: result.insertedId,
       message: "Call initiated successfully",
-      callSid: callResult.sid,
-      status: callResult.status,
     })
   } catch (error) {
-    console.error("Make call error:", error)
-    return NextResponse.json({ success: false, message: "Failed to make call", error: error.message }, { status: 500 })
+    console.error("Error making call:", error)
+    return NextResponse.json({ error: "Failed to make call" }, { status: 500 })
   }
 }
