@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     // Get current user ID from session (replace with actual session handling)
     const userId = "current-user-id"
 
-    const calls = await db.collection("calls").find({ userId: userId }).sort({ createdAt: -1 }).limit(50).toArray()
+    const calls = await db.collection("calls").find({ userId: userId }).sort({ timestamp: -1 }).limit(50).toArray()
 
     // Transform the data for frontend consumption
     const formattedCalls = calls.map((call) => ({
@@ -18,10 +18,8 @@ export async function GET(request: NextRequest) {
       status: call.status || "unknown",
       cost: call.cost || 0,
       recordingUrl: call.recordingUrl,
-      recordingDuration: call.recordingDuration,
-      recordingSize: call.recordingSize,
       transcript: call.transcript,
-      timestamp: call.createdAt,
+      timestamp: call.timestamp,
     }))
 
     return NextResponse.json({
@@ -30,6 +28,6 @@ export async function GET(request: NextRequest) {
     })
   } catch (error) {
     console.error("Error fetching call history:", error)
-    return NextResponse.json({ success: false, message: "Failed to fetch call history" }, { status: 500 })
+    return NextResponse.json({ error: "Failed to fetch call history" }, { status: 500 })
   }
 }

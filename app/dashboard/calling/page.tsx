@@ -23,8 +23,6 @@ import {
   Download,
   Clock,
   DollarSign,
-  FileAudio,
-  FileText,
 } from "lucide-react"
 
 interface CallRecord {
@@ -34,8 +32,6 @@ interface CallRecord {
   status: "completed" | "failed" | "busy" | "no-answer"
   cost: number
   recordingUrl?: string
-  recordingDuration?: number
-  recordingSize?: string
   transcript?: string
   timestamp: Date
 }
@@ -49,7 +45,7 @@ export default function CallingPage() {
   const [isRecording, setIsRecording] = useState(false)
   const [volume, setVolume] = useState([80])
   const [callHistory, setCallHistory] = useState<CallRecord[]>([])
-  const [balance, setBalance] = useState(125.5)
+  const [balance, setBalance] = useState(25.5)
   const [autoRecord, setAutoRecord] = useState(true)
   const [callCost, setCallCost] = useState(0)
   const callTimerRef = useRef<NodeJS.Timeout>()
@@ -65,7 +61,7 @@ export default function CallingPage() {
       callTimerRef.current = setInterval(() => {
         setCallDuration((prev) => {
           const newDuration = prev + 1
-          setCallCost((newDuration / 60) * 2.5) // ₹2.5 per minute
+          setCallCost(newDuration * 0.05) // $0.05 per minute
           return newDuration
         })
       }, 1000)
@@ -91,40 +87,6 @@ export default function CallingPage() {
       }
     } catch (error) {
       console.error("Failed to fetch call history:", error)
-      // Mock data for demonstration
-      setCallHistory([
-        {
-          id: "1",
-          phoneNumber: "+91 98765 43210",
-          duration: 185,
-          status: "completed",
-          cost: 7.5,
-          recordingUrl: "/api/recordings/call-1.mp3",
-          recordingDuration: 180,
-          recordingSize: "2.1 MB",
-          transcript: "Hello, this is a test call. We discussed the project requirements and timeline.",
-          timestamp: new Date(Date.now() - 3600000),
-        },
-        {
-          id: "2",
-          phoneNumber: "+91 87654 32109",
-          duration: 95,
-          status: "completed",
-          cost: 4.0,
-          recordingUrl: "/api/recordings/call-2.mp3",
-          recordingDuration: 90,
-          recordingSize: "1.2 MB",
-          timestamp: new Date(Date.now() - 7200000),
-        },
-        {
-          id: "3",
-          phoneNumber: "+91 76543 21098",
-          duration: 0,
-          status: "no-answer",
-          cost: 0,
-          timestamp: new Date(Date.now() - 10800000),
-        },
-      ])
     }
   }
 
@@ -134,7 +96,7 @@ export default function CallingPage() {
       return
     }
 
-    if (balance < 2.5) {
+    if (balance < 1) {
       toast.error("Insufficient balance to make a call")
       return
     }
@@ -146,7 +108,7 @@ export default function CallingPage() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          to: formatIndianNumber(phoneNumber),
+          to: phoneNumber,
           record: autoRecord,
         }),
       })
@@ -173,31 +135,15 @@ export default function CallingPage() {
   const endCall = () => {
     setIsCallActive(false)
     setIsRecording(false)
-
-    // Create new call record
-    const newCallRecord: CallRecord = {
-      id: Date.now().toString(),
-      phoneNumber: formatIndianNumber(phoneNumber),
-      duration: callDuration,
-      status: "completed",
-      cost: callCost,
-      recordingUrl: isRecording ? `/api/recordings/call-${Date.now()}.mp3` : undefined,
-      recordingDuration: isRecording ? callDuration : undefined,
-      recordingSize: isRecording ? `${(callDuration * 0.01).toFixed(1)} MB` : undefined,
-      transcript: isRecording ? "Call transcription will be available shortly..." : undefined,
-      timestamp: new Date(),
-    }
-
-    // Add to call history
-    setCallHistory((prev) => [newCallRecord, ...prev])
-
     setCallDuration(0)
 
     // Deduct cost from balance
     setBalance((prev) => Math.max(0, prev - callCost))
 
-    toast.success(`Call ended. Cost: ₹${callCost.toFixed(2)}`)
-    setPhoneNumber("")
+    toast.success(`Call ended. Cost: $${callCost.toFixed(2)}`)
+
+    // Refresh call history
+    fetchCallHistory()
   }
 
   const toggleMute = () => {
@@ -218,27 +164,11 @@ export default function CallingPage() {
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
   }
 
-  const formatIndianNumber = (number: string) => {
+  const formatPhoneNumber = (number: string) => {
     const cleaned = number.replace(/\D/g, "")
-
-    // If number starts with 91, format as +91
-    if (cleaned.startsWith("91") && cleaned.length === 12) {
-      return `+91 ${cleaned.slice(2, 7)} ${cleaned.slice(7)}`
-    }
-
-    // If 10 digit number, add +91
     if (cleaned.length === 10) {
-      return `+91 ${cleaned.slice(0, 5)} ${cleaned.slice(5)}`
+      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`
     }
-
-    // If already has +91
-    if (number.startsWith("+91")) {
-      const digits = cleaned.slice(2)
-      if (digits.length === 10) {
-        return `+91 ${digits.slice(0, 5)} ${digits.slice(5)}`
-      }
-    }
-
     return number
   }
 
@@ -279,13 +209,6 @@ export default function CallingPage() {
     }
   }
 
-  const playRecording = (recordingUrl: string) => {
-    const audio = new Audio(recordingUrl)
-    audio.play().catch(() => {
-      toast.error("Failed to play recording")
-    })
-  }
-
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -296,7 +219,7 @@ export default function CallingPage() {
         <div className="flex items-center space-x-4">
           <div className="text-right">
             <p className="text-sm text-muted-foreground">Account Balance</p>
-            <p className="text-2xl font-bold text-green-600">₹{balance.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-green-600">${balance.toFixed(2)}</p>
           </div>
         </div>
       </div>
@@ -317,7 +240,7 @@ export default function CallingPage() {
                   <Phone className="h-5 w-5" />
                   <span>Phone Dialer</span>
                 </CardTitle>
-                <CardDescription>Enter an Indian phone number to make a call</CardDescription>
+                <CardDescription>Enter a phone number to make a call</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
@@ -325,15 +248,12 @@ export default function CallingPage() {
                   <Input
                     id="phone"
                     type="tel"
-                    placeholder="+91 98765 43210"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    placeholder="+1 (555) 123-4567"
+                    value={formatPhoneNumber(phoneNumber)}
+                    onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))}
                     disabled={isCallActive}
                     className="text-lg text-center"
                   />
-                  <p className="text-xs text-muted-foreground text-center">
-                    Indian numbers only. +91 will be added automatically.
-                  </p>
                 </div>
 
                 {/* Dial Pad */}
@@ -364,7 +284,7 @@ export default function CallingPage() {
                     Clear
                   </Button>
                   <Button
-                    onClick={() => setPhoneNumber(phoneNumber.slice(0, -1))}
+                    onClick={phoneNumber.slice(0, -1) ? () => setPhoneNumber(phoneNumber.slice(0, -1)) : undefined}
                     variant="outline"
                     disabled={isCallActive || !phoneNumber}
                     className="flex-1"
@@ -401,7 +321,7 @@ export default function CallingPage() {
                 {isCallActive && (
                   <>
                     <div className="text-center space-y-2">
-                      <div className="text-2xl font-bold">{formatIndianNumber(phoneNumber)}</div>
+                      <div className="text-2xl font-bold">{formatPhoneNumber(phoneNumber)}</div>
                       <div className="flex items-center justify-center space-x-4 text-sm text-muted-foreground">
                         <div className="flex items-center space-x-1">
                           <Clock className="h-4 w-4" />
@@ -409,7 +329,7 @@ export default function CallingPage() {
                         </div>
                         <div className="flex items-center space-x-1">
                           <DollarSign className="h-4 w-4" />
-                          <span>₹{callCost.toFixed(2)}</span>
+                          <span>${callCost.toFixed(2)}</span>
                         </div>
                       </div>
                     </div>
@@ -452,7 +372,7 @@ export default function CallingPage() {
           <Card>
             <CardHeader>
               <CardTitle>Call History</CardTitle>
-              <CardDescription>View your recent calls, recordings, and transcripts</CardDescription>
+              <CardDescription>View your recent calls and recordings</CardDescription>
             </CardHeader>
             <CardContent>
               {callHistory.length === 0 ? (
@@ -464,21 +384,21 @@ export default function CallingPage() {
               ) : (
                 <div className="space-y-4">
                   {callHistory.map((call) => (
-                    <div key={call.id} className="border rounded-lg p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <div className="flex-shrink-0">
-                            <Phone className="h-5 w-5 text-muted-foreground" />
-                          </div>
-                          <div>
-                            <p className="font-medium">{call.phoneNumber}</p>
-                            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                              <span>{formatDuration(call.duration)}</span>
-                              <span>₹{call.cost.toFixed(2)}</span>
-                              <span>{new Date(call.timestamp).toLocaleString()}</span>
-                            </div>
+                    <div key={call.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex items-center space-x-4">
+                        <div className="flex-shrink-0">
+                          <Phone className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <p className="font-medium">{formatPhoneNumber(call.phoneNumber)}</p>
+                          <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                            <span>{formatDuration(call.duration)}</span>
+                            <span>${call.cost.toFixed(2)}</span>
+                            <span>{new Date(call.timestamp).toLocaleString()}</span>
                           </div>
                         </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
                         <Badge
                           variant={
                             call.status === "completed"
@@ -490,55 +410,16 @@ export default function CallingPage() {
                         >
                           {call.status}
                         </Badge>
+                        {call.recordingUrl && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => downloadRecording(call.recordingUrl!, call.id)}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
-
-                      {/* Recording Information */}
-                      {call.recordingUrl && (
-                        <div className="bg-gray-50 rounded-lg p-3 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                              <FileAudio className="h-4 w-4 text-blue-600" />
-                              <span className="text-sm font-medium">Recording Available</span>
-                            </div>
-                            <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                              <span>{formatDuration(call.recordingDuration || 0)}</span>
-                              <span>•</span>
-                              <span>{call.recordingSize}</span>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center space-x-2">
-                            <Button size="sm" variant="outline" onClick={() => playRecording(call.recordingUrl!)}>
-                              <Play className="h-3 w-3 mr-1" />
-                              Play
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => downloadRecording(call.recordingUrl!, call.id)}
-                            >
-                              <Download className="h-3 w-3 mr-1" />
-                              Download
-                            </Button>
-                          </div>
-
-                          {/* Transcript */}
-                          {call.transcript && (
-                            <div className="mt-3 pt-3 border-t border-gray-200">
-                              <div className="flex items-center space-x-2 mb-2">
-                                <FileText className="h-4 w-4 text-green-600" />
-                                <span className="text-sm font-medium">Transcript</span>
-                              </div>
-                              <p className="text-sm text-gray-700 bg-white p-2 rounded border">{call.transcript}</p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* No Recording */}
-                      {!call.recordingUrl && call.status === "completed" && (
-                        <div className="text-xs text-muted-foreground">No recording available for this call</div>
-                      )}
                     </div>
                   ))}
                 </div>
@@ -564,22 +445,15 @@ export default function CallingPage() {
 
               <div className="space-y-2">
                 <Label>Call Rate</Label>
-                <p className="text-sm text-muted-foreground">₹2.50 per minute for Indian numbers</p>
+                <p className="text-sm text-muted-foreground">$0.05 per minute</p>
               </div>
 
               <div className="space-y-2">
                 <Label>Current Balance</Label>
-                <p className="text-2xl font-bold text-green-600">₹{balance.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-green-600">${balance.toFixed(2)}</p>
                 <Button variant="outline" size="sm">
                   Add Funds
                 </Button>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Recording Storage</Label>
-                <p className="text-sm text-muted-foreground">
-                  Recordings are stored for 30 days and then automatically deleted
-                </p>
               </div>
             </CardContent>
           </Card>

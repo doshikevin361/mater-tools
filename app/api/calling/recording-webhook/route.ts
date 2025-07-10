@@ -3,28 +3,32 @@ import { connectToDatabase } from "@/lib/mongodb"
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { CallSid, RecordingUrl, RecordingDuration, RecordingSid } = body
+    const formData = await request.formData()
+    const callSid = formData.get("CallSid") as string
+    const recordingUrl = formData.get("RecordingUrl") as string
+    const recordingDuration = formData.get("RecordingDuration") as string
 
     const { db } = await connectToDatabase()
 
     // Update call record with recording information
-    const updateData = {
-      recordingUrl: RecordingUrl,
-      recordingDuration: Number.parseInt(RecordingDuration || "0"),
-      recordingSid: RecordingSid,
-      recordingSize: `${(Number.parseInt(RecordingDuration || "0") * 0.01).toFixed(1)} MB`,
-      updatedAt: new Date(),
-    }
+    await db.collection("calls").updateOne(
+      { callSid: callSid },
+      {
+        $set: {
+          recordingUrl: recordingUrl,
+          recordingDuration: Number.parseInt(recordingDuration || "0"),
+          hasRecording: true,
+          updatedAt: new Date(),
+        },
+      },
+    )
 
-    await db.collection("calls").updateOne({ callSid: CallSid }, { $set: updateData })
-
-    // Here you could trigger transcription service
-    // For example, send to Google Speech-to-Text or AWS Transcribe
+    // Here you could also trigger transcription services
+    // await transcribeRecording(recordingUrl, callSid)
 
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Recording webhook error:", error)
-    return NextResponse.json({ success: false, message: "Recording webhook processing failed" }, { status: 500 })
+    return NextResponse.json({ error: "Recording webhook processing failed" }, { status: 500 })
   }
 }
