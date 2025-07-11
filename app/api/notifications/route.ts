@@ -1,15 +1,17 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getDatabase } from "@/lib/mongodb"
+import { connectToDatabase } from "@/lib/mongodb"
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get("userId") || "demo-user"
-    const limit = Number.parseInt(searchParams.get("limit") || "10")
+    const userId = searchParams.get("userId")
+    const limit = Number.parseInt(searchParams.get("limit") || "20")
 
-    const db = await getDatabase()
+    if (!userId) {
+      return NextResponse.json({ success: false, message: "User ID is required" }, { status: 400 })
+    }
 
-    // Get user's notifications, including automation notifications
+    const { db } = await connectToDatabase()
     const notifications = await db
       .collection("notifications")
       .find({ userId })
@@ -17,79 +19,104 @@ export async function GET(request: NextRequest) {
       .limit(limit)
       .toArray()
 
+    // Add formatted time for display
+    const formattedNotifications = notifications.map((notification) => ({
+      ...notification,
+      id: notification._id.toString(),
+      time: new Date(notification.createdAt).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    }))
+
     return NextResponse.json({
       success: true,
-      notifications: notifications.map((notification) => ({
-        id: notification._id,
-        title: notification.title,
-        message: notification.message,
-        type: notification.type,
-        read: notification.read,
-        time: formatTimeAgo(notification.createdAt),
-        createdAt: notification.createdAt,
-      })),
+      notifications: formattedNotifications,
+      count: formattedNotifications.length,
     })
   } catch (error) {
-    console.error("Get notifications error:", error)
-    return NextResponse.json({ success: false, message: "Failed to fetch notifications" }, { status: 500 })
+    console.error("Error fetching notifications:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to fetch notifications",
+        error: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { userId, title, message, type = "info" } = body
+
+    if (!userId || !title || !message) {
+      return NextResponse.json({ success: false, message: "User ID, title, and message are required" }, { status: 400 })
+    }
+
+    const { db } = await connectToDatabase()
+    const notification = {
+      userId,
+      title,
+      message,
+      type,
+      read: false,
+      createdAt: new Date(),
+    }
+
+    const result = await db.collection("notifications").insertOne(notification)
+
+    return NextResponse.json({
+      success: true,
+      message: "Notification created successfully",
+      notificationId: result.insertedId,
+    })
+  } catch (error) {
+    console.error("Error creating notification:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to create notification",
+        error: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }
 
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json()
-    const { notificationId, read } = body
+    const { notificationId, read = true } = body
 
-    const db = await getDatabase()
+    if (!notificationId) {
+      return NextResponse.json({ success: false, message: "Notification ID is required" }, { status: 400 })
+    }
 
-    await db.collection("notifications").updateOne({ _id: notificationId }, { $set: { read, updatedAt: new Date() } })
+    const { db } = await connectToDatabase()
+    const result = await db
+      .collection("notifications")
+      .updateOne({ _id: notificationId }, { $set: { read, updatedAt: new Date() } })
+
+    if (result.matchedCount === 0) {
+      return NextResponse.json({ success: false, message: "Notification not found" }, { status: 404 })
+    }
 
     return NextResponse.json({
       success: true,
       message: "Notification updated successfully",
     })
   } catch (error) {
-    console.error("Update notification error:", error)
-    return NextResponse.json({ success: false, message: "Failed to update notification" }, { status: 500 })
-  }
-}
-
-// Mark all notifications as read
-export async function PATCH(request: NextRequest) {
-  try {
-    const body = await request.json()
-    const { userId } = body
-
-    const db = await getDatabase()
-
-    await db
-      .collection("notifications")
-      .updateMany({ userId, read: false }, { $set: { read: true, updatedAt: new Date() } })
-
-    return NextResponse.json({
-      success: true,
-      message: "All notifications marked as read",
-    })
-  } catch (error) {
-    console.error("Mark all notifications read error:", error)
-    return NextResponse.json({ success: false, message: "Failed to update notifications" }, { status: 500 })
-  }
-}
-
-function formatTimeAgo(date: Date): string {
-  const now = new Date()
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
-
-  if (diffInSeconds < 60) {
-    return "Just now"
-  } else if (diffInSeconds < 3600) {
-    const minutes = Math.floor(diffInSeconds / 60)
-    return `${minutes} minute${minutes > 1 ? "s" : ""} ago`
-  } else if (diffInSeconds < 86400) {
-    const hours = Math.floor(diffInSeconds / 3600)
-    return `${hours} hour${hours > 1 ? "s" : ""} ago`
-  } else {
-    const days = Math.floor(diffInSeconds / 86400)
-    return `${days} day${days > 1 ? "s" : ""} ago`
+    console.error("Error updating notification:", error)
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to update notification",
+        error: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
   }
 }
