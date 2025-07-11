@@ -46,26 +46,13 @@ interface Template {
   mediaType?: string
 }
 
-interface RealTemplate {
-  id: string
-  name: string
-  category: string
-  content: string
-  bodyText: string
-  headerText: string
-  footerText: string
-  parametersCount: number
-  hasMedia: boolean
-  mediaType: string | null
-}
-
 export default function WhatsAppPage() {
   const [selectedContacts, setSelectedContacts] = useState<Contact[]>([])
   const [message, setMessage] = useState("")
   const [campaignName, setCampaignName] = useState("")
   const [mediaUrl, setMediaUrl] = useState("")
   const [mediaType, setMediaType] = useState<"image" | "document" | "none">("none")
-  const [selectedTemplate, setSelectedTemplate] = useState<string>("custom")
+  const [selectedTemplate, setSelectedTemplate] = useState<string>("")
   const [templates, setTemplates] = useState<Template[]>([
     {
       id: "1",
@@ -109,46 +96,12 @@ export default function WhatsAppPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [userBalance, setUserBalance] = useState(0)
-  const [realTemplates, setRealTemplates] = useState<RealTemplate[]>([])
-  const [templatesLoading, setTemplatesLoading] = useState(false)
-  const [selectedRealTemplate, setSelectedRealTemplate] = useState<string>("")
 
   // Load user data and campaigns
   useEffect(() => {
     loadUserData()
     loadCampaigns()
   }, [])
-
-  useEffect(() => {
-    fetchRealTemplates()
-  }, [])
-
-  const fetchRealTemplates = async () => {
-    try {
-      setTemplatesLoading(true)
-      const userId = localStorage.getItem("userId")
-      if (!userId) return
-
-      const response = await fetch("/api/whatsapp/fetch-templates", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, forceRefresh: false }),
-      })
-
-      const result = await response.json()
-      if (result.success) {
-        setRealTemplates(result.templates || [])
-        toast.success(`Loaded ${result.templates?.length || 0} approved templates`)
-      } else {
-        toast.error("Failed to fetch templates: " + result.message)
-      }
-    } catch (error) {
-      console.error("Failed to fetch templates:", error)
-      toast.error("Failed to fetch templates")
-    } finally {
-      setTemplatesLoading(false)
-    }
-  }
 
   const loadUserData = async () => {
     try {
@@ -178,7 +131,7 @@ export default function WhatsAppPage() {
 
       if (response.ok) {
         const data = await response.json()
-        console.log("WhatsApp Campaigns data:", data)
+        console.log("WhatsApp Campaigns data:", data) // Debug log
         setCampaigns(data.campaigns || [])
       } else {
         console.error("Failed to fetch WhatsApp campaigns:", response.status)
@@ -203,58 +156,10 @@ export default function WhatsAppPage() {
         setMediaUrl("")
       }
     } else {
-      setSelectedTemplate("custom")
+      setSelectedTemplate("")
       setMediaType("none")
       setMediaUrl("")
     }
-  }
-
-  // Auto-fill the message and media settings when a real template is chosen
-  const handleRealTemplateSelect = (templateId: string) => {
-    setSelectedRealTemplate(templateId)
-
-    // If no template selected, let system create template automatically
-    if (!templateId) {
-      return
-    }
-
-    // Find the chosen template
-    const realTemplate = realTemplates.find((t) => t.id === templateId)
-    if (!realTemplate) return
-
-    // Build a preview message for the user
-    let preview = ""
-
-    if (realTemplate.headerText) {
-      preview += `${realTemplate.headerText}\n\n`
-    }
-
-    if (realTemplate.bodyText) {
-      const body = realTemplate.bodyText
-        .replace(/\{\{1\}\}/g, "[Customer Name]")
-        .replace(/\{\{2\}\}/g, "[Your Message]")
-        .replace(/\{\{3\}\}/g, "[Value]")
-        .replace(/\{\{4\}\}/g, "[Link]")
-        .replace(/\{\{5\}\}/g, "[Date]")
-
-      preview += body
-    }
-
-    if (realTemplate.footerText) {
-      preview += `\n\n${realTemplate.footerText}`
-    }
-
-    setMessage(preview)
-
-    // Apply media requirements automatically
-    if (realTemplate.hasMedia && realTemplate.mediaType) {
-      setMediaType(realTemplate.mediaType as "image" | "document")
-    } else {
-      setMediaType("none")
-      setMediaUrl("")
-    }
-
-    toast.success(`Template "${realTemplate.name}" loaded`)
   }
 
   const calculateCost = () => {
@@ -294,7 +199,6 @@ export default function WhatsAppPage() {
         campaignName,
         mediaUrl: mediaType !== "none" ? mediaUrl.trim() : undefined,
         mediaType: mediaType !== "none" ? mediaType : undefined,
-        selectedTemplateId: selectedRealTemplate || undefined,
         userId,
       }
 
@@ -314,8 +218,7 @@ export default function WhatsAppPage() {
         setCampaignName("")
         setMediaUrl("")
         setMediaType("none")
-        setSelectedTemplate("custom")
-        setSelectedRealTemplate("")
+        setSelectedTemplate("")
         // Reload data
         loadCampaigns()
         loadUserData()
@@ -368,7 +271,7 @@ export default function WhatsAppPage() {
             <p className="text-gray-600 mt-1">Send WhatsApp messages with media support to your contacts</p>
           </div>
           <div className="flex items-center space-x-4">
-            <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-3 py-1">
+            <Badge className="bg-gradient-to-r from-green-500 to-green-600 text-white px-3 py-1">
               Balance: ₹{userBalance.toFixed(2)}
             </Badge>
             <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-3 py-1">
@@ -424,53 +327,6 @@ export default function WhatsAppPage() {
                       onChange={(e) => setCampaignName(e.target.value)}
                       className="border-green-200 focus:border-green-400 focus:ring-green-400"
                     />
-                  </div>
-
-                  {/* Real Template Selection */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label>WhatsApp Templates (From Your Account)</Label>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={fetchRealTemplates}
-                        disabled={templatesLoading}
-                      >
-                        {templatesLoading ? "Loading..." : "Refresh Templates"}
-                      </Button>
-                    </div>
-                    <Select value={selectedRealTemplate} onValueChange={handleRealTemplateSelect}>
-                      <SelectTrigger className="border-green-200">
-                        <SelectValue placeholder="Choose from your approved templates (optional)" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {realTemplates.map((template) => (
-                          <SelectItem key={template.id} value={template.id}>
-                            <div className="flex flex-col">
-                              <span>{template.name}</span>
-                              <span className="text-xs text-gray-500">
-                                {template.category} • {template.parametersCount} params
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {realTemplates.length === 0 && !templatesLoading && (
-                      <p className="text-xs text-blue-500">
-                        No approved templates found. System will create and approve template automatically when you
-                        send.
-                      </p>
-                    )}
-                    {selectedRealTemplate && (
-                      <p className="text-xs text-green-600">✅ Template selected! Message auto-filled below.</p>
-                    )}
-                    {!selectedRealTemplate && realTemplates.length > 0 && (
-                      <p className="text-xs text-blue-600">
-                        💡 No template selected. System will create template automatically from your message.
-                      </p>
-                    )}
                   </div>
 
                   {/* Template Selection */}
@@ -547,7 +403,7 @@ export default function WhatsAppPage() {
                     <Label htmlFor="message">WhatsApp Message</Label>
                     <Textarea
                       id="message"
-                      placeholder="Enter your WhatsApp message here or select a template above..."
+                      placeholder="Enter your WhatsApp message here..."
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
                       rows={6}
@@ -557,11 +413,6 @@ export default function WhatsAppPage() {
                       <span>Characters: {message.length}</span>
                       <span>Supports emojis, *bold*, _italic_, ~strikethrough~</span>
                     </div>
-                    {selectedRealTemplate && (
-                      <p className="text-xs text-blue-600">
-                        💡 Template parameters like {"{{1}}"}, {"{{2}}"} will be automatically filled when sending.
-                      </p>
-                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -633,7 +484,7 @@ export default function WhatsAppPage() {
                   <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                     <p className="text-sm text-yellow-800">
                       {selectedContacts.length === 0 && "Please select at least one recipient."}
-                      {message.trim() === "" && "Please enter a WhatsApp message or select a template."}
+                      {message.trim() === "" && "Please enter a WhatsApp message."}
                       {campaignName.trim() === "" && "Please enter a campaign name."}
                       {mediaType !== "none" && mediaUrl.trim() === "" && "Please enter a media URL."}
                       {userBalance < calculateCost() && "Insufficient balance for this campaign."}
