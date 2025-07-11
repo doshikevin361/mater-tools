@@ -4,36 +4,46 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const to = formData.get("To") as string
-    const from = formData.get("From") as string
+    const from = process.env.TWILIO_PHONE_NUMBER
 
-    console.log(`Outgoing call from ${from} to ${to}`)
+    if (!from) {
+      console.error("TWILIO_PHONE_NUMBER not configured")
+      return new NextResponse(
+        `<?xml version="1.0" encoding="UTF-8"?>
+        <Response>
+          <Say>Sorry, calling service is not configured properly.</Say>
+        </Response>`,
+        {
+          headers: { "Content-Type": "text/xml" },
+          status: 500,
+        },
+      )
+    }
 
-    // Create TwiML response for outgoing call
+    console.log(`TwiML App: Making call from ${from} to ${to}`)
+
+    // Generate TwiML for outgoing call
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-    <Dial callerId="${process.env.TWILIO_PHONE_NUMBER || from}" record="record-from-ringing-dual" recordingStatusCallback="/api/calling/recording-webhook">
+    <Response>
+      <Dial callerId="${from}" record="record-from-answer" recordingStatusCallback="/api/calling/recording-webhook">
         <Number>${to}</Number>
-    </Dial>
-</Response>`
+      </Dial>
+    </Response>`
 
     return new NextResponse(twiml, {
-      headers: {
-        "Content-Type": "text/xml",
-      },
+      headers: { "Content-Type": "text/xml" },
     })
   } catch (error) {
-    console.error("Error generating TwiML:", error)
-
-    const errorTwiml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-    <Say>Sorry, there was an error processing your call. Please try again.</Say>
-</Response>`
-
-    return new NextResponse(errorTwiml, {
-      headers: {
-        "Content-Type": "text/xml",
+    console.error("Error in TwiML app:", error)
+    return new NextResponse(
+      `<?xml version="1.0" encoding="UTF-8"?>
+      <Response>
+        <Say>Sorry, there was an error processing your call.</Say>
+      </Response>`,
+      {
+        headers: { "Content-Type": "text/xml" },
+        status: 500,
       },
-      status: 500,
-    })
+    )
   }
 }

@@ -9,7 +9,12 @@ export async function POST(request: NextRequest) {
     const recordingSid = formData.get("RecordingSid") as string
     const recordingDuration = formData.get("RecordingDuration") as string
 
-    console.log(`Recording webhook: ${callSid} - Recording: ${recordingSid}`)
+    console.log("Recording webhook received:", {
+      callSid,
+      recordingUrl,
+      recordingSid,
+      recordingDuration,
+    })
 
     // Update call record with recording information
     const { db } = await connectToDatabase()
@@ -20,7 +25,7 @@ export async function POST(request: NextRequest) {
         $set: {
           recordingUrl: recordingUrl,
           recordingSid: recordingSid,
-          recordingDuration: recordingDuration ? Number.parseInt(recordingDuration) : 0,
+          recordingDuration: Number.parseInt(recordingDuration) || 0,
           hasRecording: true,
           updatedAt: new Date(),
         },

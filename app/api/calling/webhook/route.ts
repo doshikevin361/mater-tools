@@ -12,7 +12,6 @@ export async function POST(request: NextRequest) {
 
     console.log(`Call webhook: ${callSid} - Status: ${callStatus}`)
 
-    // Update call record in database
     const { db } = await connectToDatabase()
 
     const updateData: any = {

@@ -5,19 +5,21 @@ export async function GET(request: NextRequest) {
   try {
     const { db } = await connectToDatabase()
 
-    // Get call history from database
+    // Fetch recent calls from database
     const calls = await db.collection("calls").find({}).sort({ timestamp: -1 }).limit(50).toArray()
 
     // Format calls for frontend
     const formattedCalls = calls.map((call) => ({
       id: call._id.toString(),
-      phoneNumber: call.phoneNumber,
+      phoneNumber: call.phoneNumber || call.originalNumber,
       duration: call.duration || 0,
       status: call.status === "completed" ? "completed" : call.status === "failed" ? "failed" : "completed",
       cost: call.cost || 0,
       recordingUrl: call.recordingUrl,
+      transcript: call.transcript,
       timestamp: call.timestamp,
       type: call.type || "browser_call",
+      callSid: call.callSid,
     }))
 
     return NextResponse.json({
