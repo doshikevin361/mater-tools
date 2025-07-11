@@ -23,6 +23,10 @@ import {
   Instagram,
   Twitter,
   Youtube,
+  Users,
+  TrendingUp,
+  Award,
+  Sparkles,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -62,46 +66,52 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-violet-50 via-purple-50 to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
       {/* Animated Background Elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-cyan-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-br from-violet-400/10 to-purple-400/10 rounded-full blur-3xl animate-pulse delay-500"></div>
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-purple-500/30 to-pink-500/30 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-blue-500/30 to-cyan-500/30 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-br from-violet-500/20 to-purple-500/20 rounded-full blur-3xl animate-pulse delay-500"></div>
+
+        {/* Grid Pattern */}
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZ2JhKDI1NSwgMjU1LCAyNTUsIDAuMDUpIiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-20"></div>
       </div>
 
       {/* Navigation */}
-      <nav className="relative z-10 bg-white/80 backdrop-blur-md border-b border-white/20 sticky top-0">
+      <nav className="relative z-10 bg-black/20 backdrop-blur-xl border-b border-white/10 sticky top-0">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-violet-600 to-purple-600 rounded-lg flex items-center justify-center">
-                <MessageSquare className="h-5 w-5 text-white" />
+            <div className="flex items-center space-x-3">
+              <div className="relative group">
+                <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
+                <div className="relative w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center">
+                  <MessageSquare className="h-5 w-5 text-purple-400" />
+                </div>
               </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
+              <span className="text-xl font-bold bg-gradient-to-r from-white to-purple-200 bg-clip-text text-transparent">
                 BrandBuzz Ventures
               </span>
             </div>
             <div className="hidden md:flex items-center space-x-8">
-              <a href="#features" className="text-gray-600 hover:text-violet-600 transition-colors">
+              <a href="#features" className="text-slate-300 hover:text-white transition-colors">
                 Features
               </a>
-              <a href="#pricing" className="text-gray-600 hover:text-violet-600 transition-colors">
+              <a href="#pricing" className="text-slate-300 hover:text-white transition-colors">
                 Pricing
               </a>
-              <a href="#contact" className="text-gray-600 hover:text-violet-600 transition-colors">
+              <a href="#contact" className="text-slate-300 hover:text-white transition-colors">
                 Contact
               </a>
               <Link href="/login">
                 <Button
                   variant="outline"
-                  className="border-violet-200 text-violet-600 hover:bg-violet-50 bg-transparent"
+                  className="border-purple-500/50 text-purple-300 hover:bg-purple-500/20 bg-transparent backdrop-blur-sm"
                 >
                   Login
                 </Button>
               </Link>
               <Link href="/signup">
-                <Button className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-lg">
+                <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all">
                   Get Started
                 </Button>
               </Link>
@@ -114,22 +124,27 @@ export default function HomePage() {
       <section className="relative z-10 pt-20 pb-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="max-w-4xl mx-auto">
-            <Badge className="mb-6 bg-gradient-to-r from-violet-100 to-purple-100 text-violet-700 border-violet-200">
-              🚀 Multi-Channel Marketing Platform
+            <Badge className="mb-6 bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-200 border-purple-500/30 backdrop-blur-sm">
+              🚀 Next-Gen Marketing Platform
             </Badge>
-            <h1 className="text-5xl md:text-7xl font-bold mb-8 bg-gradient-to-r from-violet-600 via-purple-600 to-blue-600 bg-clip-text text-transparent leading-tight">
-              Amplify Your Brand with
-              <span className="block">BrandBuzz Ventures</span>
+            <h1 className="text-5xl md:text-7xl font-bold mb-8 leading-tight">
+              <span className="bg-gradient-to-r from-white via-purple-200 to-pink-200 bg-clip-text text-transparent">
+                Transform Your Brand with
+              </span>
+              <br />
+              <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent animate-gradient-x">
+                BrandBuzz Ventures
+              </span>
             </h1>
-            <p className="text-xl md:text-2xl text-gray-600 mb-12 leading-relaxed">
-              Reach your audience across WhatsApp, SMS, Email, Voice calls, and social media platforms. One powerful
-              dashboard to manage all your marketing campaigns.
+            <p className="text-xl md:text-2xl text-slate-300 mb-12 leading-relaxed max-w-3xl mx-auto">
+              Revolutionize your marketing with AI-powered campaigns across WhatsApp, SMS, Email, Voice calls, and
+              social media. One unified platform for unlimited growth.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
               <Link href="/signup">
                 <Button
                   size="lg"
-                  className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-8 py-4 text-lg shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-200"
+                  className="bg-gradient-to-r from-purple-600 via-purple-600 to-pink-600 hover:from-purple-700 hover:via-purple-700 hover:to-pink-700 text-white px-8 py-4 text-lg shadow-2xl hover:shadow-purple-500/25 transform hover:scale-105 transition-all duration-300"
                 >
                   Start Free Trial
                   <ArrowRight className="ml-2 h-5 w-5" />
@@ -138,7 +153,7 @@ export default function HomePage() {
               <Button
                 size="lg"
                 variant="outline"
-                className="border-violet-200 text-violet-600 hover:bg-violet-50 px-8 py-4 text-lg bg-transparent"
+                className="border-purple-500/50 text-purple-300 hover:bg-purple-500/20 px-8 py-4 text-lg bg-transparent backdrop-blur-sm"
               >
                 <Play className="mr-2 h-5 w-5" />
                 Watch Demo
@@ -146,17 +161,17 @@ export default function HomePage() {
             </div>
 
             {/* Trust Indicators */}
-            <div className="flex flex-wrap justify-center items-center gap-8 text-sm text-gray-500">
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="h-4 w-4 text-green-500" />
-                <span>10,000+ Active Users</span>
+            <div className="flex flex-wrap justify-center items-center gap-8 text-sm text-slate-400">
+              <div className="flex items-center space-x-2 bg-white/5 backdrop-blur-sm rounded-full px-4 py-2 border border-white/10">
+                <Users className="h-4 w-4 text-green-400" />
+                <span>50,000+ Active Users</span>
               </div>
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="h-4 w-4 text-green-500" />
+              <div className="flex items-center space-x-2 bg-white/5 backdrop-blur-sm rounded-full px-4 py-2 border border-white/10">
+                <TrendingUp className="h-4 w-4 text-blue-400" />
                 <span>99.9% Uptime</span>
               </div>
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="h-4 w-4 text-green-500" />
+              <div className="flex items-center space-x-2 bg-white/5 backdrop-blur-sm rounded-full px-4 py-2 border border-white/10">
+                <Award className="h-4 w-4 text-purple-400" />
                 <span>24/7 Support</span>
               </div>
             </div>
@@ -165,191 +180,195 @@ export default function HomePage() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="relative z-10 py-24 bg-white/50 backdrop-blur-sm">
+      <section id="features" className="relative z-10 py-24 bg-black/20 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-20">
-            <Badge className="mb-4 bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-700 border-blue-200">
+            <Badge className="mb-4 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 text-blue-200 border-blue-500/30 backdrop-blur-sm">
               ✨ Powerful Features
             </Badge>
-            <h2 className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-violet-600 to-blue-600 bg-clip-text text-transparent">
-              Everything You Need to Succeed
+            <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white">
+              Everything You Need to
+              <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                {" "}
+                Succeed
+              </span>
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-xl text-slate-300 max-w-3xl mx-auto">
               Comprehensive marketing tools designed to help you reach, engage, and convert your audience across
-              multiple channels.
+              multiple channels with AI-powered intelligence.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {/* WhatsApp Marketing */}
-            <Card className="group hover:shadow-2xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm hover:scale-105">
+            <Card className="group hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 border-white/10 bg-white/5 backdrop-blur-sm hover:scale-105 hover:bg-white/10">
               <CardHeader>
                 <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                   <MessageSquare className="h-6 w-6 text-white" />
                 </div>
-                <CardTitle className="text-xl font-bold text-gray-800">WhatsApp Marketing</CardTitle>
-                <CardDescription className="text-gray-600">
-                  Send bulk WhatsApp messages with rich media support and template management.
+                <CardTitle className="text-xl font-bold text-white">WhatsApp Marketing</CardTitle>
+                <CardDescription className="text-slate-300">
+                  Send bulk WhatsApp messages with rich media support and intelligent template management.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-2 text-sm text-gray-600">
+                <ul className="space-y-2 text-sm text-slate-400">
                   <li className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span>Bulk messaging</span>
+                    <CheckCircle className="h-4 w-4 text-green-400" />
+                    <span>Bulk messaging with AI optimization</span>
                   </li>
                   <li className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span>Media attachments</span>
+                    <CheckCircle className="h-4 w-4 text-green-400" />
+                    <span>Rich media attachments</span>
                   </li>
                   <li className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span>Template management</span>
+                    <CheckCircle className="h-4 w-4 text-green-400" />
+                    <span>Smart template management</span>
                   </li>
                 </ul>
               </CardContent>
             </Card>
 
             {/* Email Marketing */}
-            <Card className="group hover:shadow-2xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm hover:scale-105">
+            <Card className="group hover:shadow-2xl hover:shadow-blue-500/20 transition-all duration-500 border-white/10 bg-white/5 backdrop-blur-sm hover:scale-105 hover:bg-white/10">
               <CardHeader>
                 <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                   <Mail className="h-6 w-6 text-white" />
                 </div>
-                <CardTitle className="text-xl font-bold text-gray-800">Email Campaigns</CardTitle>
-                <CardDescription className="text-gray-600">
-                  Create beautiful email campaigns with drag-and-drop editor and automation.
+                <CardTitle className="text-xl font-bold text-white">Email Campaigns</CardTitle>
+                <CardDescription className="text-slate-300">
+                  Create stunning email campaigns with AI-powered content and advanced automation.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-2 text-sm text-gray-600">
+                <ul className="space-y-2 text-sm text-slate-400">
                   <li className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span>Rich text editor</span>
+                    <CheckCircle className="h-4 w-4 text-green-400" />
+                    <span>AI-powered content creation</span>
                   </li>
                   <li className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span>Email automation</span>
+                    <CheckCircle className="h-4 w-4 text-green-400" />
+                    <span>Advanced automation flows</span>
                   </li>
                   <li className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span>A/B testing</span>
+                    <CheckCircle className="h-4 w-4 text-green-400" />
+                    <span>Smart A/B testing</span>
                   </li>
                 </ul>
               </CardContent>
             </Card>
 
             {/* SMS Marketing */}
-            <Card className="group hover:shadow-2xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm hover:scale-105">
+            <Card className="group hover:shadow-2xl hover:shadow-purple-500/20 transition-all duration-500 border-white/10 bg-white/5 backdrop-blur-sm hover:scale-105 hover:bg-white/10">
               <CardHeader>
                 <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                   <Smartphone className="h-6 w-6 text-white" />
                 </div>
-                <CardTitle className="text-xl font-bold text-gray-800">SMS Marketing</CardTitle>
-                <CardDescription className="text-gray-600">
-                  Reach customers instantly with personalized SMS campaigns and notifications.
+                <CardTitle className="text-xl font-bold text-white">SMS Marketing</CardTitle>
+                <CardDescription className="text-slate-300">
+                  Reach customers instantly with personalized SMS campaigns and real-time notifications.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-2 text-sm text-gray-600">
+                <ul className="space-y-2 text-sm text-slate-400">
                   <li className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span>Instant delivery</span>
+                    <CheckCircle className="h-4 w-4 text-green-400" />
+                    <span>Lightning-fast delivery</span>
                   </li>
                   <li className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span>Personalization</span>
+                    <CheckCircle className="h-4 w-4 text-green-400" />
+                    <span>Smart personalization</span>
                   </li>
                   <li className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span>Delivery reports</span>
+                    <CheckCircle className="h-4 w-4 text-green-400" />
+                    <span>Real-time analytics</span>
                   </li>
                 </ul>
               </CardContent>
             </Card>
 
             {/* Voice Campaigns */}
-            <Card className="group hover:shadow-2xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm hover:scale-105">
+            <Card className="group hover:shadow-2xl hover:shadow-orange-500/20 transition-all duration-500 border-white/10 bg-white/5 backdrop-blur-sm hover:scale-105 hover:bg-white/10">
               <CardHeader>
                 <div className="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                   <HeadphonesIcon className="h-6 w-6 text-white" />
                 </div>
-                <CardTitle className="text-xl font-bold text-gray-800">Voice Campaigns</CardTitle>
-                <CardDescription className="text-gray-600">
-                  Create voice campaigns with custom audio messages and text-to-speech.
+                <CardTitle className="text-xl font-bold text-white">Voice Campaigns</CardTitle>
+                <CardDescription className="text-slate-300">
+                  Create powerful voice campaigns with AI-generated speech and interactive responses.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-2 text-sm text-gray-600">
+                <ul className="space-y-2 text-sm text-slate-400">
                   <li className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span>Custom audio</span>
+                    <CheckCircle className="h-4 w-4 text-green-400" />
+                    <span>AI voice generation</span>
                   </li>
                   <li className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span>Text-to-speech</span>
+                    <CheckCircle className="h-4 w-4 text-green-400" />
+                    <span>Interactive voice responses</span>
                   </li>
                   <li className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span>Call analytics</span>
+                    <CheckCircle className="h-4 w-4 text-green-400" />
+                    <span>Advanced call analytics</span>
                   </li>
                 </ul>
               </CardContent>
             </Card>
 
             {/* Social Media */}
-            <Card className="group hover:shadow-2xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm hover:scale-105">
+            <Card className="group hover:shadow-2xl hover:shadow-pink-500/20 transition-all duration-500 border-white/10 bg-white/5 backdrop-blur-sm hover:scale-105 hover:bg-white/10">
               <CardHeader>
                 <div className="w-12 h-12 bg-gradient-to-br from-pink-500 to-rose-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                   <Globe className="h-6 w-6 text-white" />
                 </div>
-                <CardTitle className="text-xl font-bold text-gray-800">Social Media</CardTitle>
-                <CardDescription className="text-gray-600">
-                  Manage Facebook, Instagram, Twitter, and YouTube campaigns from one dashboard.
+                <CardTitle className="text-xl font-bold text-white">Social Media</CardTitle>
+                <CardDescription className="text-slate-300">
+                  Manage all social platforms with AI-powered content creation and scheduling.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-2 text-sm text-gray-600">
+                <ul className="space-y-2 text-sm text-slate-400">
                   <li className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span>Multi-platform</span>
+                    <CheckCircle className="h-4 w-4 text-green-400" />
+                    <span>Multi-platform management</span>
                   </li>
                   <li className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span>Content scheduling</span>
+                    <CheckCircle className="h-4 w-4 text-green-400" />
+                    <span>AI content generation</span>
                   </li>
                   <li className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span>Engagement tracking</span>
+                    <CheckCircle className="h-4 w-4 text-green-400" />
+                    <span>Smart scheduling</span>
                   </li>
                 </ul>
               </CardContent>
             </Card>
 
             {/* Analytics */}
-            <Card className="group hover:shadow-2xl transition-all duration-300 border-0 bg-white/80 backdrop-blur-sm hover:scale-105">
+            <Card className="group hover:shadow-2xl hover:shadow-indigo-500/20 transition-all duration-500 border-white/10 bg-white/5 backdrop-blur-sm hover:scale-105 hover:bg-white/10">
               <CardHeader>
                 <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                   <BarChart3 className="h-6 w-6 text-white" />
                 </div>
-                <CardTitle className="text-xl font-bold text-gray-800">Advanced Analytics</CardTitle>
-                <CardDescription className="text-gray-600">
-                  Track performance across all channels with detailed reports and insights.
+                <CardTitle className="text-xl font-bold text-white">AI Analytics</CardTitle>
+                <CardDescription className="text-slate-300">
+                  Get deep insights with AI-powered analytics and predictive performance metrics.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-2 text-sm text-gray-600">
+                <ul className="space-y-2 text-sm text-slate-400">
                   <li className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span>Real-time data</span>
+                    <CheckCircle className="h-4 w-4 text-green-400" />
+                    <span>Predictive analytics</span>
                   </li>
                   <li className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span>Custom reports</span>
+                    <CheckCircle className="h-4 w-4 text-green-400" />
+                    <span>AI-powered insights</span>
                   </li>
                   <li className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    <span>ROI tracking</span>
+                    <CheckCircle className="h-4 w-4 text-green-400" />
+                    <span>ROI optimization</span>
                   </li>
                 </ul>
               </CardContent>
@@ -362,161 +381,169 @@ export default function HomePage() {
       <section className="relative z-10 py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div className="text-center">
-              <div className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent mb-2">
+            <div className="text-center group">
+              <div className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent mb-2 group-hover:scale-110 transition-transform">
                 10M+
               </div>
-              <div className="text-gray-600">Messages Sent</div>
+              <div className="text-slate-300">Messages Delivered</div>
             </div>
-            <div className="text-center">
-              <div className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-2">
+            <div className="text-center group">
+              <div className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent mb-2 group-hover:scale-110 transition-transform">
                 50K+
               </div>
-              <div className="text-gray-600">Active Users</div>
+              <div className="text-slate-300">Happy Customers</div>
             </div>
-            <div className="text-center">
-              <div className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-2">
+            <div className="text-center group">
+              <div className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-green-400 to-emerald-400 bg-clip-text text-transparent mb-2 group-hover:scale-110 transition-transform">
                 99.9%
               </div>
-              <div className="text-gray-600">Uptime</div>
+              <div className="text-slate-300">Uptime Guarantee</div>
             </div>
-            <div className="text-center">
-              <div className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-2">
+            <div className="text-center group">
+              <div className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-orange-400 to-red-400 bg-clip-text text-transparent mb-2 group-hover:scale-110 transition-transform">
                 24/7
               </div>
-              <div className="text-gray-600">Support</div>
+              <div className="text-slate-300">Expert Support</div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="relative z-10 py-24 bg-white/50 backdrop-blur-sm">
+      <section id="pricing" className="relative z-10 py-24 bg-black/20 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-20">
-            <Badge className="mb-4 bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 border-green-200">
-              💰 Simple Pricing
+            <Badge className="mb-4 bg-gradient-to-r from-green-500/20 to-emerald-500/20 text-green-200 border-green-500/30 backdrop-blur-sm">
+              💰 Transparent Pricing
             </Badge>
-            <h2 className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-violet-600 to-blue-600 bg-clip-text text-transparent">
-              Choose Your Plan
+            <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white">
+              Choose Your
+              <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                {" "}
+                Growth Plan
+              </span>
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Flexible pricing options to suit businesses of all sizes. Start free and scale as you grow.
+            <p className="text-xl text-slate-300 max-w-3xl mx-auto">
+              Flexible pricing designed to scale with your business. Start free and upgrade as you grow.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             {/* Starter Plan */}
-            <Card className="border-2 border-gray-200 hover:border-violet-300 transition-all duration-300 bg-white/80 backdrop-blur-sm">
+            <Card className="border-white/20 hover:border-purple-500/50 transition-all duration-300 bg-white/5 backdrop-blur-sm hover:scale-105 hover:bg-white/10">
               <CardHeader className="text-center pb-8">
-                <CardTitle className="text-2xl font-bold text-gray-800">Starter</CardTitle>
-                <div className="text-4xl font-bold text-gray-900 mt-4">₹999</div>
-                <div className="text-gray-600">/month</div>
-                <CardDescription className="mt-4">Perfect for small businesses getting started</CardDescription>
+                <CardTitle className="text-2xl font-bold text-white">Starter</CardTitle>
+                <div className="text-4xl font-bold text-white mt-4">₹999</div>
+                <div className="text-slate-400">/month</div>
+                <CardDescription className="mt-4 text-slate-300">
+                  Perfect for small businesses getting started
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center space-x-3">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  <span>1,000 WhatsApp messages</span>
+                  <CheckCircle className="h-5 w-5 text-green-400" />
+                  <span className="text-slate-300">1,000 WhatsApp messages</span>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  <span>5,000 SMS messages</span>
+                  <CheckCircle className="h-5 w-5 text-green-400" />
+                  <span className="text-slate-300">5,000 SMS messages</span>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  <span>10,000 emails</span>
+                  <CheckCircle className="h-5 w-5 text-green-400" />
+                  <span className="text-slate-300">10,000 emails</span>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  <span>Basic analytics</span>
+                  <CheckCircle className="h-5 w-5 text-green-400" />
+                  <span className="text-slate-300">Basic analytics</span>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  <span>Email support</span>
+                  <CheckCircle className="h-5 w-5 text-green-400" />
+                  <span className="text-slate-300">Email support</span>
                 </div>
-                <Button className="w-full mt-8 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700">
+                <Button className="w-full mt-8 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white">
                   Get Started
                 </Button>
               </CardContent>
             </Card>
 
             {/* Professional Plan */}
-            <Card className="border-2 border-violet-300 hover:border-violet-400 transition-all duration-300 bg-white/80 backdrop-blur-sm relative">
+            <Card className="border-purple-500/50 hover:border-purple-400/70 transition-all duration-300 bg-white/10 backdrop-blur-sm relative hover:scale-105 hover:bg-white/15">
               <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                <Badge className="bg-gradient-to-r from-violet-600 to-purple-600 text-white px-4 py-1">
+                <Badge className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-1">
                   Most Popular
                 </Badge>
               </div>
               <CardHeader className="text-center pb-8">
-                <CardTitle className="text-2xl font-bold text-gray-800">Professional</CardTitle>
-                <div className="text-4xl font-bold text-gray-900 mt-4">₹2,999</div>
-                <div className="text-gray-600">/month</div>
-                <CardDescription className="mt-4">Ideal for growing businesses</CardDescription>
+                <CardTitle className="text-2xl font-bold text-white">Professional</CardTitle>
+                <div className="text-4xl font-bold text-white mt-4">₹2,999</div>
+                <div className="text-slate-400">/month</div>
+                <CardDescription className="mt-4 text-slate-300">Ideal for growing businesses</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center space-x-3">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  <span>10,000 WhatsApp messages</span>
+                  <CheckCircle className="h-5 w-5 text-green-400" />
+                  <span className="text-slate-300">10,000 WhatsApp messages</span>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  <span>25,000 SMS messages</span>
+                  <CheckCircle className="h-5 w-5 text-green-400" />
+                  <span className="text-slate-300">25,000 SMS messages</span>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  <span>50,000 emails</span>
+                  <CheckCircle className="h-5 w-5 text-green-400" />
+                  <span className="text-slate-300">50,000 emails</span>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  <span>Voice campaigns</span>
+                  <CheckCircle className="h-5 w-5 text-green-400" />
+                  <span className="text-slate-300">Voice campaigns</span>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  <span>Advanced analytics</span>
+                  <CheckCircle className="h-5 w-5 text-green-400" />
+                  <span className="text-slate-300">AI-powered analytics</span>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  <span>Priority support</span>
+                  <CheckCircle className="h-5 w-5 text-green-400" />
+                  <span className="text-slate-300">Priority support</span>
                 </div>
-                <Button className="w-full mt-8 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700">
+                <Button className="w-full mt-8 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white">
                   Get Started
                 </Button>
               </CardContent>
             </Card>
 
             {/* Enterprise Plan */}
-            <Card className="border-2 border-gray-200 hover:border-violet-300 transition-all duration-300 bg-white/80 backdrop-blur-sm">
+            <Card className="border-white/20 hover:border-purple-500/50 transition-all duration-300 bg-white/5 backdrop-blur-sm hover:scale-105 hover:bg-white/10">
               <CardHeader className="text-center pb-8">
-                <CardTitle className="text-2xl font-bold text-gray-800">Enterprise</CardTitle>
-                <div className="text-4xl font-bold text-gray-900 mt-4">Custom</div>
-                <div className="text-gray-600">pricing</div>
-                <CardDescription className="mt-4">For large organizations with custom needs</CardDescription>
+                <CardTitle className="text-2xl font-bold text-white">Enterprise</CardTitle>
+                <div className="text-4xl font-bold text-white mt-4">Custom</div>
+                <div className="text-slate-400">pricing</div>
+                <CardDescription className="mt-4 text-slate-300">
+                  For large organizations with custom needs
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center space-x-3">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  <span>Unlimited messages</span>
+                  <CheckCircle className="h-5 w-5 text-green-400" />
+                  <span className="text-slate-300">Unlimited messages</span>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  <span>All channels included</span>
+                  <CheckCircle className="h-5 w-5 text-green-400" />
+                  <span className="text-slate-300">All channels included</span>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  <span>Custom integrations</span>
+                  <CheckCircle className="h-5 w-5 text-green-400" />
+                  <span className="text-slate-300">Custom integrations</span>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  <span>Dedicated support</span>
+                  <CheckCircle className="h-5 w-5 text-green-400" />
+                  <span className="text-slate-300">Dedicated support</span>
                 </div>
                 <div className="flex items-center space-x-3">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  <span>SLA guarantee</span>
+                  <CheckCircle className="h-5 w-5 text-green-400" />
+                  <span className="text-slate-300">SLA guarantee</span>
                 </div>
                 <Button
                   variant="outline"
-                  className="w-full mt-8 border-violet-200 text-violet-600 hover:bg-violet-50 bg-transparent"
+                  className="w-full mt-8 border-purple-500/50 text-purple-300 hover:bg-purple-500/20 bg-transparent backdrop-blur-sm"
                 >
                   Contact Sales
                 </Button>
@@ -529,12 +556,13 @@ export default function HomePage() {
       {/* Newsletter Section */}
       <section className="relative z-10 py-24">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="bg-gradient-to-r from-violet-600 to-purple-600 rounded-3xl p-12 text-white relative overflow-hidden">
-            <div className="absolute inset-0 bg-[url(%27data:image/svg+xml,%3Csvg width=%2260%27 height=%2760%27 viewBox=%270 0 60 60%27 xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cg fill=%27none%27 fillRule=%27evenodd%27%3E%3Cg fill=%27%23ffffff%27 fillOpacity=%270.1%27%3E%3Ccircle cx=%277%27 cy=%277%27 r=%274%27/%3E%3C/g%3E%3C/g%3E%3C/svg%3E%27)] opacity-20"></div>
+          <div className="relative bg-gradient-to-r from-purple-600/20 via-pink-600/20 to-purple-600/20 rounded-3xl p-12 backdrop-blur-xl border border-white/10 overflow-hidden">
+            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJyZ2JhKDI1NSwgMjU1LCAyNTUsIDAuMDUpIiBzdHJva2Utd2lkdGg9IjEiLz48L3BhdHRlcm4+PC9kZWZzPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9InVybCgjZ3JpZCkiLz48L3N2Zz4=')] opacity-30"></div>
             <div className="relative z-10">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">Stay Updated with BrandBuzz Ventures</h2>
-              <p className="text-xl mb-8 text-violet-100">
-                Get the latest marketing tips, feature updates, and industry insights delivered to your inbox.
+              <Sparkles className="h-12 w-12 text-purple-400 mx-auto mb-6" />
+              <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">Stay Ahead of the Curve</h2>
+              <p className="text-xl mb-8 text-slate-300">
+                Get exclusive marketing insights, feature updates, and growth strategies delivered to your inbox.
               </p>
               <form onSubmit={handleNewsletterSubmit} className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
                 <Input
@@ -543,12 +571,12 @@ export default function HomePage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="flex-1 bg-white/20 border-white/30 text-white placeholder:text-violet-200"
+                  className="flex-1 bg-white/10 border-white/20 text-white placeholder:text-slate-400 backdrop-blur-sm focus:border-purple-400"
                 />
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="bg-white text-violet-600 hover:bg-violet-50 font-semibold"
+                  className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold"
                 >
                   {isSubmitting ? "Subscribing..." : "Subscribe"}
                 </Button>
@@ -559,48 +587,70 @@ export default function HomePage() {
       </section>
 
       {/* Contact Section */}
-      <section id="contact" className="relative z-10 py-24 bg-white/50 backdrop-blur-sm">
+      <section id="contact" className="relative z-10 py-24 bg-black/20 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-20">
-            <Badge className="mb-4 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 border-purple-200">
+            <Badge className="mb-4 bg-gradient-to-r from-purple-500/20 to-pink-500/20 text-purple-200 border-purple-500/30 backdrop-blur-sm">
               📞 Get in Touch
             </Badge>
-            <h2 className="text-4xl md:text-5xl font-bold mb-6 bg-gradient-to-r from-violet-600 to-blue-600 bg-clip-text text-transparent">
-              Ready to Get Started?
+            <h2 className="text-4xl md:text-5xl font-bold mb-6 text-white">
+              Ready to Transform
+              <span className="bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                {" "}
+                Your Marketing?
+              </span>
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Have questions? We're here to help. Contact our team and we'll get back to you within 24 hours.
+            <p className="text-xl text-slate-300 max-w-3xl mx-auto">
+              Have questions? Our expert team is here to help you succeed. Get in touch and we'll respond within 24
+              hours.
             </p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 max-w-6xl mx-auto">
             {/* Contact Form */}
-            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+            <Card className="bg-white/5 backdrop-blur-xl border-white/10 shadow-2xl">
               <CardHeader>
-                <CardTitle className="text-2xl font-bold text-gray-800">Send us a Message</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-2xl font-bold text-white">Send us a Message</CardTitle>
+                <CardDescription className="text-slate-300">
                   Fill out the form below and we'll get back to you as soon as possible.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleContactSubmit} className="space-y-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <Input placeholder="First Name" required />
-                    <Input placeholder="Last Name" required />
+                    <Input
+                      placeholder="First Name"
+                      required
+                      className="bg-white/10 border-white/20 text-white placeholder:text-slate-400"
+                    />
+                    <Input
+                      placeholder="Last Name"
+                      required
+                      className="bg-white/10 border-white/20 text-white placeholder:text-slate-400"
+                    />
                   </div>
-                  <Input type="email" placeholder="Email Address" required />
-                  <Input placeholder="Company Name" />
+                  <Input
+                    type="email"
+                    placeholder="Email Address"
+                    required
+                    className="bg-white/10 border-white/20 text-white placeholder:text-slate-400"
+                  />
+                  <Input
+                    placeholder="Company Name"
+                    className="bg-white/10 border-white/20 text-white placeholder:text-slate-400"
+                  />
                   <Textarea
                     placeholder="Tell us about your marketing needs..."
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     required
                     rows={4}
+                    className="bg-white/10 border-white/20 text-white placeholder:text-slate-400"
                   />
                   <Button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700"
+                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
                   >
                     {isSubmitting ? "Sending..." : "Send Message"}
                   </Button>
@@ -610,43 +660,43 @@ export default function HomePage() {
 
             {/* Contact Info */}
             <div className="space-y-8">
-              <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+              <Card className="bg-white/5 backdrop-blur-xl border-white/10 shadow-2xl hover:bg-white/10 transition-all">
                 <CardContent className="p-6">
                   <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-purple-500 rounded-xl flex items-center justify-center">
+                    <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
                       <Mail className="h-6 w-6 text-white" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-800">Email Us</h3>
-                      <p className="text-gray-600">support@brandbuzzventures.com</p>
+                      <h3 className="font-semibold text-white">Email Us</h3>
+                      <p className="text-slate-300">support@brandbuzzventures.com</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+              <Card className="bg-white/5 backdrop-blur-xl border-white/10 shadow-2xl hover:bg-white/10 transition-all">
                 <CardContent className="p-6">
                   <div className="flex items-center space-x-4">
                     <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
                       <Phone className="h-6 w-6 text-white" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-800">Call Us</h3>
-                      <p className="text-gray-600">+91 98765 43210</p>
+                      <h3 className="font-semibold text-white">Call Us</h3>
+                      <p className="text-slate-300">+91 98765 43210</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+              <Card className="bg-white/5 backdrop-blur-xl border-white/10 shadow-2xl hover:bg-white/10 transition-all">
                 <CardContent className="p-6">
                   <div className="flex items-center space-x-4">
                     <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
                       <MessageSquare className="h-6 w-6 text-white" />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-800">Live Chat</h3>
-                      <p className="text-gray-600">Available 24/7 for instant support</p>
+                      <h3 className="font-semibold text-white">Live Chat</h3>
+                      <p className="text-slate-300">Available 24/7 for instant support</p>
                     </div>
                   </div>
                 </CardContent>
@@ -657,28 +707,28 @@ export default function HomePage() {
                 <Button
                   size="icon"
                   variant="outline"
-                  className="border-violet-200 text-violet-600 hover:bg-violet-50 bg-transparent"
+                  className="border-purple-500/50 text-purple-300 hover:bg-purple-500/20 bg-transparent backdrop-blur-sm"
                 >
                   <Facebook className="h-5 w-5" />
                 </Button>
                 <Button
                   size="icon"
                   variant="outline"
-                  className="border-violet-200 text-violet-600 hover:bg-violet-50 bg-transparent"
+                  className="border-purple-500/50 text-purple-300 hover:bg-purple-500/20 bg-transparent backdrop-blur-sm"
                 >
                   <Instagram className="h-5 w-5" />
                 </Button>
                 <Button
                   size="icon"
                   variant="outline"
-                  className="border-violet-200 text-violet-600 hover:bg-violet-50 bg-transparent"
+                  className="border-purple-500/50 text-purple-300 hover:bg-purple-500/20 bg-transparent backdrop-blur-sm"
                 >
                   <Twitter className="h-5 w-5" />
                 </Button>
                 <Button
                   size="icon"
                   variant="outline"
-                  className="border-violet-200 text-violet-600 hover:bg-violet-50 bg-transparent"
+                  className="border-purple-500/50 text-purple-300 hover:bg-purple-500/20 bg-transparent backdrop-blur-sm"
                 >
                   <Youtube className="h-5 w-5" />
                 </Button>
@@ -689,33 +739,35 @@ export default function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="relative z-10 bg-gray-900 text-white py-16">
-        <div className="absolute inset-0 bg-[url(%27data:image/svg+xml,%3Csvg width=%2760%27 height=%2760%27 viewBox=%270 0 60 60%27 xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cg fill=%27none%27 fillRule=%27evenodd%27%3E%3Cg fill=%27%23ffffff%27 fillOpacity=%270.05%27%3E%3Ccircle cx=%277%27 cy=%277%27 r=%274%27/%3E%3C/g%3E%3C/g%3E%3C/svg%3E%27)] opacity-50"></div>
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <footer className="relative z-10 bg-black/40 backdrop-blur-xl text-white py-16 border-t border-white/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             {/* Company Info */}
             <div className="col-span-1 md:col-span-2">
-              <div className="flex items-center space-x-2 mb-4">
-                <div className="w-8 h-8 bg-gradient-to-br from-violet-600 to-purple-600 rounded-lg flex items-center justify-center">
-                  <MessageSquare className="h-5 w-5 text-white" />
+              <div className="flex items-center space-x-3 mb-6">
+                <div className="relative group">
+                  <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl blur opacity-75"></div>
+                  <div className="relative w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center">
+                    <MessageSquare className="h-5 w-5 text-purple-400" />
+                  </div>
                 </div>
                 <span className="text-xl font-bold">BrandBuzz Ventures</span>
               </div>
-              <p className="text-gray-400 mb-6 max-w-md">
+              <p className="text-slate-400 mb-6 max-w-md">
                 Empowering businesses with comprehensive multi-channel marketing solutions. Reach your audience across
-                WhatsApp, SMS, Email, Voice, and social media platforms.
+                WhatsApp, SMS, Email, Voice, and social media platforms with AI-powered intelligence.
               </p>
               <div className="flex space-x-4">
-                <Button size="icon" variant="ghost" className="text-gray-400 hover:text-white hover:bg-white/10">
+                <Button size="icon" variant="ghost" className="text-slate-400 hover:text-white hover:bg-white/10">
                   <Facebook className="h-5 w-5" />
                 </Button>
-                <Button size="icon" variant="ghost" className="text-gray-400 hover:text-white hover:bg-white/10">
+                <Button size="icon" variant="ghost" className="text-slate-400 hover:text-white hover:bg-white/10">
                   <Instagram className="h-5 w-5" />
                 </Button>
-                <Button size="icon" variant="ghost" className="text-gray-400 hover:text-white hover:bg-white/10">
+                <Button size="icon" variant="ghost" className="text-slate-400 hover:text-white hover:bg-white/10">
                   <Twitter className="h-5 w-5" />
                 </Button>
-                <Button size="icon" variant="ghost" className="text-gray-400 hover:text-white hover:bg-white/10">
+                <Button size="icon" variant="ghost" className="text-slate-400 hover:text-white hover:bg-white/10">
                   <Youtube className="h-5 w-5" />
                 </Button>
               </div>
@@ -723,8 +775,8 @@ export default function HomePage() {
 
             {/* Quick Links */}
             <div>
-              <h3 className="font-semibold mb-4">Quick Links</h3>
-              <ul className="space-y-2 text-gray-400">
+              <h3 className="font-semibold mb-4 text-white">Quick Links</h3>
+              <ul className="space-y-2 text-slate-400">
                 <li>
                   <a href="#features" className="hover:text-white transition-colors">
                     Features
@@ -750,8 +802,8 @@ export default function HomePage() {
 
             {/* Support */}
             <div>
-              <h3 className="font-semibold mb-4">Support</h3>
-              <ul className="space-y-2 text-gray-400">
+              <h3 className="font-semibold mb-4 text-white">Support</h3>
+              <ul className="space-y-2 text-slate-400">
                 <li>
                   <a href="#contact" className="hover:text-white transition-colors">
                     Contact Us
@@ -776,11 +828,27 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="border-t border-gray-800 mt-12 pt-8 text-center text-gray-400">
+          <div className="border-t border-white/10 mt-12 pt-8 text-center text-slate-400">
             <p>&copy; 2024 BrandBuzz Ventures. All rights reserved.</p>
           </div>
         </div>
       </footer>
+
+      <style jsx>{`
+        @keyframes gradient-x {
+          0%, 100% {
+            background-size: 200% 200%;
+            background-position: left center;
+          }
+          50% {
+            background-size: 200% 200%;
+            background-position: right center;
+          }
+        }
+        .animate-gradient-x {
+          animation: gradient-x 3s ease infinite;
+        }
+      `}</style>
     </div>
   )
 }
