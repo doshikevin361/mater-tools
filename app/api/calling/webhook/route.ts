@@ -4,51 +4,59 @@ import { connectToDatabase } from "@/lib/mongodb"
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
-
     const callSid = formData.get("CallSid") as string
     const callStatus = formData.get("CallStatus") as string
     const callDuration = formData.get("CallDuration") as string
     const from = formData.get("From") as string
     const to = formData.get("To") as string
-    const timestamp = formData.get("Timestamp") as string
+    const direction = formData.get("Direction") as string
 
-    console.log("Call webhook received:", {
+    console.log("Call status webhook received:", {
       callSid,
       callStatus,
       callDuration,
       from,
       to,
-      timestamp,
+      direction,
     })
 
-    // Connect to database
+    // Connect to database and update call record
     const { db } = await connectToDatabase()
 
-    // Update call record in database
-    const callRecord = {
-      callSid,
+    const updateData = {
       status: callStatus,
       duration: Number.parseInt(callDuration) || 0,
-      from,
-      to,
-      timestamp: timestamp || new Date().toISOString(),
-      cost: calculateCallCost(Number.parseInt(callDuration) || 0),
+      cost: callDuration ? (Number.parseInt(callDuration) / 60) * 0.05 : 0, // $0.05 per minute
       updatedAt: new Date(),
     }
 
-    await db.collection("call_history").updateOne({ callSid }, { $set: callRecord }, { upsert: true })
+    // Add completion timestamp for completed calls
+    if (callStatus === "completed") {
+      updateData.completedAt = new Date()
+    }
 
-    console.log("Call record updated:", callRecord)
+    const result = await db.collection("call_history").updateOne({ callSid }, { $set: updateData })
+
+    if (result.matchedCount === 0) {
+      console.log("Call record not found, creating new one")
+
+      // Create new record if not found (for incoming calls)
+      const newRecord = {
+        callSid,
+        userId: "demo-user", // In real app, determine from phone number mapping
+        phoneNumber: direction === "inbound" ? from : to,
+        direction: direction || "outbound",
+        ...updateData,
+        timestamp: new Date(),
+        createdAt: new Date(),
+      }
+
+      await db.collection("call_history").insertOne(newRecord)
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Webhook error:", error)
-    return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 })
+    console.error("Error processing call webhook:", error)
+    return NextResponse.json({ error: "Failed to process webhook" }, { status: 500 })
   }
-}
-
-function calculateCallCost(durationSeconds: number): number {
-  // ₹0.50 per minute for Indian calls
-  const minutes = Math.ceil(durationSeconds / 60)
-  return minutes * 0.5
 }
