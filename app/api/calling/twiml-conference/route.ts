@@ -1,34 +1,27 @@
-import { type NextRequest, NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
 
 export async function POST(request: NextRequest) {
   try {
-    const formData = await request.formData()
-    const conferenceId = formData.get("conferenceId") as string
-    const callType = formData.get("callType") as string // "first" or "second"
+    const { searchParams } = new URL(request.url)
+    const conferenceId = searchParams.get("conferenceId") || "default-conference"
+    const callType = searchParams.get("callType") || "first"
 
     console.log("Conference TwiML requested:", { conferenceId, callType })
 
-    const waitMessage =
-      callType === "first"
-        ? "Please wait while we connect the other party."
-        : "You are being connected to the conference."
-
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say voice="alice">${waitMessage}</Say>
+    <Say voice="alice">You are being connected to the conference call. Please wait.</Say>
     <Dial>
         <Conference 
-            statusCallback="${process.env.NEXT_PUBLIC_BASE_URL}/api/calling/conference-webhook"
-            statusCallbackEvent="start,end,join,leave"
+            statusCallback="https://master-tool.vercel.app/api/calling/conference-webhook"
+            statusCallbackEvent="start end join leave mute hold"
             record="true"
-            recordingStatusCallback="${process.env.NEXT_PUBLIC_BASE_URL}/api/calling/recording-webhook"
-            waitUrl="http://twimlets.com/holdmusic?Bucket=com.twilio.music.ambient"
-            maxParticipants="2"
+            recordingStatusCallback="https://master-tool.vercel.app/api/calling/recording-webhook"
         >${conferenceId}</Conference>
     </Dial>
 </Response>`
 
-    return new NextResponse(twiml, {
+    return new Response(twiml, {
       headers: {
         "Content-Type": "text/xml",
       },
@@ -42,10 +35,14 @@ export async function POST(request: NextRequest) {
     <Hangup/>
 </Response>`
 
-    return new NextResponse(errorTwiml, {
+    return new Response(errorTwiml, {
       headers: {
         "Content-Type": "text/xml",
       },
     })
   }
+}
+
+export async function GET(request: NextRequest) {
+  return POST(request)
 }

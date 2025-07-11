@@ -1,47 +1,44 @@
-import { type NextRequest, NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
 
 export async function POST(request: NextRequest) {
   try {
-    const formData = await request.formData()
-    const from = formData.get("From") as string
-    const to = formData.get("To") as string
+    console.log("Live TwiML endpoint called")
 
-    console.log("Live call TwiML requested for:", { from, to })
+    const yourPhoneNumber = "+918733832957" // UPDATE THIS WITH YOUR ACTUAL PHONE NUMBER
 
-    // Create TwiML that connects the caller directly to your phone
-    // Replace YOUR_PHONE_NUMBER with your actual phone number
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say voice="alice">Connecting your call, please wait.</Say>
-    <Dial 
-        timeout="30" 
-        record="true"
-        recordingStatusCallback="${process.env.NEXT_PUBLIC_BASE_URL}/api/calling/recording-webhook"
-        callerId="${from}"
-    >
-        <Number>+919876543210</Number>
+    <Say voice="alice">Please wait while we connect you. You will hear a brief hold music.</Say>
+    <Play>http://com.twilio.music.classical.s3.amazonaws.com/BusyStrings.wav</Play>
+    <Dial timeout="30" record="true" recordingStatusCallback="https://master-tool.vercel.app/api/calling/recording-webhook">
+        <Number>${yourPhoneNumber}</Number>
     </Dial>
-    <Say voice="alice">The call could not be completed. Please try again later.</Say>
+    <Say voice="alice">The call could not be connected. Please try again later. Goodbye.</Say>
 </Response>`
 
-    return new NextResponse(twiml, {
+    return new Response(twiml, {
+      status: 200,
       headers: {
         "Content-Type": "text/xml",
       },
     })
   } catch (error) {
-    console.error("Error generating live call TwiML:", error)
+    console.error("Error generating live TwiML:", error)
 
-    const errorTwiml = `<?xml version="1.0" encoding="UTF-8"?>
+    const fallbackTwiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say voice="alice">Sorry, we are experiencing technical difficulties. Please try again later.</Say>
-    <Hangup/>
+    <Say voice="alice">Sorry, there was an error connecting your call. Please try again later. Goodbye.</Say>
 </Response>`
 
-    return new NextResponse(errorTwiml, {
+    return new Response(fallbackTwiml, {
+      status: 200,
       headers: {
         "Content-Type": "text/xml",
       },
     })
   }
+}
+
+export async function GET(request: NextRequest) {
+  return POST(request)
 }

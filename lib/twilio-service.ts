@@ -6,17 +6,50 @@ class TwilioService {
   private apiKey: string
   private apiSecret: string
   private phoneNumber: string
+  private baseUrl: string
 
   constructor() {
     this.accountSid = process.env.TWILIO_ACCOUNT_SID || "AC86b70352ccc2023f8cfa305712b474cd"
     this.apiKey = process.env.TWILIO_API_KEY || "SK0745de76832af1b501e871e36bc467ae"
     this.apiSecret = process.env.TWILIO_API_SECRET || "Ge1LcneXSoJmREekmK7wmoqsn4E1qOz9"
     this.phoneNumber = process.env.TWILIO_PHONE_NUMBER || "+19252617266"
+    this.baseUrl = "https://master-tool.vercel.app"
 
     // Initialize Twilio client with API Key and Secret
     this.client = twilio(this.apiKey, this.apiSecret, {
       accountSid: this.accountSid,
     })
+  }
+
+  // Make a direct call from your Twilio number to any number
+  async makeDirectCall(toNumber: string) {
+    try {
+      const cleanNumber = this.formatPhoneNumber(toNumber)
+
+      console.log(`Making direct call from ${this.phoneNumber} to ${cleanNumber}`)
+
+      const call = await this.client.calls.create({
+        to: cleanNumber,
+        from: this.phoneNumber,
+        url: `${this.baseUrl}/api/calling/direct-call-twiml`,
+        statusCallback: `${this.baseUrl}/api/calling/webhook`,
+        statusCallbackEvent: ["initiated", "ringing", "answered", "completed"],
+        timeout: 30,
+        record: true,
+        recordingStatusCallback: `${this.baseUrl}/api/calling/recording-webhook`,
+      })
+
+      return {
+        success: true,
+        callSid: call.sid,
+        status: call.status,
+        to: call.to,
+        from: call.from,
+      }
+    } catch (error) {
+      console.error("Twilio direct call error:", error)
+      throw new Error(`Direct call failed: ${error.message}`)
+    }
   }
 
   // Make a live call where you can talk to the person
@@ -25,16 +58,17 @@ class TwilioService {
       const cleanNumber = this.formatPhoneNumber(toNumber)
 
       console.log(`Making live call to ${cleanNumber}`)
+      console.log(`Using base URL: ${this.baseUrl}`)
 
       const call = await this.client.calls.create({
         to: cleanNumber,
         from: this.phoneNumber,
-        url: `${process.env.NEXT_PUBLIC_BASE_URL}/api/calling/live-twiml`,
-        statusCallback: `${process.env.NEXT_PUBLIC_BASE_URL}/api/calling/webhook`,
+        url: `${this.baseUrl}/api/calling/live-twiml`,
+        statusCallback: `${this.baseUrl}/api/calling/webhook`,
         statusCallbackEvent: ["initiated", "ringing", "answered", "completed"],
         timeout: 30,
         record: true,
-        recordingStatusCallback: `${process.env.NEXT_PUBLIC_BASE_URL}/api/calling/recording-webhook`,
+        recordingStatusCallback: `${this.baseUrl}/api/calling/recording-webhook`,
       })
 
       return {
@@ -75,7 +109,7 @@ class TwilioService {
         twiml: twiml,
         timeout: 30, // Ring for 30 seconds
         record: true, // Record the call
-        recordingStatusCallback: `${process.env.NEXT_PUBLIC_BASE_URL}/api/calling/recording-webhook`,
+        recordingStatusCallback: `${this.baseUrl}/api/calling/recording-webhook`,
       })
 
       return {
@@ -102,8 +136,8 @@ class TwilioService {
       const call = await this.client.calls.create({
         to: cleanNumber,
         from: this.phoneNumber,
-        url: `${process.env.NEXT_PUBLIC_BASE_URL}/api/calling/twiml-conference?conferenceId=${conferenceId}&callType=${callType}`,
-        statusCallback: `${process.env.NEXT_PUBLIC_BASE_URL}/api/calling/webhook`,
+        url: `${this.baseUrl}/api/calling/twiml-conference?conferenceId=${conferenceId}&callType=${callType}`,
+        statusCallback: `${this.baseUrl}/api/calling/webhook`,
         statusCallbackEvent: ["initiated", "ringing", "answered", "completed"],
         timeout: 30,
       })
