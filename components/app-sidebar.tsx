@@ -27,9 +27,9 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarRail } fr
 // This is sample data.
 const data = {
   user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
+    name: "BrandBuzz User",
+    email: "user@brandbuzz.com",
+    avatar: "/placeholder-user.jpg",
   },
   teams: [
     {
@@ -38,14 +38,14 @@ const data = {
       plan: "Enterprise",
     },
     {
-      name: "Acme Corp.",
+      name: "Marketing Team",
       logo: AudioWaveform,
-      plan: "Startup",
+      plan: "Pro",
     },
     {
-      name: "Evil Corp.",
+      name: "Growth Team",
       logo: Command,
-      plan: "Free",
+      plan: "Startup",
     },
   ],
   navMain: [
@@ -63,6 +63,7 @@ const data = {
         {
           title: "WhatsApp",
           url: "/dashboard/whatsapp",
+          badge: "New",
         },
         {
           title: "SMS",
@@ -79,6 +80,7 @@ const data = {
         {
           title: "Calling",
           url: "/dashboard/calling",
+          badge: "Live",
         },
       ],
     },
@@ -90,18 +92,22 @@ const data = {
         {
           title: "Instagram",
           url: "/dashboard/instagram",
+          badge: "Growth",
         },
         {
           title: "Facebook",
           url: "/dashboard/facebook",
+          badge: "Growth",
         },
         {
           title: "Twitter",
           url: "/dashboard/twitter",
+          badge: "Trading",
         },
         {
           title: "YouTube",
           url: "/dashboard/youtube",
+          badge: "Growth",
         },
       ],
     },
@@ -113,14 +119,17 @@ const data = {
         {
           title: "Instagram Accounts",
           url: "/dashboard/create-instagram",
+          badge: "Auto",
         },
         {
           title: "Facebook Accounts",
           url: "/dashboard/create-facebook",
+          badge: "Auto",
         },
         {
           title: "Twitter Accounts",
           url: "/dashboard/create-twitter",
+          badge: "Auto",
         },
         {
           title: "All Social Accounts",
@@ -129,6 +138,7 @@ const data = {
         {
           title: "Email Accounts",
           url: "/dashboard/accounts",
+          badge: "New",
         },
       ],
     },
@@ -154,36 +164,36 @@ const data = {
       items: [
         {
           title: "General",
-          url: "#",
+          url: "/dashboard/settings/general",
         },
         {
           title: "Team",
-          url: "#",
+          url: "/dashboard/settings/team",
         },
         {
           title: "Billing",
-          url: "#",
+          url: "/dashboard/settings/billing",
         },
         {
           title: "Limits",
-          url: "#",
+          url: "/dashboard/settings/limits",
         },
       ],
     },
   ],
   projects: [
     {
-      name: "Design Engineering",
+      name: "Marketing Campaigns",
       url: "#",
       icon: Frame,
     },
     {
-      name: "Sales & Marketing",
+      name: "Social Growth",
       url: "#",
       icon: PieChart,
     },
     {
-      name: "Travel",
+      name: "Lead Generation",
       url: "#",
       icon: Map,
     },

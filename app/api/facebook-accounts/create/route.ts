@@ -1,399 +1,324 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
-import axios from "axios"
 import puppeteer from "puppeteer"
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-
-const USER_AGENTS = [
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+// Indian names and surnames for realistic profiles
+const indianFirstNames = [
+  "Aarav",
+  "Vivaan",
+  "Aditya",
+  "Vihaan",
+  "Arjun",
+  "Sai",
+  "Reyansh",
+  "Ayaan",
+  "Krishna",
+  "Ishaan",
+  "Ananya",
+  "Diya",
+  "Priya",
+  "Kavya",
+  "Aanya",
+  "Isha",
+  "Avni",
+  "Sara",
+  "Riya",
+  "Myra",
 ]
 
-const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
-const humanWait = (minMs = 1500, maxMs = 4000) => {
-  const delay = minMs + Math.random() * (maxMs - minMs)
-  return new Promise((resolve) => setTimeout(resolve, delay))
+const indianLastNames = [
+  "Sharma",
+  "Verma",
+  "Singh",
+  "Kumar",
+  "Gupta",
+  "Agarwal",
+  "Jain",
+  "Patel",
+  "Shah",
+  "Mehta",
+  "Reddy",
+  "Nair",
+  "Iyer",
+  "Rao",
+  "Pillai",
+  "Menon",
+  "Bhat",
+  "Shetty",
+  "Kulkarni",
+  "Desai",
+]
+
+// Generate temporary email
+function generateTempEmail(): string {
+  const domains = ["tempmail.org", "10minutemail.com", "guerrillamail.com", "mailinator.com"]
+  const randomString = Math.random().toString(36).substring(2, 10)
+  const domain = domains[Math.floor(Math.random() * domains.length)]
+  return `${randomString}@${domain}`
 }
 
-async function sendNotification(userId: string, message: string, type = "info") {
-  try {
-    const { db } = await connectToDatabase()
-    await db.collection("notifications").insertOne({
-      userId,
-      title: "Facebook Account Creation",
-      message,
-      type,
-      read: false,
-      createdAt: new Date(),
-    })
-  } catch (error) {
-    console.error("Failed to send notification:", error)
-  }
-}
+// Generate Indian profile
+function generateIndianProfile() {
+  const firstName = indianFirstNames[Math.floor(Math.random() * indianFirstNames.length)]
+  const lastName = indianLastNames[Math.floor(Math.random() * indianLastNames.length)]
+  const email = generateTempEmail()
+  const password = `${firstName}@${Math.floor(Math.random() * 9999)}`
 
-async function createStealthBrowser() {
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-blink-features=AutomationControlled",
-    ],
-    ignoreDefaultArgs: ["--enable-automation"],
-  })
-
-  const page = await browser.newPage()
-  await page.setUserAgent(USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)])
-
-  await page.evaluateOnNewDocument(() => {
-    Object.defineProperty(navigator, "webdriver", { get: () => undefined })
-  })
-
-  return { browser, page }
-}
-
-async function createTempEmail() {
-  try {
-    const sessionResponse = await axios.get("https://www.guerrillamail.com/ajax.php?f=get_email_address", {
-      timeout: 15000,
-    })
-
-    if (sessionResponse.data && sessionResponse.data.email_addr) {
-      return {
-        success: true,
-        email: sessionResponse.data.email_addr,
-      }
-    } else {
-      throw new Error("Failed to get email")
-    }
-  } catch (error) {
-    throw new Error("Email creation failed")
-  }
-}
-
-function generateProfile() {
-  const firstNames = [
-    "Arjun",
-    "Aarav",
-    "Vivaan",
-    "Aditya",
-    "Vihaan",
-    "Sai",
-    "Aryan",
-    "Krishna",
-    "Saanvi",
-    "Ananya",
-    "Aadhya",
-    "Diya",
-    "Kavya",
-    "Pihu",
-    "Angel",
-    "Pari",
-  ]
-
-  const lastNames = [
-    "Sharma",
-    "Verma",
-    "Singh",
-    "Kumar",
-    "Gupta",
-    "Agarwal",
-    "Mishra",
-    "Jain",
-    "Patel",
-    "Shah",
-    "Mehta",
-    "Joshi",
-    "Desai",
-    "Modi",
-    "Reddy",
-    "Nair",
-  ]
-
-  const firstName = firstNames[Math.floor(Math.random() * firstNames.length)]
-  const lastName = lastNames[Math.floor(Math.random() * lastNames.length)]
-  const birthYear = Math.floor(Math.random() * 22) + 1985
+  // Generate random birth date (18-35 years old)
+  const currentYear = new Date().getFullYear()
+  const birthYear = currentYear - Math.floor(Math.random() * 17) - 18
   const birthMonth = Math.floor(Math.random() * 12) + 1
   const birthDay = Math.floor(Math.random() * 28) + 1
-
-  const password = `${firstName}${Math.floor(Math.random() * 9999)}!`
 
   return {
     firstName,
     lastName,
-    birthYear,
-    birthMonth,
-    birthDay,
+    email,
     password,
-    fullName: `${firstName} ${lastName}`,
+    birthDate: `${birthYear}-${birthMonth.toString().padStart(2, "0")}-${birthDay.toString().padStart(2, "0")}`,
+    gender: Math.random() > 0.5 ? "male" : "female",
   }
 }
 
-async function createFacebookAccount(accountData, userId) {
-  let browser, page
+// Human-like typing function
+async function humanType(page: any, selector: string, text: string) {
+  await page.click(selector)
+  await page.evaluate((sel) => {
+    const element = document.querySelector(sel) as HTMLInputElement
+    if (element) element.value = ""
+  }, selector)
+
+  for (const char of text) {
+    await page.type(selector, char, { delay: Math.random() * 100 + 50 })
+  }
+}
+
+// Random delay function
+function randomDelay(min = 1000, max = 3000) {
+  return new Promise((resolve) => setTimeout(resolve, Math.random() * (max - min) + min))
+}
+
+async function createFacebookAccount(profile: any, userId: string) {
+  let browser
+  const accountData = {
+    platform: "facebook",
+    email: profile.email,
+    firstName: profile.firstName,
+    lastName: profile.lastName,
+    password: profile.password,
+    birthDate: profile.birthDate,
+    gender: profile.gender,
+    status: "creating",
+    userId,
+    createdAt: new Date(),
+    needsPhoneVerification: false,
+    error: null,
+  }
 
   try {
-    await sendNotification(userId, `Starting Facebook account creation for ${accountData.profile.fullName}...`, "info")
+    // Launch browser with stealth settings
+    browser = await puppeteer.launch({
+      headless: true,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-accelerated-2d-canvas",
+        "--no-first-run",
+        "--no-zygote",
+        "--disable-gpu",
+        "--disable-web-security",
+        "--disable-features=VizDisplayCompositor",
+        "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      ],
+    })
 
-    const browserSetup = await createStealthBrowser()
-    browser = browserSetup.browser
-    page = browserSetup.page
+    const page = await browser.newPage()
 
+    // Set viewport and user agent
+    await page.setViewport({
+      width: 1366 + Math.floor(Math.random() * 200),
+      height: 768 + Math.floor(Math.random() * 200),
+    })
+
+    // Navigate to Facebook signup
     await page.goto("https://www.facebook.com/reg/", {
       waitUntil: "networkidle2",
       timeout: 30000,
     })
 
-    await humanWait(3000, 6000)
+    await randomDelay(2000, 4000)
 
     // Fill first name
-    await page.type('input[name="firstname"]', accountData.profile.firstName, { delay: 100 })
-    await humanWait(500, 1000)
+    await humanType(page, 'input[name="firstname"]', profile.firstName)
+    await randomDelay(500, 1500)
 
     // Fill last name
-    await page.type('input[name="lastname"]', accountData.profile.lastName, { delay: 100 })
-    await humanWait(500, 1000)
+    await humanType(page, 'input[name="lastname"]', profile.lastName)
+    await randomDelay(500, 1500)
 
     // Fill email
-    await page.type('input[name="reg_email__"]', accountData.email, { delay: 100 })
-    await humanWait(500, 1000)
+    await humanType(page, 'input[name="reg_email__"]', profile.email)
+    await randomDelay(500, 1500)
 
     // Confirm email
-    await page.type('input[name="reg_email_confirmation__"]', accountData.email, { delay: 100 })
-    await humanWait(500, 1000)
+    await humanType(page, 'input[name="reg_email_confirmation__"]', profile.email)
+    await randomDelay(500, 1500)
 
     // Fill password
-    await page.type('input[name="reg_passwd__"]', accountData.profile.password, { delay: 100 })
-    await humanWait(1000, 2000)
+    await humanType(page, 'input[name="reg_passwd__"]', profile.password)
+    await randomDelay(1000, 2000)
 
-    await sendNotification(userId, `Setting up profile details for ${accountData.profile.fullName}...`, "info")
+    // Handle birthday selection
+    const birthDate = new Date(profile.birthDate)
 
-    // Select birthday
-    await page.select('select[name="birthday_day"]', accountData.profile.birthDay.toString())
-    await humanWait(500, 1000)
+    // Select month
+    await page.select('select[name="birthday_month"]', (birthDate.getMonth() + 1).toString())
+    await randomDelay(300, 800)
 
-    await page.select('select[name="birthday_month"]', accountData.profile.birthMonth.toString())
-    await humanWait(500, 1000)
+    // Select day
+    await page.select('select[name="birthday_day"]', birthDate.getDate().toString())
+    await randomDelay(300, 800)
 
-    await page.select('select[name="birthday_year"]', accountData.profile.birthYear.toString())
-    await humanWait(1000, 2000)
+    // Select year
+    await page.select('select[name="birthday_year"]', birthDate.getFullYear().toString())
+    await randomDelay(500, 1000)
 
     // Select gender
-    const gender = Math.random() > 0.5 ? "2" : "1" // 1=Female, 2=Male
-    await page.click(`input[name="sex"][value="${gender}"]`)
-    await humanWait(1000, 2000)
+    const genderValue = profile.gender === "male" ? "2" : "1"
+    await page.click(`input[name="sex"][value="${genderValue}"]`)
+    await randomDelay(1000, 2000)
 
-    await sendNotification(userId, `Submitting registration for ${accountData.profile.fullName}...`, "info")
-
-    // Submit form
+    // Click sign up button
     await page.click('button[name="websubmit"]')
-    await humanWait(5000, 8000)
+    await randomDelay(5000, 8000)
 
-    // Check for success
+    // Check for phone verification requirement
     const currentUrl = page.url()
-
-    if (currentUrl.includes("facebook.com") && !currentUrl.includes("/reg/")) {
-      await sendNotification(
-        userId,
-        `✅ Facebook account created successfully: ${accountData.profile.fullName}`,
-        "success",
-      )
-
-      return {
-        success: true,
-        platform: "facebook",
-        message: "Account created successfully",
-        username: accountData.profile.fullName,
-        email: accountData.email,
-        accountData: {
-          userId: `fb_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          profileUrl: `https://facebook.com/profile.php`,
-          createdAt: new Date().toISOString(),
-        },
-      }
+    if (currentUrl.includes("checkpoint") || currentUrl.includes("phone")) {
+      accountData.needsPhoneVerification = true
+      accountData.status = "needs_phone_verification"
     } else {
-      throw new Error("Account creation failed")
+      accountData.status = "active"
     }
+
+    return accountData
   } catch (error) {
-    await sendNotification(userId, `❌ Failed to create Facebook account: ${error.message}`, "error")
-    return {
-      success: false,
-      platform: "facebook",
-      error: error.message,
-    }
+    console.error("Error creating Facebook account:", error)
+    accountData.status = "failed"
+    accountData.error = error instanceof Error ? error.message : "Unknown error"
+    return accountData
   } finally {
     if (browser) {
-      setTimeout(async () => {
-        try {
-          await browser.close()
-        } catch (e) {
-          // Ignore
-        }
-      }, 5000)
+      await browser.close()
     }
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { count = 1, userId } = body
+    const { count = 1, userId } = await request.json()
 
     if (!userId) {
-      return NextResponse.json({ success: false, message: "User ID is required" }, { status: 400 })
+      return NextResponse.json({ error: "User ID is required" }, { status: 400 })
     }
 
-    if (count < 1 || count > 5) {
-      return NextResponse.json({ success: false, message: "Count must be between 1 and 5" }, { status: 400 })
+    if (count > 5) {
+      return NextResponse.json({ error: "Maximum 5 accounts per batch" }, { status: 400 })
     }
 
     const { db } = await connectToDatabase()
-    const results = []
-    let successCount = 0
+    const accounts = []
 
-    await sendNotification(
-      userId,
-      `🚀 Starting creation of ${count} Facebook account${count > 1 ? "s" : ""}...`,
-      "info",
-    )
+    // Send initial notification
+    await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/notifications`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId,
+        type: "account_creation_started",
+        platform: "facebook",
+        message: `Starting creation of ${count} Facebook account${count > 1 ? "s" : ""}...`,
+        data: { count, platform: "facebook" },
+      }),
+    })
 
     for (let i = 0; i < count; i++) {
-      try {
-        const emailResult = await createTempEmail()
-        if (!emailResult.success) {
-          throw new Error("Failed to get temporary email")
-        }
+      const profile = generateIndianProfile()
 
-        const profile = generateProfile()
-
-        const accountData = {
-          email: emailResult.email,
-          profile: profile,
+      // Send progress notification
+      await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/notifications`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          type: "account_creation_progress",
           platform: "facebook",
-        }
+          message: `Creating Facebook account ${i + 1} of ${count}...`,
+          data: { current: i + 1, total: count, platform: "facebook" },
+        }),
+      })
 
-        const creationResult = await createFacebookAccount(accountData, userId)
+      const accountData = await createFacebookAccount(profile, userId)
 
-        const socialAccount = {
-          userId: userId,
-          accountNumber: i + 1,
+      // Save to database
+      await db.collection("social_accounts").insertOne(accountData)
+      accounts.push(accountData)
+
+      // Send individual account notification
+      await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/notifications`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          type: "account_created",
           platform: "facebook",
-          email: emailResult.email,
-          username: creationResult.username || profile.fullName,
-          password: profile.password,
-          profile: {
-            firstName: profile.firstName,
-            lastName: profile.lastName,
-            fullName: profile.fullName,
-            birthDate: `${profile.birthYear}-${profile.birthMonth.toString().padStart(2, "0")}-${profile.birthDay.toString().padStart(2, "0")}`,
-          },
-          creationResult: creationResult,
-          status: creationResult.success ? "active" : "failed",
-          verified: false,
-          realAccount: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        }
+          message: `Facebook account ${accountData.firstName} ${accountData.lastName} ${accountData.status === "active" ? "created successfully" : accountData.status === "needs_phone_verification" ? "created but needs phone verification" : "creation failed"}`,
+          data: { account: accountData },
+        }),
+      })
 
-        await db.collection("social_accounts").insertOne(socialAccount)
-
-        results.push({
-          accountNumber: i + 1,
-          success: creationResult.success,
-          platform: "facebook",
-          email: emailResult.email,
-          username: creationResult.username || profile.fullName,
-          password: profile.password,
-          profile: profile,
-          message: creationResult.message,
-          error: creationResult.error,
-        })
-
-        if (creationResult.success) {
-          successCount++
-        }
-
-        // Wait between accounts
-        if (i < count - 1) {
-          const delay = 60000 + Math.random() * 30000
-          await sendNotification(
-            userId,
-            `⏳ Waiting before creating next account... (${Math.round(delay / 1000)} seconds)`,
-            "info",
-          )
-          await wait(delay)
-        }
-      } catch (error) {
-        await sendNotification(userId, `❌ Account ${i + 1} failed: ${error.message}`, "error")
-        results.push({
-          accountNumber: i + 1,
-          success: false,
-          platform: "facebook",
-          error: error.message,
-        })
+      // Random delay between accounts
+      if (i < count - 1) {
+        await randomDelay(5000, 10000)
       }
     }
 
-    await sendNotification(
-      userId,
-      `🎉 Facebook account creation completed! ${successCount}/${count} accounts created successfully.`,
-      successCount > 0 ? "success" : "error",
-    )
+    // Send completion notification
+    const successCount = accounts.filter((acc) => acc.status === "active").length
+    const phoneVerificationCount = accounts.filter((acc) => acc.status === "needs_phone_verification").length
+    const failedCount = accounts.filter((acc) => acc.status === "failed").length
 
-    return NextResponse.json({
-      success: true,
-      message: `Facebook account creation completed! ${successCount}/${count} accounts created.`,
-      totalRequested: count,
-      totalCreated: successCount,
-      platform: "facebook",
-      accounts: results,
+    await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/notifications`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId,
+        type: "account_creation_completed",
+        platform: "facebook",
+        message: `Facebook account creation completed! Success: ${successCount}, Phone verification needed: ${phoneVerificationCount}, Failed: ${failedCount}`,
+        data: {
+          total: count,
+          success: successCount,
+          phoneVerification: phoneVerificationCount,
+          failed: failedCount,
+          platform: "facebook",
+        },
+      }),
     })
-  } catch (error) {
-    console.error("Error creating Facebook accounts:", error)
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to create Facebook accounts",
-        error: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
-  }
-}
-
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get("userId")
-
-    if (!userId) {
-      return NextResponse.json({ success: false, message: "User ID is required" }, { status: 400 })
-    }
-
-    const { db } = await connectToDatabase()
-    const accounts = await db
-      .collection("social_accounts")
-      .find({ userId, platform: "facebook" })
-      .sort({ createdAt: -1 })
-      .toArray()
 
     return NextResponse.json({
       success: true,
       accounts,
-      count: accounts.length,
+      summary: {
+        total: count,
+        success: successCount,
+        phoneVerification: phoneVerificationCount,
+        failed: failedCount,
+      },
     })
   } catch (error) {
-    console.error("Error fetching Facebook accounts:", error)
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to fetch Facebook accounts",
-        error: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
+    console.error("Error in Facebook account creation:", error)
+    return NextResponse.json({ error: "Failed to create Facebook accounts" }, { status: 500 })
   }
 }

@@ -1,557 +1,318 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
-import axios from "axios"
 import puppeteer from "puppeteer"
 
-const MONTHS = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
+// Indian names and surnames for realistic profiles
+const indianFirstNames = [
+  "Aarav",
+  "Vivaan",
+  "Aditya",
+  "Vihaan",
+  "Arjun",
+  "Sai",
+  "Reyansh",
+  "Ayaan",
+  "Krishna",
+  "Ishaan",
+  "Ananya",
+  "Diya",
+  "Priya",
+  "Kavya",
+  "Aanya",
+  "Isha",
+  "Avni",
+  "Sara",
+  "Riya",
+  "Myra",
 ]
 
-// Enhanced User Agents pool
-const USER_AGENTS = [
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0",
+const indianLastNames = [
+  "Sharma",
+  "Verma",
+  "Singh",
+  "Kumar",
+  "Gupta",
+  "Agarwal",
+  "Jain",
+  "Patel",
+  "Shah",
+  "Mehta",
+  "Reddy",
+  "Nair",
+  "Iyer",
+  "Rao",
+  "Pillai",
+  "Menon",
+  "Bhat",
+  "Shetty",
+  "Kulkarni",
+  "Desai",
 ]
 
-const SCREEN_RESOLUTIONS = [
-  { width: 1920, height: 1080 },
-  { width: 1366, height: 768 },
-  { width: 1440, height: 900 },
-  { width: 1536, height: 864 },
-]
-
-const wait = (ms, variance = 0.6) => {
-  const randomDelay = ms + (Math.random() - 0.5) * 2 * variance * ms
-  return new Promise((resolve) => setTimeout(resolve, Math.max(1500, randomDelay)))
+// Generate temporary email
+function generateTempEmail(): string {
+  const domains = ["tempmail.org", "10minutemail.com", "guerrillamail.com", "mailinator.com"]
+  const randomString = Math.random().toString(36).substring(2, 10)
+  const domain = domains[Math.floor(Math.random() * domains.length)]
+  return `${randomString}@${domain}`
 }
 
-const humanWait = (minMs = 1500, maxMs = 4000) => {
-  const delay = minMs + Math.random() * (maxMs - minMs)
-  return new Promise((resolve) => setTimeout(resolve, delay))
-}
-
-async function sendNotification(userId: string, message: string, type = "info") {
-  try {
-    const { db } = await connectToDatabase()
-    await db.collection("notifications").insertOne({
-      userId,
-      title: "Instagram Account Creation",
-      message,
-      type,
-      read: false,
-      createdAt: new Date(),
-    })
-  } catch (error) {
-    console.error("Failed to send notification:", error)
-  }
-}
-
-async function createStealthBrowser() {
-  const resolution = SCREEN_RESOLUTIONS[Math.floor(Math.random() * SCREEN_RESOLUTIONS.length)]
-  const randomUserAgent = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)]
-
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-blink-features=AutomationControlled",
-      "--disable-web-security",
-    ],
-    ignoreDefaultArgs: ["--enable-automation"],
-    defaultViewport: null,
-    ignoreHTTPSErrors: true,
-  })
-
-  const pages = await browser.pages()
-  const page = pages[0] || (await browser.newPage())
-
-  await page.evaluateOnNewDocument(() => {
-    Object.defineProperty(navigator, "webdriver", { get: () => undefined })
-    window.chrome = {
-      runtime: {},
-      loadTimes: () => ({}),
-      csi: () => ({}),
-      app: {},
-    }
-  })
-
-  await page.setUserAgent(randomUserAgent)
-  await page.setViewport({
-    width: resolution.width,
-    height: resolution.height,
-    deviceScaleFactor: 1,
-  })
-
-  return { browser, page }
-}
-
-async function createTempEmail() {
-  try {
-    const sessionResponse = await axios.get("https://www.guerrillamail.com/ajax.php?f=get_email_address", {
-      timeout: 15000,
-      headers: {
-        "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
-        Referer: "https://www.guerrillamail.com/inbox",
-        Accept: "application/json, text/javascript, */*; q=0.01",
-      },
-    })
-
-    if (sessionResponse.data && sessionResponse.data.email_addr) {
-      return {
-        success: true,
-        email: sessionResponse.data.email_addr,
-        sessionId: sessionResponse.data.sid_token,
-      }
-    } else {
-      throw new Error("Failed to get email")
-    }
-  } catch (error) {
-    throw new Error("Email creation failed")
-  }
-}
-
-function generateProfile() {
-  const indianFirstNames = [
-    "Arjun",
-    "Aarav",
-    "Vivaan",
-    "Aditya",
-    "Vihaan",
-    "Sai",
-    "Aryan",
-    "Krishna",
-    "Ishaan",
-    "Shaurya",
-    "Atharv",
-    "Aadhya",
-    "Reyansh",
-    "Muhammad",
-    "Siddharth",
-    "Saanvi",
-    "Ananya",
-    "Aadhya",
-    "Diya",
-    "Kavya",
-    "Pihu",
-    "Angel",
-    "Pari",
-    "Fatima",
-    "Aaradhya",
-    "Sara",
-    "Anaya",
-    "Parina",
-    "Aisha",
-    "Anvi",
-    "Riya",
-  ]
-
-  const indianLastNames = [
-    "Sharma",
-    "Verma",
-    "Singh",
-    "Kumar",
-    "Gupta",
-    "Agarwal",
-    "Mishra",
-    "Jain",
-    "Patel",
-    "Shah",
-    "Mehta",
-    "Joshi",
-    "Desai",
-    "Modi",
-    "Reddy",
-    "Nair",
-    "Iyer",
-    "Rao",
-    "Pillai",
-    "Menon",
-    "Bhat",
-    "Shetty",
-    "Kaul",
-    "Malhotra",
-  ]
-
+// Generate Indian profile
+function generateIndianProfile() {
   const firstName = indianFirstNames[Math.floor(Math.random() * indianFirstNames.length)]
   const lastName = indianLastNames[Math.floor(Math.random() * indianLastNames.length)]
-  const birthYear = Math.floor(Math.random() * 22) + 1985
+  const email = generateTempEmail()
+  const username = `${firstName.toLowerCase()}${lastName.toLowerCase()}${Math.floor(Math.random() * 999)}`
+  const password = `${firstName}@${Math.floor(Math.random() * 9999)}`
+
+  // Generate random birth date (18-35 years old)
+  const currentYear = new Date().getFullYear()
+  const birthYear = currentYear - Math.floor(Math.random() * 17) - 18
   const birthMonth = Math.floor(Math.random() * 12) + 1
   const birthDay = Math.floor(Math.random() * 28) + 1
-  const gender = Math.random() > 0.5 ? "male" : "female"
-
-  const timestamp = Date.now().toString().slice(-6)
-  const randomSuffix = Math.floor(Math.random() * 99999)
-
-  const usernames = [
-    `${firstName.toLowerCase()}_${lastName.toLowerCase()}_${timestamp}`,
-    `${firstName.toLowerCase()}${lastName.toLowerCase()}${timestamp}`,
-    `${firstName.toLowerCase()}.${lastName.toLowerCase()}.${timestamp}`,
-    `${firstName.toLowerCase()}${randomSuffix}`,
-  ]
-
-  const password = `${firstName}${Math.floor(Math.random() * 9999)}!${lastName.charAt(0)}`
 
   return {
     firstName,
     lastName,
-    birthYear,
-    birthMonth,
-    birthDay,
-    gender,
-    usernames,
+    email,
+    username,
     password,
-    fullName: `${firstName} ${lastName}`,
+    birthDate: `${birthYear}-${birthMonth.toString().padStart(2, "0")}-${birthDay.toString().padStart(2, "0")}`,
+    gender: Math.random() > 0.5 ? "male" : "female",
   }
 }
 
-async function humanType(page, selector, text) {
-  const element = await page.waitForSelector(selector, { timeout: 20000 })
-  await element.click()
-  await humanWait(400, 1000)
+// Human-like typing function
+async function humanType(page: any, selector: string, text: string) {
+  await page.click(selector)
+  await page.evaluate((sel) => {
+    const element = document.querySelector(sel) as HTMLInputElement
+    if (element) element.value = ""
+  }, selector)
 
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i]
-    const typeDelay = 100 + Math.random() * 150
-    await element.type(char, { delay: typeDelay })
+  for (const char of text) {
+    await page.type(selector, char, { delay: Math.random() * 100 + 50 })
+  }
+}
 
-    if (Math.random() < 0.2) {
-      await humanWait(300, 1500)
-    }
+// Random delay function
+function randomDelay(min = 1000, max = 3000) {
+  return new Promise((resolve) => setTimeout(resolve, Math.random() * (max - min) + min))
+}
+
+async function createInstagramAccount(profile: any, userId: string) {
+  let browser
+  const accountData = {
+    platform: "instagram",
+    email: profile.email,
+    firstName: profile.firstName,
+    lastName: profile.lastName,
+    username: profile.username,
+    password: profile.password,
+    birthDate: profile.birthDate,
+    gender: profile.gender,
+    status: "creating",
+    userId,
+    createdAt: new Date(),
+    needsPhoneVerification: false,
+    error: null,
   }
 
-  await humanWait(300, 800)
-}
-
-async function humanClick(page, selector) {
-  const element = await page.waitForSelector(selector, { timeout: 20000 })
-  const box = await element.boundingBox()
-  if (!box) throw new Error("Element not visible")
-
-  const x = box.x + box.width * (0.25 + Math.random() * 0.5)
-  const y = box.y + box.height * (0.25 + Math.random() * 0.5)
-
-  await page.mouse.move(x, y, { steps: 5 })
-  await humanWait(100, 250)
-  await page.mouse.click(x, y)
-  await humanWait(200, 500)
-}
-
-async function handleBirthdaySelection(page, profile) {
   try {
-    await page.waitForSelector("select", { timeout: 20000 })
-
-    const monthName = MONTHS[profile.birthMonth - 1]
-    await page.select('select[title*="Month"], select:first-of-type', monthName)
-    await humanWait(1000, 2000)
-
-    await page.select('select[title*="Day"], select:nth-of-type(2)', profile.birthDay.toString())
-    await humanWait(1000, 2000)
-
-    await page.select('select[title*="Year"], select:nth-of-type(3)', profile.birthYear.toString())
-    await humanWait(2000, 4000)
-
-    const nextClicked = await page.evaluate(() => {
-      const buttons = document.querySelectorAll('button, [role="button"]')
-      for (const button of buttons) {
-        const text = button.textContent?.trim().toLowerCase()
-        if (text === "next" && button.offsetParent !== null) {
-          button.click()
-          return true
-        }
-      }
-      return false
+    // Launch browser with stealth settings
+    browser = await puppeteer.launch({
+      headless: true,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-accelerated-2d-canvas",
+        "--no-first-run",
+        "--no-zygote",
+        "--disable-gpu",
+        "--disable-web-security",
+        "--disable-features=VizDisplayCompositor",
+        "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      ],
     })
 
-    if (!nextClicked) {
-      await page.keyboard.press("Enter")
-    }
+    const page = await browser.newPage()
 
-    await humanWait(3000, 5000)
-    return { success: true, nextClicked }
-  } catch (error) {
-    return { success: false, error: error.message }
-  }
-}
+    // Set viewport and user agent
+    await page.setViewport({
+      width: 1366 + Math.floor(Math.random() * 200),
+      height: 768 + Math.floor(Math.random() * 200),
+    })
 
-async function createInstagramAccount(accountData, userId) {
-  let browser, page
-
-  try {
-    await sendNotification(userId, `Starting Instagram account creation for ${accountData.profile.fullName}...`, "info")
-
-    const browserSetup = await createStealthBrowser()
-    browser = browserSetup.browser
-    page = browserSetup.page
-
-    await page.goto("https://www.instagram.com/accounts/emailsignup/?hl=en", {
+    // Navigate to Instagram signup
+    await page.goto("https://www.instagram.com/accounts/emailsignup/", {
       waitUntil: "networkidle2",
       timeout: 30000,
     })
 
-    await humanWait(3000, 6000)
+    await randomDelay(2000, 4000)
 
     // Fill email
-    await humanType(page, 'input[name="emailOrPhone"]', accountData.email)
-    await humanWait(1200, 2000)
+    await humanType(page, 'input[name="emailOrPhone"]', profile.email)
+    await randomDelay(500, 1500)
 
     // Fill full name
-    await humanType(page, 'input[name="fullName"]', accountData.profile.fullName)
-    await humanWait(1200, 2000)
+    await humanType(page, 'input[name="fullName"]', `${profile.firstName} ${profile.lastName}`)
+    await randomDelay(500, 1500)
 
     // Fill username
-    await humanType(page, 'input[name="username"]', accountData.profile.usernames[0])
-    await humanWait(1200, 2000)
+    await humanType(page, 'input[name="username"]', profile.username)
+    await randomDelay(500, 1500)
 
     // Fill password
-    await humanType(page, 'input[name="password"]', accountData.profile.password)
-    await humanWait(2000, 4000)
-
-    await sendNotification(userId, `Submitting registration form for ${accountData.profile.fullName}...`, "info")
-
-    // Submit form
-    await humanClick(page, 'button[type="submit"]')
-    await humanWait(3000, 6000)
+    await humanType(page, 'input[name="password"]', profile.password)
+    await randomDelay(1000, 2000)
 
     // Handle birthday selection
-    await sendNotification(userId, `Setting up profile details for ${accountData.profile.fullName}...`, "info")
+    const birthDate = new Date(profile.birthDate)
 
-    const birthdayResult = await handleBirthdaySelection(page, accountData.profile)
-    if (!birthdayResult.success) {
-      throw new Error(`Birthday selection failed: ${birthdayResult.error}`)
-    }
+    // Select month
+    await page.select('select[title="Month:"]', (birthDate.getMonth() + 1).toString())
+    await randomDelay(300, 800)
 
-    await humanWait(4000, 8000)
+    // Select day
+    await page.select('select[title="Day:"]', birthDate.getDate().toString())
+    await randomDelay(300, 800)
 
-    // Check for success
+    // Select year
+    await page.select('select[title="Year:"]', birthDate.getFullYear().toString())
+    await randomDelay(1000, 2000)
+
+    // Click sign up button
+    await page.click('button[type="submit"]')
+    await randomDelay(3000, 5000)
+
+    // Check for phone verification requirement
     const currentUrl = page.url()
-    const finalContent = await page.content()
-
-    const successIndicators = [
-      currentUrl.includes("instagram.com") && !currentUrl.includes("emailsignup"),
-      finalContent.includes("Home"),
-      finalContent.includes("Profile"),
-      currentUrl.includes("/onboarding/"),
-      currentUrl === "https://www.instagram.com/",
-    ]
-
-    const isSuccessful = successIndicators.some((indicator) => indicator)
-
-    if (isSuccessful) {
-      await sendNotification(
-        userId,
-        `✅ Instagram account created successfully: @${accountData.profile.usernames[0]}`,
-        "success",
-      )
-
-      return {
-        success: true,
-        platform: "instagram",
-        message: "Account created successfully",
-        username: accountData.profile.usernames[0],
-        email: accountData.email,
-        accountData: {
-          userId: `ig_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          profileUrl: `https://instagram.com/${accountData.profile.usernames[0]}`,
-          createdAt: new Date().toISOString(),
-        },
-      }
+    if (currentUrl.includes("challenge") || currentUrl.includes("phone")) {
+      accountData.needsPhoneVerification = true
+      accountData.status = "needs_phone_verification"
     } else {
-      throw new Error("Account creation status unclear")
+      accountData.status = "active"
     }
+
+    return accountData
   } catch (error) {
-    await sendNotification(userId, `❌ Failed to create Instagram account: ${error.message}`, "error")
-    return {
-      success: false,
-      platform: "instagram",
-      error: error.message,
-    }
+    console.error("Error creating Instagram account:", error)
+    accountData.status = "failed"
+    accountData.error = error instanceof Error ? error.message : "Unknown error"
+    return accountData
   } finally {
     if (browser) {
-      setTimeout(async () => {
-        try {
-          await browser.close()
-        } catch (e) {
-          // Ignore
-        }
-      }, 5000)
+      await browser.close()
     }
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { count = 1, userId } = body
+    const { count = 1, userId } = await request.json()
 
     if (!userId) {
-      return NextResponse.json({ success: false, message: "User ID is required" }, { status: 400 })
+      return NextResponse.json({ error: "User ID is required" }, { status: 400 })
     }
 
-    if (count < 1 || count > 5) {
-      return NextResponse.json({ success: false, message: "Count must be between 1 and 5" }, { status: 400 })
+    if (count > 5) {
+      return NextResponse.json({ error: "Maximum 5 accounts per batch" }, { status: 400 })
     }
 
     const { db } = await connectToDatabase()
-    const results = []
-    let successCount = 0
+    const accounts = []
 
-    await sendNotification(
-      userId,
-      `🚀 Starting creation of ${count} Instagram account${count > 1 ? "s" : ""}...`,
-      "info",
-    )
+    // Send initial notification
+    await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/notifications`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId,
+        type: "account_creation_started",
+        platform: "instagram",
+        message: `Starting creation of ${count} Instagram account${count > 1 ? "s" : ""}...`,
+        data: { count, platform: "instagram" },
+      }),
+    })
 
     for (let i = 0; i < count; i++) {
-      try {
-        const emailResult = await createTempEmail()
-        if (!emailResult.success) {
-          throw new Error("Failed to get temporary email")
-        }
+      const profile = generateIndianProfile()
 
-        const profile = generateProfile()
-
-        const accountData = {
-          email: emailResult.email,
-          profile: profile,
+      // Send progress notification
+      await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/notifications`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          type: "account_creation_progress",
           platform: "instagram",
-        }
+          message: `Creating Instagram account ${i + 1} of ${count}...`,
+          data: { current: i + 1, total: count, platform: "instagram" },
+        }),
+      })
 
-        const creationResult = await createInstagramAccount(accountData, userId)
+      const accountData = await createInstagramAccount(profile, userId)
 
-        const socialAccount = {
-          userId: userId,
-          accountNumber: i + 1,
+      // Save to database
+      await db.collection("social_accounts").insertOne(accountData)
+      accounts.push(accountData)
+
+      // Send individual account notification
+      await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/notifications`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          type: "account_created",
           platform: "instagram",
-          email: emailResult.email,
-          username: creationResult.username || profile.usernames[0],
-          password: profile.password,
-          profile: {
-            firstName: profile.firstName,
-            lastName: profile.lastName,
-            fullName: profile.fullName,
-            birthDate: `${profile.birthYear}-${profile.birthMonth.toString().padStart(2, "0")}-${profile.birthDay.toString().padStart(2, "0")}`,
-            gender: profile.gender,
-          },
-          creationResult: creationResult,
-          status: creationResult.success ? "active" : "failed",
-          verified: false,
-          realAccount: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        }
+          message: `Instagram account ${accountData.username} ${accountData.status === "active" ? "created successfully" : accountData.status === "needs_phone_verification" ? "created but needs phone verification" : "creation failed"}`,
+          data: { account: accountData },
+        }),
+      })
 
-        await db.collection("social_accounts").insertOne(socialAccount)
-
-        results.push({
-          accountNumber: i + 1,
-          success: creationResult.success,
-          platform: "instagram",
-          email: emailResult.email,
-          username: creationResult.username || profile.usernames[0],
-          password: profile.password,
-          profile: profile,
-          message: creationResult.message,
-          error: creationResult.error,
-        })
-
-        if (creationResult.success) {
-          successCount++
-        }
-
-        // Wait between accounts
-        if (i < count - 1) {
-          const delay = 60000 + Math.random() * 30000 // 1-1.5 minutes
-          await sendNotification(
-            userId,
-            `⏳ Waiting before creating next account... (${Math.round(delay / 1000)} seconds)`,
-            "info",
-          )
-          await wait(delay)
-        }
-      } catch (error) {
-        await sendNotification(userId, `❌ Account ${i + 1} failed: ${error.message}`, "error")
-        results.push({
-          accountNumber: i + 1,
-          success: false,
-          platform: "instagram",
-          error: error.message,
-        })
+      // Random delay between accounts
+      if (i < count - 1) {
+        await randomDelay(5000, 10000)
       }
     }
 
-    // Final notification
-    await sendNotification(
-      userId,
-      `🎉 Instagram account creation completed! ${successCount}/${count} accounts created successfully.`,
-      successCount > 0 ? "success" : "error",
-    )
+    // Send completion notification
+    const successCount = accounts.filter((acc) => acc.status === "active").length
+    const phoneVerificationCount = accounts.filter((acc) => acc.status === "needs_phone_verification").length
+    const failedCount = accounts.filter((acc) => acc.status === "failed").length
 
-    return NextResponse.json({
-      success: true,
-      message: `Instagram account creation completed! ${successCount}/${count} accounts created.`,
-      totalRequested: count,
-      totalCreated: successCount,
-      platform: "instagram",
-      accounts: results,
+    await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/notifications`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId,
+        type: "account_creation_completed",
+        platform: "instagram",
+        message: `Instagram account creation completed! Success: ${successCount}, Phone verification needed: ${phoneVerificationCount}, Failed: ${failedCount}`,
+        data: {
+          total: count,
+          success: successCount,
+          phoneVerification: phoneVerificationCount,
+          failed: failedCount,
+          platform: "instagram",
+        },
+      }),
     })
-  } catch (error) {
-    console.error("Error creating Instagram accounts:", error)
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to create Instagram accounts",
-        error: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
-  }
-}
-
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get("userId")
-
-    if (!userId) {
-      return NextResponse.json({ success: false, message: "User ID is required" }, { status: 400 })
-    }
-
-    const { db } = await connectToDatabase()
-    const accounts = await db
-      .collection("social_accounts")
-      .find({ userId, platform: "instagram" })
-      .sort({ createdAt: -1 })
-      .toArray()
 
     return NextResponse.json({
       success: true,
       accounts,
-      count: accounts.length,
+      summary: {
+        total: count,
+        success: successCount,
+        phoneVerification: phoneVerificationCount,
+        failed: failedCount,
+      },
     })
   } catch (error) {
-    console.error("Error fetching Instagram accounts:", error)
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to fetch Instagram accounts",
-        error: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
+    console.error("Error in Instagram account creation:", error)
+    return NextResponse.json({ error: "Failed to create Instagram accounts" }, { status: 500 })
   }
 }

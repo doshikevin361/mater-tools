@@ -1,417 +1,331 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
-import axios from "axios"
 import puppeteer from "puppeteer"
 
-const USER_AGENTS = [
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+// Indian names and surnames for realistic profiles
+const indianFirstNames = [
+  "Aarav",
+  "Vivaan",
+  "Aditya",
+  "Vihaan",
+  "Arjun",
+  "Sai",
+  "Reyansh",
+  "Ayaan",
+  "Krishna",
+  "Ishaan",
+  "Ananya",
+  "Diya",
+  "Priya",
+  "Kavya",
+  "Aanya",
+  "Isha",
+  "Avni",
+  "Sara",
+  "Riya",
+  "Myra",
 ]
 
-const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
-const humanWait = (minMs = 1500, maxMs = 4000) => {
-  const delay = minMs + Math.random() * (maxMs - minMs)
-  return new Promise((resolve) => setTimeout(resolve, delay))
+const indianLastNames = [
+  "Sharma",
+  "Verma",
+  "Singh",
+  "Kumar",
+  "Gupta",
+  "Agarwal",
+  "Jain",
+  "Patel",
+  "Shah",
+  "Mehta",
+  "Reddy",
+  "Nair",
+  "Iyer",
+  "Rao",
+  "Pillai",
+  "Menon",
+  "Bhat",
+  "Shetty",
+  "Kulkarni",
+  "Desai",
+]
+
+// Generate temporary email
+function generateTempEmail(): string {
+  const domains = ["tempmail.org", "10minutemail.com", "guerrillamail.com", "mailinator.com"]
+  const randomString = Math.random().toString(36).substring(2, 10)
+  const domain = domains[Math.floor(Math.random() * domains.length)]
+  return `${randomString}@${domain}`
 }
 
-async function sendNotification(userId: string, message: string, type = "info") {
-  try {
-    const { db } = await connectToDatabase()
-    await db.collection("notifications").insertOne({
-      userId,
-      title: "Twitter Account Creation",
-      message,
-      type,
-      read: false,
-      createdAt: new Date(),
-    })
-  } catch (error) {
-    console.error("Failed to send notification:", error)
-  }
-}
+// Generate Indian profile
+function generateIndianProfile() {
+  const firstName = indianFirstNames[Math.floor(Math.random() * indianFirstNames.length)]
+  const lastName = indianLastNames[Math.floor(Math.random() * indianLastNames.length)]
+  const email = generateTempEmail()
+  const username = `${firstName.toLowerCase()}${lastName.toLowerCase()}${Math.floor(Math.random() * 999)}`
+  const password = `${firstName}@${Math.floor(Math.random() * 9999)}`
 
-async function createStealthBrowser() {
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-blink-features=AutomationControlled",
-    ],
-    ignoreDefaultArgs: ["--enable-automation"],
-  })
-
-  const page = await browser.newPage()
-  await page.setUserAgent(USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)])
-
-  await page.evaluateOnNewDocument(() => {
-    Object.defineProperty(navigator, "webdriver", { get: () => undefined })
-  })
-
-  return { browser, page }
-}
-
-async function createTempEmail() {
-  try {
-    const sessionResponse = await axios.get("https://www.guerrillamail.com/ajax.php?f=get_email_address", {
-      timeout: 15000,
-    })
-
-    if (sessionResponse.data && sessionResponse.data.email_addr) {
-      return {
-        success: true,
-        email: sessionResponse.data.email_addr,
-      }
-    } else {
-      throw new Error("Failed to get email")
-    }
-  } catch (error) {
-    throw new Error("Email creation failed")
-  }
-}
-
-function generateProfile() {
-  const firstNames = [
-    "Alex",
-    "Jordan",
-    "Taylor",
-    "Morgan",
-    "Casey",
-    "Riley",
-    "Avery",
-    "Quinn",
-    "Sage",
-    "River",
-    "Phoenix",
-    "Rowan",
-    "Skylar",
-    "Cameron",
-    "Drew",
-    "Emery",
-  ]
-
-  const lastNames = [
-    "Smith",
-    "Johnson",
-    "Williams",
-    "Brown",
-    "Jones",
-    "Garcia",
-    "Miller",
-    "Davis",
-    "Rodriguez",
-    "Martinez",
-    "Hernandez",
-    "Lopez",
-    "Gonzalez",
-    "Wilson",
-    "Anderson",
-    "Thomas",
-  ]
-
-  const firstName = firstNames[Math.floor(Math.random() * firstNames.length)]
-  const lastName = lastNames[Math.floor(Math.random() * lastNames.length)]
-  const birthYear = Math.floor(Math.random() * 22) + 1985
+  // Generate random birth date (18-35 years old)
+  const currentYear = new Date().getFullYear()
+  const birthYear = currentYear - Math.floor(Math.random() * 17) - 18
   const birthMonth = Math.floor(Math.random() * 12) + 1
   const birthDay = Math.floor(Math.random() * 28) + 1
-
-  const timestamp = Date.now().toString().slice(-4)
-  const randomSuffix = Math.floor(Math.random() * 9999)
-
-  const usernames = [
-    `${firstName.toLowerCase()}_${lastName.toLowerCase()}${timestamp}`,
-    `${firstName.toLowerCase()}${lastName.toLowerCase()}${randomSuffix}`,
-    `${firstName.toLowerCase()}_${randomSuffix}`,
-  ]
-
-  const password = `${firstName}${Math.floor(Math.random() * 9999)}!`
 
   return {
     firstName,
     lastName,
-    birthYear,
-    birthMonth,
-    birthDay,
-    usernames,
+    email,
+    username,
     password,
-    fullName: `${firstName} ${lastName}`,
+    birthDate: `${birthYear}-${birthMonth.toString().padStart(2, "0")}-${birthDay.toString().padStart(2, "0")}`,
+    gender: Math.random() > 0.5 ? "male" : "female",
   }
 }
 
-async function createTwitterAccount(accountData, userId) {
-  let browser, page
+// Human-like typing function
+async function humanType(page: any, selector: string, text: string) {
+  await page.click(selector)
+  await page.evaluate((sel) => {
+    const element = document.querySelector(sel) as HTMLInputElement
+    if (element) element.value = ""
+  }, selector)
+
+  for (const char of text) {
+    await page.type(selector, char, { delay: Math.random() * 100 + 50 })
+  }
+}
+
+// Random delay function
+function randomDelay(min = 1000, max = 3000) {
+  return new Promise((resolve) => setTimeout(resolve, Math.random() * (max - min) + min))
+}
+
+async function createTwitterAccount(profile: any, userId: string) {
+  let browser
+  const accountData = {
+    platform: "twitter",
+    email: profile.email,
+    firstName: profile.firstName,
+    lastName: profile.lastName,
+    username: profile.username,
+    password: profile.password,
+    birthDate: profile.birthDate,
+    gender: profile.gender,
+    status: "creating",
+    userId,
+    createdAt: new Date(),
+    needsPhoneVerification: false,
+    error: null,
+  }
 
   try {
-    await sendNotification(userId, `Starting Twitter account creation for ${accountData.profile.fullName}...`, "info")
+    // Launch browser with stealth settings
+    browser = await puppeteer.launch({
+      headless: true,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-accelerated-2d-canvas",
+        "--no-first-run",
+        "--no-zygote",
+        "--disable-gpu",
+        "--disable-web-security",
+        "--disable-features=VizDisplayCompositor",
+        "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      ],
+    })
 
-    const browserSetup = await createStealthBrowser()
-    browser = browserSetup.browser
-    page = browserSetup.page
+    const page = await browser.newPage()
 
+    // Set viewport and user agent
+    await page.setViewport({
+      width: 1366 + Math.floor(Math.random() * 200),
+      height: 768 + Math.floor(Math.random() * 200),
+    })
+
+    // Navigate to Twitter signup
     await page.goto("https://twitter.com/i/flow/signup", {
       waitUntil: "networkidle2",
       timeout: 30000,
     })
 
-    await humanWait(3000, 6000)
+    await randomDelay(2000, 4000)
 
     // Fill name
-    await page.waitForSelector('input[name="name"]', { timeout: 20000 })
-    await page.type('input[name="name"]', accountData.profile.fullName, { delay: 100 })
-    await humanWait(1000, 2000)
+    await humanType(page, 'input[name="name"]', `${profile.firstName} ${profile.lastName}`)
+    await randomDelay(500, 1500)
 
     // Fill email
-    await page.type('input[name="email"]', accountData.email, { delay: 100 })
-    await humanWait(1000, 2000)
+    await humanType(page, 'input[name="email"]', profile.email)
+    await randomDelay(1000, 2000)
 
-    await sendNotification(userId, `Setting up profile for ${accountData.profile.fullName}...`, "info")
+    // Handle birthday selection
+    const birthDate = new Date(profile.birthDate)
 
-    // Select birth month
-    await page.click('select[name="month"]')
-    await humanWait(500, 1000)
-    await page.select('select[name="month"]', accountData.profile.birthMonth.toString())
-    await humanWait(500, 1000)
+    // Select month
+    await page.select('select[id*="SELECTOR_1"]', birthDate.toLocaleString("en-US", { month: "long" }))
+    await randomDelay(300, 800)
 
-    // Select birth day
-    await page.click('select[name="day"]')
-    await humanWait(500, 1000)
-    await page.select('select[name="day"]', accountData.profile.birthDay.toString())
-    await humanWait(500, 1000)
+    // Select day
+    await page.select('select[id*="SELECTOR_2"]', birthDate.getDate().toString())
+    await randomDelay(300, 800)
 
-    // Select birth year
-    await page.click('select[name="year"]')
-    await humanWait(500, 1000)
-    await page.select('select[name="year"]', accountData.profile.birthYear.toString())
-    await humanWait(1000, 2000)
+    // Select year
+    await page.select('select[id*="SELECTOR_3"]', birthDate.getFullYear().toString())
+    await randomDelay(1000, 2000)
 
-    // Click Next
-    await page.click('[data-testid="ocf_base_step_next_button"]')
-    await humanWait(3000, 5000)
+    // Click next button
+    await page.click('[data-testid="ocf_base_text_next_button"]')
+    await randomDelay(3000, 5000)
 
-    await sendNotification(userId, `Completing registration for ${accountData.profile.fullName}...`, "info")
-
-    // Handle verification code if needed
+    // Skip phone number if possible
     try {
-      await page.waitForSelector('input[name="verfication_code"]', { timeout: 10000 })
-      // If verification code is required, we'll skip for now
-      throw new Error("Phone verification required")
+      await page.click('[data-testid="ocf_base_text_skip_button"]')
+      await randomDelay(2000, 3000)
     } catch (e) {
-      // Continue if no verification code needed
+      // Phone verification might be required
+      accountData.needsPhoneVerification = true
     }
 
-    // Set password
-    try {
-      await page.waitForSelector('input[name="password"]', { timeout: 10000 })
-      await page.type('input[name="password"]', accountData.profile.password, { delay: 100 })
-      await humanWait(1000, 2000)
+    // Continue with signup process
+    await page.click('[data-testid="ocf_base_text_next_button"]')
+    await randomDelay(3000, 5000)
 
-      // Submit
-      await page.click('[data-testid="LoginForm_Login_Button"]')
-      await humanWait(3000, 5000)
-    } catch (e) {
-      // Continue
-    }
+    // Fill password
+    await humanType(page, 'input[name="password"]', profile.password)
+    await randomDelay(1000, 2000)
 
-    // Check for success
+    // Click next
+    await page.click('[data-testid="ocf_base_text_next_button"]')
+    await randomDelay(3000, 5000)
+
+    // Check for phone verification requirement
     const currentUrl = page.url()
-
-    if (currentUrl.includes("twitter.com") && !currentUrl.includes("/signup")) {
-      await sendNotification(
-        userId,
-        `✅ Twitter account created successfully: ${accountData.profile.fullName}`,
-        "success",
-      )
-
-      return {
-        success: true,
-        platform: "twitter",
-        message: "Account created successfully",
-        username: accountData.profile.usernames[0],
-        email: accountData.email,
-        accountData: {
-          userId: `tw_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          profileUrl: `https://twitter.com/${accountData.profile.usernames[0]}`,
-          createdAt: new Date().toISOString(),
-        },
-      }
+    if (currentUrl.includes("challenge") || currentUrl.includes("phone") || accountData.needsPhoneVerification) {
+      accountData.needsPhoneVerification = true
+      accountData.status = "needs_phone_verification"
     } else {
-      throw new Error("Account creation failed or requires additional verification")
+      accountData.status = "active"
     }
+
+    return accountData
   } catch (error) {
-    await sendNotification(userId, `❌ Failed to create Twitter account: ${error.message}`, "error")
-    return {
-      success: false,
-      platform: "twitter",
-      error: error.message,
-    }
+    console.error("Error creating Twitter account:", error)
+    accountData.status = "failed"
+    accountData.error = error instanceof Error ? error.message : "Unknown error"
+    return accountData
   } finally {
     if (browser) {
-      setTimeout(async () => {
-        try {
-          await browser.close()
-        } catch (e) {
-          // Ignore
-        }
-      }, 5000)
+      await browser.close()
     }
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { count = 1, userId } = body
+    const { count = 1, userId } = await request.json()
 
     if (!userId) {
-      return NextResponse.json({ success: false, message: "User ID is required" }, { status: 400 })
+      return NextResponse.json({ error: "User ID is required" }, { status: 400 })
     }
 
-    if (count < 1 || count > 3) {
-      return NextResponse.json({ success: false, message: "Count must be between 1 and 3" }, { status: 400 })
+    if (count > 3) {
+      return NextResponse.json({ error: "Maximum 3 accounts per batch for Twitter" }, { status: 400 })
     }
 
     const { db } = await connectToDatabase()
-    const results = []
-    let successCount = 0
+    const accounts = []
 
-    await sendNotification(userId, `🚀 Starting creation of ${count} Twitter account${count > 1 ? "s" : ""}...`, "info")
+    // Send initial notification
+    await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/notifications`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId,
+        type: "account_creation_started",
+        platform: "twitter",
+        message: `Starting creation of ${count} Twitter account${count > 1 ? "s" : ""}...`,
+        data: { count, platform: "twitter" },
+      }),
+    })
 
     for (let i = 0; i < count; i++) {
-      try {
-        const emailResult = await createTempEmail()
-        if (!emailResult.success) {
-          throw new Error("Failed to get temporary email")
-        }
+      const profile = generateIndianProfile()
 
-        const profile = generateProfile()
-
-        const accountData = {
-          email: emailResult.email,
-          profile: profile,
+      // Send progress notification
+      await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/notifications`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          type: "account_creation_progress",
           platform: "twitter",
-        }
+          message: `Creating Twitter account ${i + 1} of ${count}...`,
+          data: { current: i + 1, total: count, platform: "twitter" },
+        }),
+      })
 
-        const creationResult = await createTwitterAccount(accountData, userId)
+      const accountData = await createTwitterAccount(profile, userId)
 
-        const socialAccount = {
-          userId: userId,
-          accountNumber: i + 1,
+      // Save to database
+      await db.collection("social_accounts").insertOne(accountData)
+      accounts.push(accountData)
+
+      // Send individual account notification
+      await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/notifications`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          type: "account_created",
           platform: "twitter",
-          email: emailResult.email,
-          username: creationResult.username || profile.usernames[0],
-          password: profile.password,
-          profile: {
-            firstName: profile.firstName,
-            lastName: profile.lastName,
-            fullName: profile.fullName,
-            birthDate: `${profile.birthYear}-${profile.birthMonth.toString().padStart(2, "0")}-${profile.birthDay.toString().padStart(2, "0")}`,
-          },
-          creationResult: creationResult,
-          status: creationResult.success ? "active" : "failed",
-          verified: false,
-          realAccount: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        }
+          message: `Twitter account ${accountData.username} ${accountData.status === "active" ? "created successfully" : accountData.status === "needs_phone_verification" ? "created but needs phone verification" : "creation failed"}`,
+          data: { account: accountData },
+        }),
+      })
 
-        await db.collection("social_accounts").insertOne(socialAccount)
-
-        results.push({
-          accountNumber: i + 1,
-          success: creationResult.success,
-          platform: "twitter",
-          email: emailResult.email,
-          username: creationResult.username || profile.usernames[0],
-          password: profile.password,
-          profile: profile,
-          message: creationResult.message,
-          error: creationResult.error,
-        })
-
-        if (creationResult.success) {
-          successCount++
-        }
-
-        // Wait between accounts
-        if (i < count - 1) {
-          const delay = 90000 + Math.random() * 30000 // 1.5-2 minutes
-          await sendNotification(
-            userId,
-            `⏳ Waiting before creating next account... (${Math.round(delay / 1000)} seconds)`,
-            "info",
-          )
-          await wait(delay)
-        }
-      } catch (error) {
-        await sendNotification(userId, `❌ Account ${i + 1} failed: ${error.message}`, "error")
-        results.push({
-          accountNumber: i + 1,
-          success: false,
-          platform: "twitter",
-          error: error.message,
-        })
+      // Random delay between accounts
+      if (i < count - 1) {
+        await randomDelay(8000, 15000) // Longer delay for Twitter
       }
     }
 
-    await sendNotification(
-      userId,
-      `🎉 Twitter account creation completed! ${successCount}/${count} accounts created successfully.`,
-      successCount > 0 ? "success" : "error",
-    )
+    // Send completion notification
+    const successCount = accounts.filter((acc) => acc.status === "active").length
+    const phoneVerificationCount = accounts.filter((acc) => acc.status === "needs_phone_verification").length
+    const failedCount = accounts.filter((acc) => acc.status === "failed").length
 
-    return NextResponse.json({
-      success: true,
-      message: `Twitter account creation completed! ${successCount}/${count} accounts created.`,
-      totalRequested: count,
-      totalCreated: successCount,
-      platform: "twitter",
-      accounts: results,
+    await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/notifications`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId,
+        type: "account_creation_completed",
+        platform: "twitter",
+        message: `Twitter account creation completed! Success: ${successCount}, Phone verification needed: ${phoneVerificationCount}, Failed: ${failedCount}`,
+        data: {
+          total: count,
+          success: successCount,
+          phoneVerification: phoneVerificationCount,
+          failed: failedCount,
+          platform: "twitter",
+        },
+      }),
     })
-  } catch (error) {
-    console.error("Error creating Twitter accounts:", error)
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to create Twitter accounts",
-        error: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
-  }
-}
-
-export async function GET(request: NextRequest) {
-  try {
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get("userId")
-
-    if (!userId) {
-      return NextResponse.json({ success: false, message: "User ID is required" }, { status: 400 })
-    }
-
-    const { db } = await connectToDatabase()
-    const accounts = await db
-      .collection("social_accounts")
-      .find({ userId, platform: "twitter" })
-      .sort({ createdAt: -1 })
-      .toArray()
 
     return NextResponse.json({
       success: true,
       accounts,
-      count: accounts.length,
+      summary: {
+        total: count,
+        success: successCount,
+        phoneVerification: phoneVerificationCount,
+        failed: failedCount,
+      },
     })
   } catch (error) {
-    console.error("Error fetching Twitter accounts:", error)
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to fetch Twitter accounts",
-        error: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
+    console.error("Error in Twitter account creation:", error)
+    return NextResponse.json({ error: "Failed to create Twitter accounts" }, { status: 500 })
   }
 }
