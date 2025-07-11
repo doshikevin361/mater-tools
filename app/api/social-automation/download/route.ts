@@ -6,86 +6,80 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get("userId")
-    const platform = searchParams.get("platform") || "all"
+    const platform = searchParams.get("platform")
 
     if (!userId) {
-      return NextResponse.json({ success: false, message: "User ID is required" }, { status: 400 })
+      return NextResponse.json({ error: "Missing userId" }, { status: 400 })
     }
 
     const { db } = await connectToDatabase()
-    const query: any = { userId }
 
-    if (platform !== "all") {
+    // Build query
+    const query: any = { userId }
+    if (platform && platform !== "all") {
       query.platform = platform
     }
 
     const accounts = await db.collection("social_automation_accounts").find(query).sort({ createdAt: -1 }).toArray()
 
     if (accounts.length === 0) {
-      return NextResponse.json({ success: false, message: "No accounts found" }, { status: 404 })
+      return NextResponse.json({ error: "No accounts found" }, { status: 404 })
     }
 
     // Prepare data for Excel
-    const excelData = accounts.map((account, index) => ({
-      "Account #": account.accountNumber || index + 1,
-      Platform: account.platform?.charAt(0).toUpperCase() + account.platform?.slice(1) || "Unknown",
-      Username: account.username || "",
-      Email: account.email || "",
-      Password: account.password || "",
-      "First Name": account.profile?.firstName || "",
-      "Last Name": account.profile?.lastName || "",
-      "Full Name": account.profile?.fullName || "",
-      "Birth Date": account.profile?.birthDate || "",
-      Gender: account.profile?.gender || "",
-      Status: account.status || "",
-      Verified: account.verified ? "Yes" : "No",
-      "Created Date": account.createdAt ? new Date(account.createdAt).toLocaleDateString() : "",
-      "Created Time": account.createdAt ? new Date(account.createdAt).toLocaleTimeString() : "",
+    const excelData = accounts.map((account) => ({
+      Platform: account.platform,
+      Email: account.email,
+      "First Name": account.firstName,
+      "Last Name": account.lastName,
+      Username: account.username,
+      Password: account.password,
+      "Birth Date": account.birthDate ? new Date(account.birthDate).toLocaleDateString() : "",
+      Gender: account.gender,
+      Status: account.status,
+      Country: account.country,
+      "Created Date": new Date(account.createdAt).toLocaleDateString(),
     }))
 
-    // Create workbook and worksheet
+    // Create workbook
     const workbook = XLSX.utils.book_new()
     const worksheet = XLSX.utils.json_to_sheet(excelData)
 
-    // Set column widths
-    const columnWidths = [
-      { wch: 10 }, // Account #
+    // Auto-size columns
+    const colWidths = [
       { wch: 12 }, // Platform
-      { wch: 20 }, // Username
-      { wch: 30 }, // Email
-      { wch: 15 }, // Password
+      { wch: 25 }, // Email
       { wch: 15 }, // First Name
       { wch: 15 }, // Last Name
-      { wch: 25 }, // Full Name
+      { wch: 20 }, // Username
+      { wch: 15 }, // Password
       { wch: 12 }, // Birth Date
       { wch: 8 }, // Gender
-      { wch: 10 }, // Status
-      { wch: 10 }, // Verified
+      { wch: 20 }, // Status
+      { wch: 10 }, // Country
       { wch: 12 }, // Created Date
-      { wch: 12 }, // Created Time
     ]
+    worksheet["!cols"] = colWidths
 
-    worksheet["!cols"] = columnWidths
-
-    // Add worksheet to workbook
-    const sheetName =
-      platform === "all" ? "All Social Accounts" : `${platform.charAt(0).toUpperCase() + platform.slice(1)} Accounts`
-    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName)
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Social Accounts")
 
     // Generate Excel buffer
     const excelBuffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" })
 
-    // Set response headers
-    const headers = new Headers()
-    headers.set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    headers.set(
-      "Content-Disposition",
-      `attachment; filename="social-automation-accounts-${platform}-${new Date().toISOString().split("T")[0]}.xlsx"`,
-    )
+    const filename =
+      platform && platform !== "all"
+        ? `${platform}_accounts_${new Date().toISOString().split("T")[0]}.xlsx`
+        : `social_accounts_${new Date().toISOString().split("T")[0]}.xlsx`
 
-    return new NextResponse(excelBuffer, { headers })
+    return new NextResponse(excelBuffer, {
+      status: 200,
+      headers: {
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": `attachment; filename="${filename}"`,
+      },
+    })
   } catch (error) {
-    console.error("Error generating Excel file:", error)
-    return NextResponse.json({ success: false, message: "Failed to generate Excel file" }, { status: 500 })
+    console.error("Download error:", error)
+    return NextResponse.json({ error: "Failed to generate Excel file" }, { status: 500 })
   }
 }
