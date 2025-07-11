@@ -467,9 +467,7 @@ export default function WhatsAppPage() {
                       </p>
                     )}
                     {selectedRealTemplate !== "auto" && (
-                      <p className="text-xs text-green-600">
-                        ✅ Template selected! Message auto-filled below.
-                      </p>
+                      <p className="text-xs text-green-600">✅ Template selected! Message auto-filled below.</p>
                     )}
                   </div>
 
@@ -557,9 +555,10 @@ export default function WhatsAppPage() {
                       <span>Characters: {message.length}</span>
                       <span>Supports emojis, *bold*, _italic_, ~strikethrough~</span>
                     </div>
+                    {/* helper note when a real template is chosen */}
                     {selectedRealTemplate !== "auto" && (
                       <p className="text-xs text-blue-600">
-                         Template parameters like {{1}}, {{2}} will be automatically filled when sending.
+                        💡 Template parameters like {"{{1}}"}, {"{{2}}"} … will be auto-filled at send-time.
                       </p>
                     )}
                   </div>
