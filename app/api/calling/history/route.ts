@@ -5,21 +5,27 @@ export async function GET(request: NextRequest) {
   try {
     const { db } = await connectToDatabase()
 
-    // Fetch recent calls from database
-    const calls = await db.collection("calls").find({}).sort({ timestamp: -1 }).limit(50).toArray()
+    const calls = await db.collection("call_history").find({}).sort({ timestamp: -1 }).limit(50).toArray()
 
-    // Format calls for frontend
     const formattedCalls = calls.map((call) => ({
       id: call._id.toString(),
-      phoneNumber: call.phoneNumber || call.originalNumber,
+      phoneNumber: call.phoneNumber,
       duration: call.duration || 0,
-      status: call.status === "completed" ? "completed" : call.status === "failed" ? "failed" : "completed",
+      status:
+        call.status === "completed"
+          ? "completed"
+          : call.status === "failed"
+            ? "failed"
+            : call.status === "busy"
+              ? "busy"
+              : call.status === "no-answer"
+                ? "no-answer"
+                : "completed",
       cost: call.cost || 0,
       recordingUrl: call.recordingUrl,
       transcript: call.transcript,
       timestamp: call.timestamp,
       type: call.type || "browser_call",
-      callSid: call.callSid,
     }))
 
     return NextResponse.json({
@@ -29,5 +35,25 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("Error fetching call history:", error)
     return NextResponse.json({ success: false, error: "Failed to fetch call history" }, { status: 500 })
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const callData = await request.json()
+    const { db } = await connectToDatabase()
+
+    const result = await db.collection("call_history").insertOne({
+      ...callData,
+      timestamp: new Date(),
+    })
+
+    return NextResponse.json({
+      success: true,
+      id: result.insertedId.toString(),
+    })
+  } catch (error) {
+    console.error("Error saving call history:", error)
+    return NextResponse.json({ success: false, error: "Failed to save call history" }, { status: 500 })
   }
 }

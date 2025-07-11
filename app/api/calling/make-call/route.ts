@@ -30,31 +30,33 @@ export async function POST(request: NextRequest) {
 
     const formattedNumber = formatIndianNumber(phoneNumber)
 
-    // Log call attempt in database
-    const { db } = await connectToDatabase()
+    // Log the call attempt to database
+    try {
+      const { db } = await connectToDatabase()
 
-    const callRecord = {
-      phoneNumber: formattedNumber,
-      originalNumber: phoneNumber,
-      status: "initiated",
-      timestamp: new Date(),
-      type: "browser_call",
-      cost: 0,
-      duration: 0,
+      const callRecord = {
+        phoneNumber: formattedNumber,
+        status: "initiated",
+        timestamp: new Date(),
+        duration: 0,
+        cost: 0,
+        type: "browser_call",
+      }
+
+      await db.collection("call_history").insertOne(callRecord)
+      console.log(`Call attempt logged for ${formattedNumber}`)
+    } catch (dbError) {
+      console.error("Failed to log call to database:", dbError)
+      // Continue with call even if logging fails
     }
-
-    const result = await db.collection("calls").insertOne(callRecord)
-
-    console.log(`Call initiated to ${formattedNumber}`)
 
     return NextResponse.json({
       success: true,
-      callId: result.insertedId,
-      formattedNumber: formattedNumber,
-      message: "Call initiated successfully",
+      message: "Call initiated",
+      phoneNumber: formattedNumber,
     })
   } catch (error) {
-    console.error("Error initiating call:", error)
+    console.error("Error in make-call API:", error)
     return NextResponse.json({ success: false, error: "Failed to initiate call" }, { status: 500 })
   }
 }

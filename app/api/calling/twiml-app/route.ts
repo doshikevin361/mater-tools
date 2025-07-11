@@ -1,49 +1,54 @@
-import { type NextRequest, NextResponse } from "next/server"
+import type { NextRequest } from "next/server"
 
 export async function POST(request: NextRequest) {
   try {
-    const formData = await request.formData()
-    const to = formData.get("To") as string
-    const from = process.env.TWILIO_PHONE_NUMBER
+    const body = await request.text()
+    const params = new URLSearchParams(body)
 
-    if (!from) {
-      console.error("TWILIO_PHONE_NUMBER not configured")
-      return new NextResponse(
-        `<?xml version="1.0" encoding="UTF-8"?>
-        <Response>
-          <Say>Sorry, calling service is not configured properly.</Say>
-        </Response>`,
-        {
-          headers: { "Content-Type": "text/xml" },
-          status: 500,
-        },
-      )
-    }
+    const to = params.get("To")
+    const from = params.get("From")
 
-    console.log(`TwiML App: Making call from ${from} to ${to}`)
+    console.log(`TwiML App: Outgoing call from ${from} to ${to}`)
 
-    // Generate TwiML for outgoing call
+    // Create TwiML response for outgoing calls
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
-    <Response>
-      <Dial callerId="${from}" record="record-from-answer" recordingStatusCallback="/api/calling/recording-webhook">
+<Response>
+    <Dial callerId="+919876543210" record="record-from-answer" recordingStatusCallback="/api/calling/recording-webhook">
         <Number>${to}</Number>
-      </Dial>
-    </Response>`
+    </Dial>
+</Response>`
 
-    return new NextResponse(twiml, {
-      headers: { "Content-Type": "text/xml" },
+    return new Response(twiml, {
+      headers: {
+        "Content-Type": "text/xml",
+      },
     })
   } catch (error) {
     console.error("Error in TwiML app:", error)
-    return new NextResponse(
-      `<?xml version="1.0" encoding="UTF-8"?>
-      <Response>
-        <Say>Sorry, there was an error processing your call.</Say>
-      </Response>`,
-      {
-        headers: { "Content-Type": "text/xml" },
-        status: 500,
+
+    const errorTwiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Say>Sorry, there was an error connecting your call. Please try again.</Say>
+</Response>`
+
+    return new Response(errorTwiml, {
+      headers: {
+        "Content-Type": "text/xml",
       },
-    )
+    })
   }
+}
+
+export async function GET(request: NextRequest) {
+  // Handle GET requests for TwiML app
+  const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Say>Welcome to the calling service.</Say>
+</Response>`
+
+  return new Response(twiml, {
+    headers: {
+      "Content-Type": "text/xml",
+    },
+  })
 }

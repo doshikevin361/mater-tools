@@ -10,20 +10,44 @@ export class TwilioVoiceBrowser {
   private isInitialized = false
   private token = ""
   private identity = ""
+  private initializationPromise: Promise<void> | null = null
 
   async initialize() {
+    // Prevent multiple initialization attempts
+    if (this.initializationPromise) {
+      return this.initializationPromise
+    }
+
     if (this.isInitialized) return
 
+    this.initializationPromise = this.doInitialize()
+    return this.initializationPromise
+  }
+
+  private async doInitialize() {
     try {
-      console.log("Initializing Twilio Voice SDK...")
+      console.log("Starting Twilio Voice SDK initialization...")
 
       // Load Twilio Voice SDK
       if (!window.Twilio) {
+        console.log("Loading Twilio SDK...")
         await this.loadTwilioSDK()
       }
 
+      console.log("Twilio SDK loaded, getting access token...")
+
       // Get access token from server
-      const response = await fetch("/api/calling/token")
+      const response = await fetch("/api/calling/token", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
       const data = await response.json()
 
       if (!data.success) {
@@ -33,7 +57,7 @@ export class TwilioVoiceBrowser {
       this.token = data.token
       this.identity = data.identity
 
-      console.log("Access token received, initializing device...")
+      console.log("Access token received, initializing Twilio device...")
 
       // Initialize Twilio Device
       this.device = new window.Twilio.Device(this.token, {
@@ -42,6 +66,8 @@ export class TwilioVoiceBrowser {
         fakeLocalDTMF: true,
         enableRingingState: true,
         allowIncomingWhileBusy: true,
+        codecPreferences: ["opus", "pcmu"],
+        enableImprovedSignalingErrorPrecision: true,
       })
 
       // Set up device event listeners
@@ -50,18 +76,23 @@ export class TwilioVoiceBrowser {
       // Wait for device to be ready
       await new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
-          reject(new Error("Device initialization timeout"))
-        }, 10000) // 10 second timeout
+          reject(new Error("Device initialization timeout after 15 seconds"))
+        }, 15000) // 15 second timeout
 
         this.device.on("ready", () => {
+          console.log("Twilio device is ready!")
           clearTimeout(timeout)
           resolve(true)
         })
 
         this.device.on("error", (error: any) => {
+          console.error("Device initialization error:", error)
           clearTimeout(timeout)
           reject(error)
         })
+
+        // Start the device registration process
+        this.device.register()
       })
 
       this.isInitialized = true
@@ -69,6 +100,7 @@ export class TwilioVoiceBrowser {
     } catch (error) {
       console.error("Failed to initialize Twilio Voice SDK:", error)
       this.isInitialized = false
+      this.initializationPromise = null
       throw error
     }
   }
@@ -77,11 +109,10 @@ export class TwilioVoiceBrowser {
     return new Promise((resolve, reject) => {
       // Check if script already exists
       const existingScript = document.querySelector('script[src*="twilio"]')
-      if (existingScript) {
-        if (window.Twilio) {
-          resolve()
-          return
-        }
+      if (existingScript && window.Twilio) {
+        console.log("Twilio SDK already loaded")
+        resolve()
+        return
       }
 
       const script = document.createElement("script")
@@ -90,19 +121,20 @@ export class TwilioVoiceBrowser {
       script.async = true
 
       script.onload = () => {
-        console.log("Twilio SDK loaded successfully")
+        console.log("Twilio SDK script loaded")
         // Wait a bit for the SDK to be fully available
         setTimeout(() => {
           if (window.Twilio) {
+            console.log("Twilio SDK is available")
             resolve()
           } else {
             reject(new Error("Twilio SDK not available after loading"))
           }
-        }, 100)
+        }, 500)
       }
 
       script.onerror = (error) => {
-        console.error("Failed to load Twilio SDK:", error)
+        console.error("Failed to load Twilio SDK script:", error)
         reject(new Error("Failed to load Twilio SDK"))
       }
 
@@ -116,16 +148,22 @@ export class TwilioVoiceBrowser {
     })
 
     this.device.on("error", (error: any) => {
-      console.error("Twilio Device error:", error)
+      console.error("Twilio Device error:", error.message || error)
     })
 
     this.device.on("connect", (call: any) => {
       console.log("Call connected successfully")
       this.activeCall = call
+
+      // Set up call event listeners
+      call.on("disconnect", () => {
+        console.log("Call disconnected")
+        this.activeCall = null
+      })
     })
 
     this.device.on("disconnect", (call: any) => {
-      console.log("Call disconnected")
+      console.log("Call disconnected from device")
       this.activeCall = null
     })
 
@@ -138,11 +176,23 @@ export class TwilioVoiceBrowser {
       console.log("Call cancelled")
       this.activeCall = null
     })
+
+    this.device.on("offline", () => {
+      console.log("Device went offline")
+    })
+
+    this.device.on("registered", () => {
+      console.log("Device registered successfully")
+    })
+
+    this.device.on("unregistered", () => {
+      console.log("Device unregistered")
+    })
   }
 
   async makeCall(phoneNumber: string): Promise<any> {
     if (!this.isInitialized) {
-      throw new Error("Device not initialized. Please refresh the page.")
+      throw new Error("Device not initialized. Please refresh the page and try again.")
     }
 
     if (!this.device) {
@@ -156,8 +206,16 @@ export class TwilioVoiceBrowser {
       console.log("Making call to:", formattedNumber)
 
       // Check if device is ready
-      if (this.device.state !== "ready") {
-        throw new Error("Device not ready. Please wait and try again.")
+      if (!this.isDeviceReady()) {
+        throw new Error("Device not ready. Please wait a moment and try again.")
+      }
+
+      // Request microphone permission explicitly
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true })
+        console.log("Microphone permission granted")
+      } catch (permError) {
+        throw new Error("Microphone permission required. Please allow microphone access and try again.")
       }
 
       const call = await this.device.connect({
@@ -167,6 +225,7 @@ export class TwilioVoiceBrowser {
       })
 
       this.activeCall = call
+      console.log("Call initiated successfully")
       return call
     } catch (error) {
       console.error("Error making call:", error)
@@ -245,7 +304,12 @@ export class TwilioVoiceBrowser {
   }
 
   isDeviceReady(): boolean {
-    return this.device && this.device.state === "ready"
+    return this.device && (this.device.state === "ready" || this.device.status() === "ready")
+  }
+
+  getDeviceState(): string {
+    if (!this.device) return "not_initialized"
+    return this.device.state || this.device.status() || "unknown"
   }
 }
 
