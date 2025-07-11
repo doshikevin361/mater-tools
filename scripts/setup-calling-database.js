@@ -11,55 +11,29 @@ async function setupCallingDatabase() {
 
     const db = client.db()
 
-    // Create call_history collection with indexes
-    const callHistoryCollection = db.collection("call_history")
-    await callHistoryCollection.createIndex({ userId: 1, createdAt: -1 })
-    await callHistoryCollection.createIndex({ callSid: 1 }, { unique: true })
-    await callHistoryCollection.createIndex({ status: 1 })
-    console.log("✅ call_history collection and indexes created")
+    // Create calls collection with indexes
+    await db.createCollection("calls")
+    await db.collection("calls").createIndex({ userId: 1 })
+    await db.collection("calls").createIndex({ callSid: 1 }, { unique: true })
+    await db.collection("calls").createIndex({ createdAt: -1 })
+    console.log("Created calls collection with indexes")
 
     // Create transactions collection with indexes
-    const transactionsCollection = db.collection("transactions")
-    await transactionsCollection.createIndex({ userId: 1, createdAt: -1 })
-    await transactionsCollection.createIndex({ type: 1 })
-    await transactionsCollection.createIndex({ callSid: 1 })
-    console.log("✅ transactions collection and indexes created")
+    await db.createCollection("transactions")
+    await db.collection("transactions").createIndex({ userId: 1 })
+    await db.collection("transactions").createIndex({ createdAt: -1 })
+    console.log("Created transactions collection with indexes")
 
-    // Update users collection to include balance field
-    const usersCollection = db.collection("users")
-    await usersCollection.createIndex({ email: 1 }, { unique: true })
-
-    // Add balance field to existing users if they don't have it
-    await usersCollection.updateMany(
+    // Ensure users collection has balance field
+    await db.collection("users").updateMany(
       { balance: { $exists: false } },
-      { $set: { balance: 100.0 } }, // Give new users ₹100 starting balance
+      { $set: { balance: 25.0 } }, // Default balance of ₹25
     )
-    console.log("✅ users collection updated with balance field")
+    console.log("Updated users with default balance")
 
-    // Create sample user for testing (if not exists)
-    const existingUser = await usersCollection.findOne({ email: "test@brandbuzz.com" })
-    if (!existingUser) {
-      await usersCollection.insertOne({
-        _id: "test_user_123",
-        name: "Test User",
-        email: "test@brandbuzz.com",
-        phone: "+91 98765 43210",
-        balance: 500.0,
-        plan: "premium",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      })
-      console.log("✅ Test user created with ₹500 balance")
-    }
-
-    console.log("\n🎉 Calling database setup completed successfully!")
-    console.log("\nNext steps:")
-    console.log("1. Make sure your Twilio credentials are set in .env.local")
-    console.log("2. Set NEXT_PUBLIC_BASE_URL to your domain")
-    console.log("3. Configure Twilio webhooks to point to your domain")
-    console.log("4. Test the calling functionality")
+    console.log("Database setup completed successfully!")
   } catch (error) {
-    console.error("❌ Error setting up calling database:", error)
+    console.error("Error setting up database:", error)
   } finally {
     await client.close()
   }

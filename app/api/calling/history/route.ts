@@ -7,40 +7,30 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get("userId")
 
     if (!userId) {
-      return NextResponse.json({ error: "User ID is required" }, { status: 400 })
+      return NextResponse.json({ error: "User ID required" }, { status: 401 })
     }
 
     const { db } = await connectToDatabase()
 
-    // Fetch call history for the user
-    const calls = await db.collection("call_history").find({ userId }).sort({ createdAt: -1 }).limit(50).toArray()
+    const calls = await db.collection("calls").find({ userId }).sort({ createdAt: -1 }).limit(50).toArray()
 
-    // Format the calls for the frontend
+    // Format calls for frontend
     const formattedCalls = calls.map((call) => ({
       id: call._id.toString(),
       phoneNumber: call.to,
       duration: call.duration || 0,
-      status: call.status === "completed" ? "completed" : call.status === "failed" ? "failed" : "no-answer",
+      status: call.status,
       cost: call.cost || 0,
-      recordingUrl: call.recordingUrl || null,
-      transcript: call.transcript || null,
+      recordingUrl: call.recordingUrl,
       timestamp: call.createdAt,
-      callSid: call.callSid,
     }))
 
     return NextResponse.json({
       success: true,
       calls: formattedCalls,
-      total: formattedCalls.length,
     })
   } catch (error) {
     console.error("Error fetching call history:", error)
-    return NextResponse.json(
-      {
-        error: "Failed to fetch call history",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
+    return NextResponse.json({ error: "Failed to fetch call history" }, { status: 500 })
   }
 }

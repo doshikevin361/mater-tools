@@ -7,7 +7,7 @@ const authToken = process.env.TWILIO_AUTH_TOKEN
 const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER
 
 if (!accountSid || !authToken || !twilioPhoneNumber) {
-  console.error("Missing Twilio credentials in environment variables")
+  throw new Error("Missing Twilio credentials")
 }
 
 const client = twilio(accountSid, authToken)
@@ -17,94 +17,55 @@ export async function POST(request: NextRequest) {
     const { to, record = false } = await request.json()
     const userId = request.headers.get("user-id")
 
-    if (!to) {
-      return NextResponse.json({ error: "Phone number is required" }, { status: 400 })
-    }
-
     if (!userId) {
-      return NextResponse.json({ error: "User ID is required" }, { status: 401 })
+      return NextResponse.json({ error: "User ID required" }, { status: 401 })
     }
 
-    // Validate Indian phone number
-    const cleanedNumber = to.replace(/\D/g, "")
-    let formattedNumber = to
-
-    if (cleanedNumber.length === 10) {
-      formattedNumber = `+91${cleanedNumber}`
-    } else if (cleanedNumber.length === 12 && cleanedNumber.startsWith("91")) {
-      formattedNumber = `+${cleanedNumber}`
-    } else if (!to.startsWith("+91")) {
-      return NextResponse.json({ error: "Invalid Indian phone number format" }, { status: 400 })
+    if (!to) {
+      return NextResponse.json({ error: "Phone number required" }, { status: 400 })
     }
 
-    console.log("Making call to:", formattedNumber)
+    // Connect to database
+    const { db } = await connectToDatabase()
 
     // Check user balance
-    const { db } = await connectToDatabase()
     const user = await db.collection("users").findOne({ _id: userId })
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 })
+    if (!user || user.balance < 1.5) {
+      return NextResponse.json({ error: "Insufficient balance" }, { status: 400 })
     }
 
-    const callCost = 1.5 // ₹1.5 minimum cost
-    if (user.balance < callCost) {
-      return NextResponse.json(
-        {
-          error: `Insufficient balance. Required: ₹${callCost}, Available: ₹${user.balance.toFixed(2)}`,
-        },
-        { status: 400 },
-      )
-    }
-
-    // Create TwiML for the call
-    const twimlUrl = `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/calling/twiml`
-
-    // Make the call using Twilio
+    // Make the call
     const call = await client.calls.create({
-      to: formattedNumber,
+      to: to,
       from: twilioPhoneNumber,
-      url: twimlUrl,
-      statusCallback: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/calling/webhook`,
+      url: `${process.env.NEXT_PUBLIC_BASE_URL}/api/calling/twiml`,
+      statusCallback: `${process.env.NEXT_PUBLIC_BASE_URL}/api/calling/webhook`,
       statusCallbackEvent: ["initiated", "ringing", "answered", "completed"],
-      statusCallbackMethod: "POST",
       record: record,
-      recordingStatusCallback: record
-        ? `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/calling/recording-webhook`
-        : undefined,
+      recordingStatusCallback: record ? `${process.env.NEXT_PUBLIC_BASE_URL}/api/calling/recording-webhook` : undefined,
     })
 
     // Store call record in database
-    const callRecord = {
+    await db.collection("calls").insertOne({
+      userId,
       callSid: call.sid,
-      userId: userId,
-      to: formattedNumber,
+      to,
       from: twilioPhoneNumber,
-      status: call.status,
-      record: record,
-      cost: callCost,
+      status: "initiated",
+      startTime: new Date(),
+      record,
+      cost: 0,
+      duration: 0,
       createdAt: new Date(),
-      updatedAt: new Date(),
-    }
-
-    await db.collection("call_history").insertOne(callRecord)
-
-    console.log("Call created successfully:", call.sid)
+    })
 
     return NextResponse.json({
       success: true,
       callSid: call.sid,
       status: call.status,
-      message: "Call initiated successfully",
     })
   } catch (error) {
     console.error("Error making call:", error)
-    return NextResponse.json(
-      {
-        error: "Failed to make call",
-        details: error instanceof Error ? error.message : "Unknown error",
-      },
-      { status: 500 },
-    )
+    return NextResponse.json({ error: "Failed to make call" }, { status: 500 })
   }
 }

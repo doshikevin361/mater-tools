@@ -7,39 +7,29 @@ export async function POST(request: NextRequest) {
     const callSid = formData.get("CallSid") as string
     const recordingUrl = formData.get("RecordingUrl") as string
     const recordingSid = formData.get("RecordingSid") as string
-    const recordingDuration = formData.get("RecordingDuration") as string
 
-    console.log("Recording webhook received:", {
-      callSid,
-      recordingUrl,
-      recordingSid,
-      recordingDuration,
-    })
+    if (!callSid || !recordingUrl) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+    }
 
     const { db } = await connectToDatabase()
 
     // Update call record with recording information
-    await db.collection("call_history").updateOne(
+    await db.collection("calls").updateOne(
       { callSid },
       {
         $set: {
-          recordingUrl: recordingUrl + ".mp3", // Add .mp3 extension for download
+          recordingUrl,
           recordingSid,
-          recordingDuration: Number.parseInt(recordingDuration) || 0,
           recordingAvailable: true,
           updatedAt: new Date(),
         },
       },
     )
 
-    console.log(`Recording saved for call ${callSid}: ${recordingUrl}`)
-
-    return NextResponse.json({ success: true, message: "Recording webhook processed successfully" })
+    return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Recording webhook error:", error)
-    return NextResponse.json(
-      { success: false, message: "Failed to process recording webhook", error: error.message },
-      { status: 500 },
-    )
+    console.error("Error processing recording webhook:", error)
+    return NextResponse.json({ error: "Recording webhook processing failed" }, { status: 500 })
   }
 }
