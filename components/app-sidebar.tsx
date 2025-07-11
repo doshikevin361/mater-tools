@@ -106,12 +106,24 @@ const data = {
       ],
     },
     {
-      title: "Account Management",
+      title: "Account Creation",
       url: "#",
       icon: UserPlus,
       items: [
         {
-          title: "Social Accounts",
+          title: "Instagram Accounts",
+          url: "/dashboard/create-instagram",
+        },
+        {
+          title: "Facebook Accounts",
+          url: "/dashboard/create-facebook",
+        },
+        {
+          title: "Twitter Accounts",
+          url: "/dashboard/create-twitter",
+        },
+        {
+          title: "All Social Accounts",
           url: "/dashboard/social-accounts",
         },
         {
