@@ -1,48 +1,48 @@
 import { type NextRequest, NextResponse } from "next/server"
-import jwt from "jsonwebtoken"
 
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    const { identity } = await request.json()
-
-    const accountSid = process.env.TWILIO_ACCOUNT_SID
-    const apiKey = process.env.TWILIO_API_KEY
-    const apiSecret = process.env.TWILIO_API_SECRET
-    const twimlAppSid = process.env.TWILIO_TWIML_APP_SID
+    const accountSid = 'AC86b70352ccc2023f8cfa305712b474cd'
+    const apiKey = 'SK0745de76832af1b501e871e36bc467ae'
+    const apiSecret = 'Ge1LcneXSoJmREekmK7wmoqsn4E1qOz9'
+    const twimlAppSid = 'APe32c170c79e356138bd267904ffc6814'
 
     if (!accountSid || !apiKey || !apiSecret || !twimlAppSid) {
-      return NextResponse.json({ success: false, message: "Missing Twilio configuration" }, { status: 500 })
+      console.error("Missing Twilio environment variables")
+      return NextResponse.json({ success: false, error: "Twilio configuration missing" }, { status: 500 })
     }
 
-    const now = Math.floor(Date.now() / 1000)
-    const exp = now + 3600
+    // Generate a unique identity for this user session
+    const identity = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
-    const payload = {
-      iss: apiKey,
-      sub: accountSid,
-      nbf: now,
-      exp: exp,
-      grants: {
-        identity: identity || `user_${Date.now()}`,
-        voice: {
-          outgoing: {
-            application_sid: twimlAppSid,
-          },
-          incoming: {
-            allow: true,
-          },
-        },
-      },
-    }
+    // Create access token
+    const AccessToken = require("twilio").jwt.AccessToken
+    const VoiceGrant = AccessToken.VoiceGrant
 
-    const token = jwt.sign(payload, apiSecret, { algorithm: "HS256" })
+    const accessToken = new AccessToken(accountSid, apiKey, apiSecret, {
+      identity: identity,
+      ttl: 3600, // 1 hour
+    })
+
+    // Create Voice grant
+    const voiceGrant = new VoiceGrant({
+      outgoingApplicationSid: twimlAppSid,
+      incomingAllow: true, // Allow incoming calls
+    })
+
+    accessToken.addGrant(voiceGrant)
+
+    const token = accessToken.toJwt()
+
+    console.log(`Generated access token for identity: ${identity}`)
 
     return NextResponse.json({
       success: true,
-      token,
-      identity: payload.grants.identity,
+      token: token,
+      identity: identity,
     })
   } catch (error) {
-    return NextResponse.json({ success: false, message: "Failed to generate token" }, { status: 500 })
+    console.error("Error generating access token:", error)
+    return NextResponse.json({ success: false, error: "Failed to generate access token" }, { status: 500 })
   }
 }

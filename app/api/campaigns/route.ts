@@ -16,13 +16,18 @@ export async function GET(request: NextRequest) {
 
     const db = await getDatabase()
 
+    // Build query - ALWAYS filter by userId
     const query: any = { userId }
     if (type) {
       query.type = type
     }
 
+    console.log("Campaigns GET query:", query)
+
+    // Get total count
     const total = await db.collection("campaigns").countDocuments(query)
 
+    // Get campaigns with pagination, sorted by most recent first
     const campaigns = await db
       .collection("campaigns")
       .find(query)
@@ -31,6 +36,9 @@ export async function GET(request: NextRequest) {
       .limit(limit)
       .toArray()
 
+    console.log(`Found ${campaigns.length} campaigns for user ${userId}`)
+
+    // Calculate pagination
     const totalPages = Math.ceil(total / limit)
 
     return NextResponse.json({
@@ -47,6 +55,7 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
+    console.error("Campaigns GET error:", error)
     return NextResponse.json(
       { success: false, message: "Failed to fetch campaigns", error: error.message },
       { status: 500 },
@@ -69,6 +78,7 @@ export async function POST(request: NextRequest) {
 
     const db = await getDatabase()
 
+    // Create new campaign - ALWAYS include userId
     const campaign = {
       userId,
       name: name.trim(),
@@ -101,6 +111,7 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
+    console.error("Campaigns POST error:", error)
     return NextResponse.json(
       { success: false, message: "Failed to create campaign", error: error.message },
       { status: 500 },
@@ -119,6 +130,7 @@ export async function PUT(request: NextRequest) {
 
     const db = await getDatabase()
 
+    // Check if campaign exists and belongs to user
     const campaign = await db.collection("campaigns").findOne({
       _id: new ObjectId(campaignId),
       userId,
@@ -128,6 +140,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Campaign not found" }, { status: 404 })
     }
 
+    // Update campaign
     const result = await db.collection("campaigns").updateOne(
       { _id: new ObjectId(campaignId), userId },
       {
@@ -142,6 +155,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ success: false, message: "No changes made to campaign" }, { status: 400 })
     }
 
+    // Get updated campaign
     const updatedCampaign = await db.collection("campaigns").findOne({
       _id: new ObjectId(campaignId),
     })
@@ -155,6 +169,7 @@ export async function PUT(request: NextRequest) {
       },
     })
   } catch (error) {
+    console.error("Campaigns PUT error:", error)
     return NextResponse.json(
       { success: false, message: "Failed to update campaign", error: error.message },
       { status: 500 },
@@ -174,6 +189,7 @@ export async function DELETE(request: NextRequest) {
 
     const db = await getDatabase()
 
+    // Check if campaign exists and belongs to user
     const campaign = await db.collection("campaigns").findOne({
       _id: new ObjectId(campaignId),
       userId,
@@ -183,6 +199,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Campaign not found" }, { status: 404 })
     }
 
+    // Delete the campaign
     await db.collection("campaigns").deleteOne({
       _id: new ObjectId(campaignId),
       userId,
@@ -193,6 +210,7 @@ export async function DELETE(request: NextRequest) {
       message: "Campaign deleted successfully",
     })
   } catch (error) {
+    console.error("Campaigns DELETE error:", error)
     return NextResponse.json(
       { success: false, message: "Failed to delete campaign", error: error.message },
       { status: 500 },

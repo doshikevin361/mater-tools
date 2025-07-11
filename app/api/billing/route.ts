@@ -8,8 +8,10 @@ export async function GET(request: NextRequest) {
 
     const db = await getDatabase()
 
+    // Get user's current balance
     const user = await db.collection("users").findOne({ _id: userId })
 
+    // Get recent transactions
     const transactions = await db
       .collection("transactions")
       .find({ userId })
@@ -17,6 +19,7 @@ export async function GET(request: NextRequest) {
       .limit(50)
       .toArray()
 
+    // Get monthly spending breakdown
     const currentMonth = new Date()
     currentMonth.setDate(1)
     currentMonth.setHours(0, 0, 0, 0)
@@ -41,6 +44,7 @@ export async function GET(request: NextRequest) {
       ])
       .toArray()
 
+    // Get total spending stats
     const totalStats = await db
       .collection("transactions")
       .aggregate([
@@ -58,6 +62,7 @@ export async function GET(request: NextRequest) {
     const credits = totalStats.find((s) => s._id === "credit")?.totalAmount || 0
     const debits = totalStats.find((s) => s._id === "debit")?.totalAmount || 0
 
+    // Format monthly usage
     const usage = {
       thisMonth: {
         whatsapp: { messages: 0, cost: 0 },
@@ -106,6 +111,7 @@ export async function GET(request: NextRequest) {
       billing: billingData,
     })
   } catch (error) {
+    console.error("Billing error:", error)
     return NextResponse.json({ success: false, message: "Failed to fetch billing data" }, { status: 500 })
   }
 }
@@ -121,9 +127,11 @@ export async function POST(request: NextRequest) {
 
     const db = await getDatabase()
 
+    // Get current user balance
     const user = await db.collection("users").findOne({ _id: userId })
     const currentBalance = user?.balance || 0
 
+    // Create transaction record
     const transaction = {
       userId,
       type: "credit",
@@ -138,6 +146,7 @@ export async function POST(request: NextRequest) {
 
     await db.collection("transactions").insertOne(transaction)
 
+    // Update user balance
     const newBalance = currentBalance + Number.parseFloat(amount)
     await db.collection("users").updateOne(
       { _id: userId },
@@ -157,6 +166,7 @@ export async function POST(request: NextRequest) {
       newBalance: newBalance,
     })
   } catch (error) {
+    console.error("Payment error:", error)
     return NextResponse.json({ success: false, message: "Payment failed" }, { status: 500 })
   }
 }

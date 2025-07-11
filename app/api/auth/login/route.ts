@@ -12,6 +12,7 @@ export async function POST(request: NextRequest) {
     try {
       const db = await getDatabase()
 
+      // Check for demo credentials first
       if (email === "demo@brandbuzzventures.com" && password === "demo123") {
         const demoUser = {
           _id: "demo-user-123",
@@ -24,6 +25,7 @@ export async function POST(request: NextRequest) {
           createdAt: new Date(),
         }
 
+        // Ensure demo user exists in database
         await db.collection("users").updateOne({ _id: "demo-user-123" }, { $set: demoUser }, { upsert: true })
 
         return NextResponse.json({
@@ -33,18 +35,21 @@ export async function POST(request: NextRequest) {
         })
       }
 
+      // Check database for user
       const user = await db.collection("users").findOne({ email })
 
       if (!user) {
         return NextResponse.json({ success: false, message: "Invalid email or password" }, { status: 401 })
       }
 
+      // Simple password comparison (not hashed)
       const isValidPassword = user.password === password
 
       if (!isValidPassword) {
         return NextResponse.json({ success: false, message: "Invalid email or password" }, { status: 401 })
       }
 
+      // Update last login
       await db.collection("users").updateOne({ _id: user._id }, { $set: { lastLoginAt: new Date() } })
 
       return NextResponse.json({
@@ -62,6 +67,9 @@ export async function POST(request: NextRequest) {
         },
       })
     } catch (dbError) {
+      console.error("Database error:", dbError)
+
+      // Fallback for admin credentials
       if (email === "admin@brandbuzzventures.com" && password === "admin123") {
         return NextResponse.json({
           success: true,
@@ -82,6 +90,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Database connection error" }, { status: 500 })
     }
   } catch (error) {
+    console.error("Login error:", error)
     return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 })
   }
 }

@@ -1,46 +1,62 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getDatabase } from "@/lib/mongodb"
+import { connectToDatabase } from "@/lib/mongodb"
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    let { phoneNumber, userId = "demo-user-123" } = body
+    const { phoneNumber } = await request.json()
 
     if (!phoneNumber) {
-      return NextResponse.json({ success: false, message: "Phone number is required" }, { status: 400 })
+      return NextResponse.json({ success: false, error: "Phone number is required" }, { status: 400 })
     }
 
-    phoneNumber = phoneNumber.replace(/\D/g, "")
+    // Format Indian phone number
+    const formatIndianNumber = (number: string): string => {
+      const cleaned = number.replace(/\D/g, "")
 
-    if (phoneNumber.length === 10) {
-      phoneNumber = "+91" + phoneNumber
-    } else if (phoneNumber.length === 12 && phoneNumber.startsWith("91")) {
-      phoneNumber = "+" + phoneNumber
-    } else if (!phoneNumber.startsWith("+91")) {
-      phoneNumber = "+91" + phoneNumber.slice(-10)
+      if (cleaned.startsWith("91") && cleaned.length === 12) {
+        return `+${cleaned}`
+      }
+
+      if (cleaned.length === 10) {
+        return `+91${cleaned}`
+      }
+
+      if (cleaned.startsWith("91")) {
+        return `+${cleaned}`
+      }
+
+      return `+91${cleaned}`
     }
 
-    const db = await getDatabase()
+    const formattedNumber = formatIndianNumber(phoneNumber)
 
-    const callRecord = {
-      userId,
-      phoneNumber,
-      status: "initiated",
-      direction: "outbound",
-      duration: 0,
-      cost: 0,
-      createdAt: new Date(),
+    // Log the call attempt to database
+    try {
+      const { db } = await connectToDatabase()
+
+      const callRecord = {
+        phoneNumber: formattedNumber,
+        status: "initiated",
+        timestamp: new Date(),
+        duration: 0,
+        cost: 0,
+        type: "browser_call",
+      }
+
+      await db.collection("call_history").insertOne(callRecord)
+      console.log(`Call attempt logged for ${formattedNumber}`)
+    } catch (dbError) {
+      console.error("Failed to log call to database:", dbError)
+      // Continue with call even if logging fails
     }
-
-    const result = await db.collection("call_history").insertOne(callRecord)
 
     return NextResponse.json({
       success: true,
-      message: "Call initiated successfully",
-      callId: result.insertedId.toString(),
-      phoneNumber,
+      message: "Call initiated",
+      phoneNumber: formattedNumber,
     })
   } catch (error) {
-    return NextResponse.json({ success: false, message: "Failed to initiate call" }, { status: 500 })
+    console.error("Error in make-call API:", error)
+    return NextResponse.json({ success: false, error: "Failed to initiate call" }, { status: 500 })
   }
 }
