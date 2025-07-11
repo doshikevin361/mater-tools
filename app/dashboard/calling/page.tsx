@@ -267,19 +267,8 @@ export default function CallingPage() {
     try {
       const formattedNumber = formatIndianNumber(phoneNumber)
 
-      // Store call in database first
-      const { db } = await import("@/lib/mongodb").then((m) => m.connectToDatabase())
-      const callRecord = {
-        userId: "demo-user",
-        phoneNumber: formattedNumber,
-        callType: "browser-direct",
-        status: "initiated",
-        direction: "outbound",
-        timestamp: new Date(),
-        createdAt: new Date(),
-      }
-
-      await db.collection("call_history").insertOne(callRecord)
+      // Server-side webhooks / API routes will log call history.
+      // Avoid importing server libraries in the browser to prevent bundling errors.
 
       // Make direct call through Twilio Device
       const call = twilioDevice.connect({
