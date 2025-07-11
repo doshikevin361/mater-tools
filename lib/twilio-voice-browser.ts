@@ -51,7 +51,8 @@ export class TwilioVoiceBrowser {
   private async loadTwilioSDK(): Promise<void> {
     return new Promise((resolve, reject) => {
       const script = document.createElement("script")
-      script.src = "https://sdk.twilio.com/js/voice/releases/2.11.1/twilio.min.js"
+      script.src = "https://cdn.jsdelivr.net/npm/@twilio/voice-sdk@2.11.0/dist/twilio.min.js"
+      script.crossOrigin = "anonymous"
       script.onload = () => resolve()
       script.onerror = () => reject(new Error("Failed to load Twilio SDK"))
       document.head.appendChild(script)

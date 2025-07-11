@@ -10,32 +10,38 @@ export async function POST(request: NextRequest) {
     const from = formData.get("From") as string
     const to = formData.get("To") as string
 
-    console.log("Call webhook received:", {
-      callSid,
-      callStatus,
-      callDuration,
-      from,
-      to,
-    })
+    console.log(`Call webhook: ${callSid} - Status: ${callStatus}`)
 
-    // Connect to database and update call record
+    // Update call record in database
     const { db } = await connectToDatabase()
 
-    const callRecord = {
-      callSid,
+    const updateData: any = {
       status: callStatus,
-      duration: Number.parseInt(callDuration) || 0,
-      from,
-      to,
-      timestamp: new Date(),
-      cost: callDuration ? (Number.parseInt(callDuration) / 60) * 0.05 : 0, // $0.05 per minute
+      updatedAt: new Date(),
     }
 
-    await db.collection("call_history").updateOne({ callSid }, { $set: callRecord }, { upsert: true })
+    if (callDuration) {
+      updateData.duration = Number.parseInt(callDuration)
+      updateData.cost = (Number.parseInt(callDuration) / 60) * 0.05 // $0.05 per minute
+    }
+
+    await db.collection("calls").updateOne(
+      { callSid: callSid },
+      {
+        $set: updateData,
+        $setOnInsert: {
+          phoneNumber: to,
+          fromNumber: from,
+          timestamp: new Date(),
+          type: "browser_call",
+        },
+      },
+      { upsert: true },
+    )
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Error processing call webhook:", error)
-    return NextResponse.json({ error: "Failed to process webhook" }, { status: 500 })
+    console.error("Error processing webhook:", error)
+    return NextResponse.json({ success: false, error: "Failed to process webhook" }, { status: 500 })
   }
 }

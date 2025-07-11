@@ -1,44 +1,49 @@
 import { type NextRequest, NextResponse } from "next/server"
-import twilio from "twilio"
-
-const accountSid = process.env.TWILIO_ACCOUNT_SID
-const authToken = process.env.TWILIO_AUTH_TOKEN
-const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER
-
-const client = twilio(accountSid, authToken)
+import { connectToDatabase } from "@/lib/mongodb"
 
 export async function POST(request: NextRequest) {
   try {
-    const { to, record = false } = await request.json()
+    const { phoneNumber, message } = await request.json()
 
-    if (!to) {
-      return NextResponse.json({ error: "Phone number is required" }, { status: 400 })
+    if (!phoneNumber) {
+      return NextResponse.json({ success: false, error: "Phone number is required" }, { status: 400 })
     }
 
-    // Format phone number
-    const formattedTo = to.startsWith("+") ? to : `+1${to.replace(/\D/g, "")}`
+    // Format Indian phone number
+    const formatIndianNumber = (number: string): string => {
+      const cleaned = number.replace(/\D/g, "")
+      if (cleaned.length === 10) {
+        return `+91${cleaned}`
+      }
+      if (cleaned.startsWith("91") && cleaned.length === 12) {
+        return `+${cleaned}`
+      }
+      return `+91${cleaned}`
+    }
 
-    const call = await client.calls.create({
-      to: formattedTo,
-      from: twilioPhoneNumber,
-      url: `${process.env.NEXT_PUBLIC_BASE_URL}/api/voice/twiml`,
-      statusCallback: `${process.env.NEXT_PUBLIC_BASE_URL}/api/calling/webhook`,
-      statusCallbackEvent: ["initiated", "ringing", "answered", "completed"],
-      record: record,
-      recordingStatusCallback: `${process.env.NEXT_PUBLIC_BASE_URL}/api/calling/recording-webhook`,
-    })
+    const formattedNumber = formatIndianNumber(phoneNumber)
+
+    // Store call record in database
+    const { db } = await connectToDatabase()
+    const callRecord = {
+      phoneNumber: formattedNumber,
+      status: "initiated",
+      timestamp: new Date(),
+      duration: 0,
+      cost: 0,
+      type: "browser_call",
+    }
+
+    const result = await db.collection("calls").insertOne(callRecord)
 
     return NextResponse.json({
       success: true,
-      callSid: call.sid,
-      status: call.status,
+      callId: result.insertedId,
+      phoneNumber: formattedNumber,
       message: "Call initiated successfully",
     })
   } catch (error) {
     console.error("Error making call:", error)
-    return NextResponse.json(
-      { error: "Failed to make call", details: error instanceof Error ? error.message : "Unknown error" },
-      { status: 500 },
-    )
+    return NextResponse.json({ success: false, error: "Failed to make call" }, { status: 500 })
   }
 }

@@ -40,6 +40,7 @@ interface CallRecord {
   recordingUrl?: string
   transcript?: string
   timestamp: Date
+  type?: string
 }
 
 interface AudioPlayerProps {
@@ -306,11 +307,15 @@ export default function CallingPage() {
             status: "completed",
             cost: callCost,
             timestamp: new Date(),
+            type: "browser_call",
           }
           setCallHistory((prev) => [newCall, ...prev])
 
           // Deduct cost from balance
           setBalance((prev) => Math.max(0, prev - callCost))
+
+          // Refresh call history from server
+          fetchCallHistory()
         })
 
         device.on("error", (error: any) => {
@@ -328,7 +333,7 @@ export default function CallingPage() {
     } catch (error) {
       console.error("Failed to initialize Twilio Voice:", error)
       setIsConnected(false)
-      toast.error("Failed to initialize voice calling. Please refresh the page.")
+      toast.error("Failed to initialize voice calling. Please check your internet connection and refresh the page.")
     } finally {
       setIsInitializing(false)
     }
@@ -336,7 +341,19 @@ export default function CallingPage() {
 
   const fetchCallHistory = async () => {
     try {
-      // Mock data with some recordings
+      const response = await fetch("/api/calling/history")
+      const data = await response.json()
+
+      if (data.success) {
+        const formattedCalls = data.calls.map((call: any) => ({
+          ...call,
+          timestamp: new Date(call.timestamp),
+        }))
+        setCallHistory(formattedCalls)
+      }
+    } catch (error) {
+      console.error("Failed to fetch call history:", error)
+      // Fallback to mock data
       const mockHistory: CallRecord[] = [
         {
           id: "call_001",
@@ -347,6 +364,7 @@ export default function CallingPage() {
           recordingUrl: "/api/recordings/sample-call-1.mp3",
           transcript: "Hello, this is a test call recording with customer service...",
           timestamp: new Date(Date.now() - 3600000),
+          type: "browser_call",
         },
         {
           id: "call_002",
@@ -356,29 +374,10 @@ export default function CallingPage() {
           cost: 1.75,
           recordingUrl: "/api/recordings/sample-call-2.mp3",
           timestamp: new Date(Date.now() - 7200000),
-        },
-        {
-          id: "call_003",
-          phoneNumber: "+919555123456",
-          duration: 45,
-          status: "completed",
-          cost: 1.25,
-          recordingUrl: "/api/recordings/sample-call-3.mp3",
-          timestamp: new Date(Date.now() - 10800000),
-        },
-        {
-          id: "call_004",
-          phoneNumber: "+919444987654",
-          duration: 0,
-          status: "failed",
-          cost: 0,
-          timestamp: new Date(Date.now() - 14400000),
+          type: "browser_call",
         },
       ]
-
       setCallHistory(mockHistory)
-    } catch (error) {
-      console.error("Failed to fetch call history:", error)
     }
   }
 
@@ -402,13 +401,25 @@ export default function CallingPage() {
       setCallStatus("connecting")
       toast.info("Connecting call...")
 
+      // Make API call to log the call attempt
+      await fetch("/api/calling/make-call", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          phoneNumber: phoneNumber,
+        }),
+      })
+
+      // Make the actual browser call
       await twilioVoiceBrowser.makeCall(phoneNumber)
 
       // The actual connection will be handled by the device event listeners
     } catch (error) {
       console.error("Error making call:", error)
       setCallStatus("idle")
-      toast.error("Failed to make call. Please try again.")
+      toast.error("Failed to make call. Please check your microphone permissions and try again.")
     }
   }
 
@@ -709,6 +720,11 @@ export default function CallingPage() {
                                 <span>${call.cost.toFixed(2)}</span>
                               </span>
                               <span>{new Date(call.timestamp).toLocaleString()}</span>
+                              {call.type && (
+                                <Badge variant="outline" className="text-xs">
+                                  {call.type}
+                                </Badge>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -806,6 +822,17 @@ export default function CallingPage() {
                       <span className="text-sm text-red-600">Disconnected - Please refresh page</span>
                     </>
                   )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Environment Variables Required</Label>
+                <div className="text-xs text-muted-foreground space-y-1 bg-gray-50 p-3 rounded">
+                  <p>TWILIO_ACCOUNT_SID=your_account_sid</p>
+                  <p>TWILIO_API_KEY=your_api_key</p>
+                  <p>TWILIO_API_SECRET=your_api_secret</p>
+                  <p>TWILIO_TWIML_APP_SID=your_twiml_app_sid</p>
+                  <p>TWILIO_PHONE_NUMBER=your_twilio_number</p>
                 </div>
               </div>
             </CardContent>

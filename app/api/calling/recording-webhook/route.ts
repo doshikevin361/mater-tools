@@ -9,24 +9,20 @@ export async function POST(request: NextRequest) {
     const recordingSid = formData.get("RecordingSid") as string
     const recordingDuration = formData.get("RecordingDuration") as string
 
-    console.log("Recording webhook received:", {
-      callSid,
-      recordingUrl,
-      recordingSid,
-      recordingDuration,
-    })
+    console.log(`Recording webhook: ${callSid} - Recording: ${recordingSid}`)
 
-    // Connect to database and update call record with recording info
+    // Update call record with recording information
     const { db } = await connectToDatabase()
 
-    await db.collection("call_history").updateOne(
-      { callSid },
+    await db.collection("calls").updateOne(
+      { callSid: callSid },
       {
         $set: {
-          recordingUrl: recordingUrl + ".mp3",
-          recordingSid,
-          recordingDuration: Number.parseInt(recordingDuration) || 0,
-          recordingAvailable: true,
+          recordingUrl: recordingUrl,
+          recordingSid: recordingSid,
+          recordingDuration: recordingDuration ? Number.parseInt(recordingDuration) : 0,
+          hasRecording: true,
+          updatedAt: new Date(),
         },
       },
     )
@@ -34,6 +30,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Error processing recording webhook:", error)
-    return NextResponse.json({ error: "Failed to process recording webhook" }, { status: 500 })
+    return NextResponse.json({ success: false, error: "Failed to process recording webhook" }, { status: 500 })
   }
 }

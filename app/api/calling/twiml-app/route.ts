@@ -6,12 +6,12 @@ export async function POST(request: NextRequest) {
     const to = formData.get("To") as string
     const from = formData.get("From") as string
 
-    console.log("TwiML App called - To:", to, "From:", from)
+    console.log(`Outgoing call from ${from} to ${to}`)
 
     // Create TwiML response for outgoing call
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Dial callerId="${process.env.TWILIO_PHONE_NUMBER || "+19252617266"}">
+    <Dial callerId="${process.env.TWILIO_PHONE_NUMBER || from}" record="record-from-ringing-dual" recordingStatusCallback="/api/calling/recording-webhook">
         <Number>${to}</Number>
     </Dial>
 </Response>`
@@ -26,13 +26,14 @@ export async function POST(request: NextRequest) {
 
     const errorTwiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say voice="alice">Sorry, there was an error connecting your call. Please try again.</Say>
+    <Say>Sorry, there was an error processing your call. Please try again.</Say>
 </Response>`
 
     return new NextResponse(errorTwiml, {
       headers: {
         "Content-Type": "text/xml",
       },
+      status: 500,
     })
   }
 }
