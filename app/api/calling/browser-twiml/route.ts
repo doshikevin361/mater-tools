@@ -1,24 +1,40 @@
 import { type NextRequest, NextResponse } from "next/server"
-import twilio from "twilio"
 
 export async function POST(request: NextRequest) {
-  const twiml = new twilio.twiml.VoiceResponse()
+  try {
+    const formData = await request.formData()
+    const to = formData.get("To") as string
+    const from = formData.get("From") as string
+    const callSid = formData.get("CallSid") as string
 
-  // Direct connection - no hold music, just connect
-  twiml.say("Hello! You are now connected to a browser call.")
+    // TwiML response for browser calling
+    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Say voice="alice">Please hold while we connect you to the browser caller.</Say>
+    <Dial>
+        <Client>browser-user</Client>
+    </Dial>
+    <Say voice="alice">The browser caller is not available. Please try again later.</Say>
+</Response>`
 
-  // Connect to browser client
-  const dial = twiml.dial({
-    callerId: "+19252617266",
-    record: "record-from-answer",
-    recordingStatusCallback: "https://master-tool.vercel.app/api/calling/recording-webhook",
-  })
+    return new NextResponse(twiml, {
+      headers: {
+        "Content-Type": "text/xml",
+      },
+    })
+  } catch (error) {
+    console.error("Browser TwiML error:", error)
 
-  dial.client("browser-user")
+    const errorTwiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Say voice="alice">Sorry, there was an error connecting your call. Please try again later.</Say>
+    <Hangup/>
+</Response>`
 
-  return new NextResponse(twiml.toString(), {
-    headers: {
-      "Content-Type": "text/xml",
-    },
-  })
+    return new NextResponse(errorTwiml, {
+      headers: {
+        "Content-Type": "text/xml",
+      },
+    })
+  }
 }

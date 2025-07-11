@@ -1,49 +1,36 @@
 import { type NextRequest, NextResponse } from "next/server"
 import twilio from "twilio"
 
-const accountSid = process.env.TWILIO_ACCOUNT_SID || "AC86b70352ccc2023f8cfa305712b474cd"
-const authToken = process.env.TWILIO_AUTH_TOKEN || "your_auth_token"
-const apiKey = process.env.TWILIO_API_KEY || "SK0745de76832af1b501e871e36bc467ae"
-const apiSecret = process.env.TWILIO_API_SECRET || "Ge1LcneXSoJmREekmK7wmoqsn4E1qOz9"
+const accountSid = process.env.TWILIO_ACCOUNT_SID
+const authToken = process.env.TWILIO_AUTH_TOKEN
 const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER || "+19252617266"
 
-const client = twilio(apiKey, apiSecret, { accountSid })
+if (!accountSid || !authToken) {
+  console.error("Missing Twilio credentials")
+}
+
+const client = twilio(accountSid, authToken)
 
 export async function POST(request: NextRequest) {
   try {
-    const { phoneNumber, action } = await request.json()
-
-    if (action === "start") {
-      // Create a direct call that connects browser to phone
-      const call = await client.calls.create({
-        to: phoneNumber,
-        from: twilioPhoneNumber,
-        url: "https://master-tool.vercel.app/api/calling/browser-twiml",
-        statusCallback: "https://master-tool.vercel.app/api/calling/webhook",
-        statusCallbackEvent: ["initiated", "ringing", "answered", "completed"],
-        record: true,
-        recordingStatusCallback: "https://master-tool.vercel.app/api/calling/recording-webhook",
-      })
-
-      return NextResponse.json({
-        success: true,
-        callSid: call.sid,
-        message: "Direct browser call started",
-      })
-    }
+    const body = await request.json()
+    const { action, phoneNumber, userId } = body
 
     if (action === "generate-token") {
-      // Generate Twilio access token for WebRTC
+      // Generate Twilio access token for browser calling
       const AccessToken = twilio.jwt.AccessToken
       const VoiceGrant = AccessToken.VoiceGrant
 
-      const accessToken = new AccessToken(accountSid, apiKey, apiSecret, {
-        identity: "browser-user",
-      })
+      const accessToken = new AccessToken(
+        accountSid!,
+        process.env.TWILIO_API_KEY || accountSid!,
+        process.env.TWILIO_API_SECRET || authToken!,
+        { identity: userId || "browser-user" },
+      )
 
       const voiceGrant = new VoiceGrant({
-        outgoingApplicationSid: "AP_YOUR_APP_SID", // You need to create this in Twilio Console
-        incomingAllow: false,
+        outgoingApplicationSid: process.env.TWILIO_TWIML_APP_SID,
+        incomingAllow: true,
       })
 
       accessToken.addGrant(voiceGrant)
@@ -54,9 +41,29 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    return NextResponse.json({ error: "Invalid action" }, { status: 400 })
+    if (action === "start" && phoneNumber) {
+      // Make direct call using Twilio REST API
+      const call = await client.calls.create({
+        to: phoneNumber,
+        from: twilioPhoneNumber,
+        url: `${process.env.NEXT_PUBLIC_BASE_URL || "https://your-domain.vercel.app"}/api/calling/browser-twiml`,
+        record: true,
+        recordingStatusCallback: `${process.env.NEXT_PUBLIC_BASE_URL || "https://your-domain.vercel.app"}/api/calling/recording-webhook`,
+        statusCallback: `${process.env.NEXT_PUBLIC_BASE_URL || "https://your-domain.vercel.app"}/api/calling/webhook`,
+        statusCallbackEvent: ["initiated", "ringing", "answered", "completed"],
+        statusCallbackMethod: "POST",
+      })
+
+      return NextResponse.json({
+        success: true,
+        callSid: call.sid,
+        status: call.status,
+      })
+    }
+
+    return NextResponse.json({ success: false, error: "Invalid action" }, { status: 400 })
   } catch (error) {
     console.error("Direct browser call error:", error)
-    return NextResponse.json({ error: "Failed to start direct browser call" }, { status: 500 })
+    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
   }
 }

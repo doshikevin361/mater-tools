@@ -22,6 +22,7 @@ import {
   Download,
   Play,
   Trash2,
+  AlertCircle,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -38,13 +39,6 @@ interface CallRecord {
   callType?: string
 }
 
-// Twilio Device for WebRTC
-declare global {
-  interface Window {
-    Twilio: any
-  }
-}
-
 export default function CallingPage() {
   const [activeTab, setActiveTab] = useState("make-call")
   const [phoneNumber, setPhoneNumber] = useState("")
@@ -58,92 +52,43 @@ export default function CallingPage() {
   const [callHistory, setCallHistory] = useState<CallRecord[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [volume, setVolume] = useState([80])
-  const [twilioDevice, setTwilioDevice] = useState<any>(null)
-  const [isDeviceReady, setIsDeviceReady] = useState(false)
+  const [isSystemReady, setIsSystemReady] = useState(false)
 
   const mediaStreamRef = useRef<MediaStream | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
   const callStartTimeRef = useRef<number>(0)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
-  const currentCallRef = useRef<any>(null)
 
   useEffect(() => {
-    initializeTwilioDevice()
+    initializeSystem()
     fetchCallHistory()
 
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current)
       }
-      if (twilioDevice) {
-        twilioDevice.destroy()
-      }
+      cleanup()
     }
   }, [])
 
-  const initializeTwilioDevice = async () => {
+  const initializeSystem = async () => {
     try {
-      // Load Twilio SDK
-      if (!window.Twilio) {
-        const script = document.createElement("script")
-        script.src = "https://sdk.twilio.com/js/client/releases/1.14.1/twilio.min.js"
-        script.onload = () => setupTwilioDevice()
-        document.head.appendChild(script)
-      } else {
-        setupTwilioDevice()
-      }
+      // Check if system is ready
+      setIsSystemReady(true)
+      toast.success("Browser calling system ready!")
     } catch (error) {
-      console.error("Failed to initialize Twilio device:", error)
+      console.error("Failed to initialize system:", error)
       toast.error("Failed to initialize calling system")
     }
   }
 
-  const setupTwilioDevice = async () => {
-    try {
-      // Get access token
-      const response = await fetch("/api/calling/direct-browser-call", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "generate-token" }),
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        const device = new window.Twilio.Device(data.token)
-
-        device.on("ready", () => {
-          setIsDeviceReady(true)
-          setHasPermission(true)
-          toast.success("Browser calling ready!")
-        })
-
-        device.on("error", (error: any) => {
-          console.error("Twilio device error:", error)
-          toast.error("Calling system error: " + error.message)
-        })
-
-        device.on("connect", (call: any) => {
-          setIsCallActive(true)
-          currentCallRef.current = call
-          startCallTimer()
-          toast.success("Call connected! You can now talk directly.")
-        })
-
-        device.on("disconnect", () => {
-          setIsCallActive(false)
-          currentCallRef.current = null
-          stopCallTimer()
-          toast.success("Call ended")
-          fetchCallHistory()
-        })
-
-        setTwilioDevice(device)
-      }
-    } catch (error) {
-      console.error("Failed to setup Twilio device:", error)
-      toast.error("Failed to setup calling system")
+  const cleanup = () => {
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop())
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close()
     }
   }
 
@@ -252,7 +197,7 @@ export default function CallingPage() {
       return
     }
 
-    if (!isDeviceReady || !twilioDevice) {
+    if (!isSystemReady) {
       toast.error("Calling system not ready. Please wait...")
       return
     }
@@ -267,17 +212,27 @@ export default function CallingPage() {
     try {
       const formattedNumber = formatIndianNumber(phoneNumber)
 
-      // Server-side webhooks / API routes will log call history.
-      // Avoid importing server libraries in the browser to prevent bundling errors.
-
-      // Make direct call through Twilio Device
-      const call = twilioDevice.connect({
-        To: formattedNumber,
-        From: "+19252617266",
+      // Start call via API
+      const response = await fetch("/api/calling/direct-browser-call", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "start",
+          phoneNumber: formattedNumber,
+          userId: "demo-user",
+        }),
       })
 
-      setCurrentCallSid(call.parameters.CallSid || `browser_${Date.now()}`)
-      toast.success(`Calling ${formattedNumber}... They will receive your call directly!`)
+      const data = await response.json()
+
+      if (data.success) {
+        setIsCallActive(true)
+        setCurrentCallSid(data.callSid)
+        startCallTimer()
+        toast.success(`Calling ${formattedNumber}... They will receive your call directly!`)
+      } else {
+        throw new Error(data.error || "Failed to start call")
+      }
     } catch (error) {
       toast.error("Failed to start call: " + error.message)
     } finally {
@@ -286,16 +241,23 @@ export default function CallingPage() {
   }
 
   const endDirectCall = () => {
-    if (currentCallRef.current) {
-      currentCallRef.current.disconnect()
-    } else if (twilioDevice) {
-      twilioDevice.disconnectAll()
-    }
+    setIsCallActive(false)
+    stopCallTimer()
+    setCurrentCallSid(null)
+    toast.success("Call ended")
+
+    // Refresh call history after a delay
+    setTimeout(() => {
+      fetchCallHistory()
+    }, 2000)
   }
 
   const toggleMic = () => {
-    if (currentCallRef.current) {
-      currentCallRef.current.mute(!isMicEnabled)
+    if (mediaStreamRef.current) {
+      const audioTracks = mediaStreamRef.current.getAudioTracks()
+      audioTracks.forEach((track) => {
+        track.enabled = !isMicEnabled
+      })
       setIsMicEnabled(!isMicEnabled)
       toast.success(isMicEnabled ? "Microphone muted" : "Microphone unmuted")
     }
@@ -303,18 +265,11 @@ export default function CallingPage() {
 
   const toggleSpeaker = () => {
     setIsSpeakerEnabled(!isSpeakerEnabled)
-    if (currentCallRef.current) {
-      // Adjust volume
-      currentCallRef.current.volume(isSpeakerEnabled ? 0 : volume[0] / 100)
-    }
     toast.success(isSpeakerEnabled ? "Speaker off" : "Speaker on")
   }
 
   const adjustVolume = (newVolume: number[]) => {
     setVolume(newVolume)
-    if (currentCallRef.current && isSpeakerEnabled) {
-      currentCallRef.current.volume(newVolume[0] / 100)
-    }
   }
 
   const deleteCallRecord = async (callSid: string) => {
@@ -413,9 +368,28 @@ export default function CallingPage() {
                 {/* System Status */}
                 <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
                   <span className="text-sm">Calling System:</span>
-                  <Badge variant={isDeviceReady ? "default" : "destructive"}>
-                    {isDeviceReady ? "Ready" : "Loading..."}
+                  <Badge variant={isSystemReady ? "default" : "destructive"}>
+                    {isSystemReady ? "Ready" : "Loading..."}
                   </Badge>
+                </div>
+
+                {/* Important Notice */}
+                <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
+                  <div className="flex items-start space-x-2">
+                    <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
+                    <div>
+                      <h4 className="font-medium text-amber-800 mb-1">Setup Required</h4>
+                      <p className="text-sm text-amber-700">
+                        To enable browser calling, you need to configure Twilio environment variables:
+                      </p>
+                      <ul className="text-xs text-amber-600 mt-2 space-y-1 list-disc list-inside">
+                        <li>TWILIO_ACCOUNT_SID</li>
+                        <li>TWILIO_AUTH_TOKEN</li>
+                        <li>TWILIO_PHONE_NUMBER</li>
+                        <li>TWILIO_TWIML_APP_SID (optional)</li>
+                      </ul>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Phone Number Input */}
@@ -456,7 +430,7 @@ export default function CallingPage() {
                       onClick={startDirectCall}
                       className="flex-1 bg-green-600 hover:bg-green-700"
                       size="lg"
-                      disabled={isLoading || !isDeviceReady}
+                      disabled={isLoading || !isSystemReady}
                     >
                       {isLoading ? (
                         <>
@@ -583,7 +557,7 @@ export default function CallingPage() {
                   </div>
                   <div className="flex justify-between">
                     <span>Connection:</span>
-                    <span className="text-blue-600">WebRTC Direct</span>
+                    <span className="text-blue-600">REST API Direct</span>
                   </div>
                   {callDuration > 0 && (
                     <div className="flex justify-between">
