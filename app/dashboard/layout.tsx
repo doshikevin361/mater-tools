@@ -1,16 +1,15 @@
 "use client"
 
 import type React from "react"
-
-import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Menu, Bell, Search, User, Settings } from "lucide-react"
+import { Menu } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Suspense } from "react"
+import { AppSidebar } from "@/components/app-sidebar"
+import { Separator } from "@/components/ui/separator"
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 
 const navigation = [
   {
@@ -22,7 +21,7 @@ const navigation = [
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeWidth={2}
-          d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"
+          d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2 2z"
         />
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5a2 2 0 012-2h4a2 2 0 012 2v6H8V5z" />
       </svg>
@@ -168,7 +167,7 @@ const social = [
     href: "/dashboard/facebook",
     icon: (
       <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.367-12 11.987c0 6.62 5.367 11.987 11.988 11.987c6.62 0 11.987-5.367 11.987-11.987C24.014 5.367 18.637.001 12.017.001zM8.449 16.988c-1.297 0-2.448-.49-3.323-1.297L3.323 17.49c1.297 1.297 3.09 2.1 5.126 2.1c3.969 0 7.19-3.221 7.19-7.19c0-2.036-.803-3.829-2.1-5.126L11.74 8.077c.807.875 1.297 2.026 1.297 3.323c0 2.687-2.178 4.865-4.865 4.865c-1.297 0-2.448-.49-3.323-1.297z" />
+        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.367-12 11.987c0 6.62 5.367 11.987 11.988 11.987c6.62 0 11.987-3.221 11.987-7.19c0-2.036-.803-3.829-2.1-5.126L11.74 8.077c.807.875 1.297 2.026 1.297 3.323c0 2.687-2.178 4.865-4.865 4.865c-1.297 0-2.448-.49-3.323-1.297z" />
       </svg>
     ),
   },
@@ -330,69 +329,21 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-
   return (
-    <Suspense fallback={null}>
-      <div className="h-screen flex overflow-hidden bg-gray-100">
-        {/* Desktop sidebar */}
-        <div className="hidden md:flex md:flex-shrink-0">
-          <Sidebar />
-        </div>
-
-        {/* Mobile sidebar */}
-        <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-          <SheetTrigger asChild>
-            <Button variant="ghost" className="md:hidden" size="icon">
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
+          <div className="flex items-center gap-2 px-4">
+            {/* Mobile sidebar trigger */}
+            <Button variant="ghost" size="icon" className="md:hidden">
               <Menu className="h-6 w-6" />
             </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="p-0 w-64">
-            <Sidebar />
-          </SheetContent>
-        </Sheet>
-
-        {/* Main content */}
-        <div className="flex flex-col w-0 flex-1 overflow-hidden">
-          {/* Top navigation */}
-          <div className="relative z-10 flex-shrink-0 flex h-16 bg-white shadow-sm border-b border-gray-200">
-            <div className="flex-1 px-4 flex justify-between items-center">
-              <div className="flex-1 flex">
-                <div className="w-full flex md:ml-0">
-                  <div className="relative w-full text-gray-400 focus-within:text-gray-600">
-                    <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none">
-                      <Search className="h-5 w-5" />
-                    </div>
-                    <input
-                      className="block w-full h-full pl-8 pr-3 py-2 border-transparent text-gray-900 placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-0 focus:border-transparent"
-                      placeholder="Search..."
-                      type="search"
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="ml-4 flex items-center md:ml-6 space-x-4">
-                <Button variant="ghost" size="icon">
-                  <Bell className="h-5 w-5" />
-                </Button>
-                <Button variant="ghost" size="icon">
-                  <Settings className="h-5 w-5" />
-                </Button>
-                <Button variant="ghost" size="icon">
-                  <User className="h-5 w-5" />
-                </Button>
-              </div>
-            </div>
+            <Separator orientation="vertical" className="mr-2 h-4" />
           </div>
-
-          {/* Page content */}
-          <main className="flex-1 relative overflow-y-auto focus:outline-none">
-            <div className="py-6">
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">{children}</div>
-            </div>
-          </main>
-        </div>
-      </div>
-    </Suspense>
+        </header>
+        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">{children}</div>
+      </SidebarInset>
+    </SidebarProvider>
   )
 }

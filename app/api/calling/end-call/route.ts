@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import twilio from "twilio"
+import { connectToDatabase } from "@/lib/mongodb"
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID
 const authToken = process.env.TWILIO_AUTH_TOKEN
@@ -14,10 +15,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Call SID is required" }, { status: 400 })
     }
 
+    console.log("Ending call:", callSid)
+
     // End the call using Twilio
     await client.calls(callSid).update({ status: "completed" })
 
-    console.log(`Call ${callSid} ended successfully`)
+    // Update call record in database
+    const { db } = await connectToDatabase()
+    await db.collection("call_history").updateOne(
+      { callSid },
+      {
+        $set: {
+          status: "completed",
+          endTime: new Date(),
+          updatedAt: new Date(),
+        },
+      },
+    )
+
+    console.log("Call ended successfully:", callSid)
 
     return NextResponse.json({
       success: true,
