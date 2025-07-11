@@ -98,7 +98,7 @@ export default function WhatsAppPage() {
   const [userBalance, setUserBalance] = useState(0)
   const [realTemplates, setRealTemplates] = useState<any[]>([])
   const [templatesLoading, setTemplatesLoading] = useState(false)
-  const [selectedRealTemplate, setSelectedRealTemplate] = useState<string>("")
+  const [selectedRealTemplate, setSelectedRealTemplate] = useState<string>("auto")
 
   // Load user data and campaigns
   useEffect(() => {
@@ -233,7 +233,7 @@ export default function WhatsAppPage() {
         campaignName,
         mediaUrl: mediaType !== "none" ? mediaUrl.trim() : undefined,
         mediaType: mediaType !== "none" ? mediaType : undefined,
-        selectedTemplateId: selectedRealTemplate || undefined,
+        selectedTemplateId: selectedRealTemplate !== "auto" ? selectedRealTemplate : undefined,
         userId,
       }
 
@@ -254,6 +254,7 @@ export default function WhatsAppPage() {
         setMediaUrl("")
         setMediaType("none")
         setSelectedTemplate("custom")
+        setSelectedRealTemplate("auto")
         // Reload data
         loadCampaigns()
         loadUserData()
@@ -383,7 +384,7 @@ export default function WhatsAppPage() {
                         <SelectValue placeholder="Choose from your approved templates" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Auto-select best template</SelectItem>
+                        <SelectItem value="auto">Auto-select best template</SelectItem>
                         {realTemplates.map((template) => (
                           <SelectItem key={template.id} value={template.id}>
                             <div className="flex flex-col">
