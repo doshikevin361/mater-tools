@@ -15,18 +15,14 @@ class TwilioService {
     this.phoneNumber = process.env.TWILIO_PHONE_NUMBER || "+19252617266"
     this.baseUrl = "https://master-tool.vercel.app"
 
-    // Initialize Twilio client with API Key and Secret
     this.client = twilio(this.apiKey, this.apiSecret, {
       accountSid: this.accountSid,
     })
   }
 
-  // Make a direct call from your Twilio number to any number
   async makeDirectCall(toNumber: string) {
     try {
       const cleanNumber = this.formatPhoneNumber(toNumber)
-
-      console.log(`Making direct call from ${this.phoneNumber} to ${cleanNumber}`)
 
       const call = await this.client.calls.create({
         to: cleanNumber,
@@ -47,18 +43,13 @@ class TwilioService {
         from: call.from,
       }
     } catch (error) {
-      console.error("Twilio direct call error:", error)
       throw new Error(`Direct call failed: ${error.message}`)
     }
   }
 
-  // Make a live call where you can talk to the person
   async makeLiveCall(toNumber: string) {
     try {
       const cleanNumber = this.formatPhoneNumber(toNumber)
-
-      console.log(`Making live call to ${cleanNumber}`)
-      console.log(`Using base URL: ${this.baseUrl}`)
 
       const call = await this.client.calls.create({
         to: cleanNumber,
@@ -79,12 +70,10 @@ class TwilioService {
         from: call.from,
       }
     } catch (error) {
-      console.error("Twilio live call error:", error)
       throw new Error(`Live call failed: ${error.message}`)
     }
   }
 
-  // Make a voice call with text-to-speech
   async makeVoiceCall(
     toNumber: string,
     message: string,
@@ -95,20 +84,15 @@ class TwilioService {
     },
   ) {
     try {
-      // Clean and format phone number
       const cleanNumber = this.formatPhoneNumber(toNumber)
-
-      // Create TwiML for text-to-speech
       const twiml = this.createTwiML(message, voiceOptions)
-
-      console.log(`Making voice call to ${cleanNumber} with message: ${message.substring(0, 50)}...`)
 
       const call = await this.client.calls.create({
         to: cleanNumber,
         from: this.phoneNumber,
         twiml: twiml,
-        timeout: 30, // Ring for 30 seconds
-        record: true, // Record the call
+        timeout: 30,
+        record: true,
         recordingStatusCallback: `${this.baseUrl}/api/calling/recording-webhook`,
       })
 
@@ -121,17 +105,13 @@ class TwilioService {
         response: call,
       }
     } catch (error) {
-      console.error("Twilio voice call error:", error)
       throw new Error(`Voice call failed: ${error.message}`)
     }
   }
 
-  // Make a conference call (2-way calling)
   async makeConferenceCall(toNumber: string, conferenceId: string, callType: "first" | "second") {
     try {
       const cleanNumber = this.formatPhoneNumber(toNumber)
-
-      console.log(`Making conference call to ${cleanNumber} for conference ${conferenceId}`)
 
       const call = await this.client.calls.create({
         to: cleanNumber,
@@ -151,12 +131,10 @@ class TwilioService {
         conferenceId,
       }
     } catch (error) {
-      console.error("Twilio conference call error:", error)
       throw new Error(`Conference call failed: ${error.message}`)
     }
   }
 
-  // Make bulk voice calls
   async makeBulkVoiceCalls(
     contacts: Array<{ phone: string; name?: string }>,
     message: string,
@@ -170,11 +148,8 @@ class TwilioService {
     let successful = 0
     let failed = 0
 
-    console.log(`Starting bulk voice calls to ${contacts.length} contacts`)
-
     for (const contact of contacts) {
       try {
-        // Add a small delay between calls to avoid rate limiting
         await new Promise((resolve) => setTimeout(resolve, 1000))
 
         const result = await this.makeVoiceCall(contact.phone, message, voiceOptions)
@@ -188,7 +163,6 @@ class TwilioService {
         })
 
         successful++
-        console.log(`✅ Call initiated to ${contact.phone} (${contact.name || "Unknown"})`)
       } catch (error) {
         results.push({
           contact: contact,
@@ -198,7 +172,6 @@ class TwilioService {
         })
 
         failed++
-        console.error(`❌ Failed to call ${contact.phone} (${contact.name || "Unknown"}):`, error.message)
       }
     }
 
@@ -211,7 +184,6 @@ class TwilioService {
     }
   }
 
-  // Create TwiML for text-to-speech
   private createTwiML(
     message: string,
     voiceOptions?: {
@@ -223,7 +195,6 @@ class TwilioService {
     const voice = voiceOptions?.voice || "alice"
     const language = voiceOptions?.language || "en-US"
 
-    // Create TwiML XML
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Say voice="${voice}" language="${language}">${this.escapeXml(message)}</Say>
@@ -234,27 +205,22 @@ class TwilioService {
     return twiml
   }
 
-  // Format phone number for Twilio (E.164 format)
   private formatPhoneNumber(phoneNumber: string): string {
-    // Remove all non-digit characters
     const cleaned = phoneNumber.replace(/\D/g, "")
 
-    // Handle Indian number formats
     if (cleaned.startsWith("91") && cleaned.length === 12) {
-      return `+${cleaned}` // Already has country code
+      return `+${cleaned}`
     } else if (cleaned.length === 10) {
-      return `+91${cleaned}` // Add India country code
+      return `+91${cleaned}`
     } else if (cleaned.startsWith("0") && cleaned.length === 11) {
-      return `+91${cleaned.substring(1)}` // Remove leading 0 and add country code
+      return `+91${cleaned.substring(1)}`
     } else if (cleaned.startsWith("1") && cleaned.length === 11) {
-      return `+${cleaned}` // US number
+      return `+${cleaned}`
     }
 
-    // If it already has + or other country code, return as is
     return phoneNumber.startsWith("+") ? phoneNumber : `+${cleaned}`
   }
 
-  // Escape XML characters for TwiML
   private escapeXml(text: string): string {
     return text
       .replace(/&/g, "&amp;")
@@ -264,7 +230,6 @@ class TwilioService {
       .replace(/'/g, "&apos;")
   }
 
-  // Get call status
   async getCallStatus(callSid: string) {
     try {
       const call = await this.client.calls(callSid).fetch()
@@ -278,12 +243,10 @@ class TwilioService {
         priceUnit: call.priceUnit,
       }
     } catch (error) {
-      console.error("Get call status error:", error)
       throw error
     }
   }
 
-  // Get account balance
   async getAccountBalance() {
     try {
       const account = await this.client.api.accounts(this.accountSid).fetch()
@@ -293,12 +256,10 @@ class TwilioService {
         currency: account.currency || "USD",
       }
     } catch (error) {
-      console.error("Get account balance error:", error)
       throw error
     }
   }
 
-  // Get conference details
   async getConferenceDetails(conferenceSid: string) {
     try {
       const conference = await this.client.conferences(conferenceSid).fetch()
@@ -310,7 +271,6 @@ class TwilioService {
         participantCount: conference.participantCount,
       }
     } catch (error) {
-      console.error("Get conference details error:", error)
       throw error
     }
   }

@@ -9,8 +9,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Phone number is required" }, { status: 400 })
     }
 
-    console.log("Making live call to:", phoneNumber)
-
     const result = await twilioService.makeLiveCall(phoneNumber)
 
     return NextResponse.json({
@@ -22,7 +20,6 @@ export async function POST(request: NextRequest) {
       from: result.from,
     })
   } catch (error) {
-    console.error("Live call API error:", error)
     return NextResponse.json(
       {
         error: "Failed to make live call",

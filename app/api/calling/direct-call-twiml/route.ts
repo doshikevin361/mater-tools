@@ -6,9 +6,6 @@ export async function POST(request: NextRequest) {
     const from = formData.get("From") as string
     const to = formData.get("To") as string
 
-    console.log("Direct call TwiML requested for:", { from, to })
-
-    // Simple TwiML that just connects the call
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Say voice="alice">Hello! This call is being connected through BrandBuzz Ventures.</Say>
@@ -22,8 +19,6 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error("Error generating direct call TwiML:", error)
-
     const errorTwiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Say voice="alice">Sorry, we are experiencing technical difficulties. Please try again later.</Say>

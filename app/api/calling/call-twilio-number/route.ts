@@ -10,10 +10,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Target number is required" }, { status: 400 })
     }
 
-    // Make a call from your Twilio number to the target number
     const callResult = await twilioService.makeDirectCall(targetNumber)
 
-    // Store call record in database
     const { db } = await connectToDatabase()
 
     const callRecord = {
@@ -41,7 +39,6 @@ export async function POST(request: NextRequest) {
       message: "Call initiated from Twilio number",
     })
   } catch (error) {
-    console.error("Error making call from Twilio number:", error)
     return NextResponse.json({ error: "Failed to make call", details: error.message }, { status: 500 })
   }
 }

@@ -25,7 +25,6 @@ export async function GET(request: NextRequest) {
       })),
     })
   } catch (error) {
-    console.error("Error fetching voicemails:", error)
     return NextResponse.json({ error: "Failed to fetch voicemails" }, { status: 500 })
   }
 }
@@ -55,7 +54,6 @@ export async function PATCH(request: NextRequest) {
       message: "Voicemail status updated",
     })
   } catch (error) {
-    console.error("Error updating voicemail:", error)
     return NextResponse.json({ error: "Failed to update voicemail" }, { status: 500 })
   }
 }

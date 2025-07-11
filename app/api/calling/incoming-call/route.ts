@@ -7,14 +7,10 @@ export async function POST(request: NextRequest) {
     const to = formData.get("To") as string
     const digits = formData.get("Digits") as string
 
-    console.log("Incoming call received:", { from, to, digits })
-
-    // If digits are provided (from Gather), handle the menu selection
     if (digits) {
       return handleMenuSelection(digits, from)
     }
 
-    // Main incoming call menu
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Say voice="alice">Welcome to BrandBuzz Ventures calling system. Thank you for calling.</Say>
@@ -36,8 +32,6 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error("Error handling incoming call:", error)
-
     const errorTwiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Say voice="alice">Sorry, we are experiencing technical difficulties. Please try again later.</Say>
@@ -57,7 +51,6 @@ function handleMenuSelection(digits: string, callerNumber: string) {
 
   switch (digits) {
     case "1":
-      // Connect to customer support (your phone)
       twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Say voice="alice">Connecting you to customer support. Please hold.</Say>
@@ -70,7 +63,6 @@ function handleMenuSelection(digits: string, callerNumber: string) {
       break
 
     case "2":
-      // Leave a voice message
       twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Say voice="alice">Please leave your message after the beep. Press any key when finished.</Say>
@@ -87,7 +79,6 @@ function handleMenuSelection(digits: string, callerNumber: string) {
       break
 
     case "3":
-      // Connect to specific number (you can customize this)
       twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Gather timeout="15" numDigits="10" action="https://master-tool.vercel.app/api/calling/connect-number">
@@ -99,7 +90,6 @@ function handleMenuSelection(digits: string, callerNumber: string) {
       break
 
     case "0":
-      // Repeat menu
       twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Redirect>https://master-tool.vercel.app/api/calling/incoming-call</Redirect>

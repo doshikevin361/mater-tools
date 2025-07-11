@@ -258,7 +258,7 @@ export default function CallingPage() {
   const [message, setMessage] = useState("Hello! This is a test call from our system. Thank you for your time.")
   const [isCallActive, setIsCallActive] = useState(false)
   const [callDuration, setCallDuration] = useState(0)
-  const [isMuted, setIsMuted] = useState(isMuted)
+  const [isMuted, setIsMuted] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
   const [volume, setVolume] = useState([80])
   const [callHistory, setCallHistory] = useState<CallRecord[]>([])
@@ -277,20 +277,18 @@ export default function CallingPage() {
   })
   const callTimerRef = useRef<NodeJS.Timeout>()
 
-  // Load call history, voicemails, and balance on component mount
   useEffect(() => {
     fetchCallHistory()
     fetchVoicemails()
     fetchBalance()
   }, [])
 
-  // Call timer effect
   useEffect(() => {
     if (isCallActive) {
       callTimerRef.current = setInterval(() => {
         setCallDuration((prev) => {
           const newDuration = prev + 1
-          setCallCost((newDuration * 0.05) / 60) // $0.05 per minute
+          setCallCost((newDuration * 0.05) / 60)
           return newDuration
         })
       }, 1000)
@@ -316,7 +314,6 @@ export default function CallingPage() {
         setCallHistory(data.calls)
       }
     } catch (error) {
-      console.error("Failed to fetch call history:", error)
       toast.error("Failed to load call history")
     }
   }
@@ -330,7 +327,6 @@ export default function CallingPage() {
         setVoicemails(data.voicemails)
       }
     } catch (error) {
-      console.error("Failed to fetch voicemails:", error)
       toast.error("Failed to load voicemails")
     }
   }
@@ -344,21 +340,19 @@ export default function CallingPage() {
         setBalance(Number.parseFloat(data.balance) || 25.5)
       }
     } catch (error) {
-      console.error("Failed to fetch balance:", error)
+      // Silent fail
     }
   }
 
   const formatIndianNumber = (number: string) => {
-    // Remove all non-digit characters
     const cleaned = number.replace(/\D/g, "")
 
-    // Handle different Indian number formats
     if (cleaned.startsWith("91") && cleaned.length === 12) {
-      return cleaned // Already has country code
+      return cleaned
     } else if (cleaned.length === 10) {
-      return `91${cleaned}` // Add India country code
+      return `91${cleaned}`
     } else if (cleaned.startsWith("0") && cleaned.length === 11) {
-      return `91${cleaned.substring(1)}` // Remove leading 0 and add country code
+      return `91${cleaned.substring(1)}`
     }
 
     return cleaned
@@ -406,7 +400,6 @@ export default function CallingPage() {
 
         toast.success("Call initiated from your Twilio number!")
 
-        // Refresh call history
         setTimeout(() => {
           fetchCallHistory()
         }, 2000)
@@ -414,7 +407,6 @@ export default function CallingPage() {
         throw new Error(data.error || "Failed to make call from Twilio number")
       }
     } catch (error) {
-      console.error("Error making Twilio call:", error)
       toast.error(error.message || "Failed to make call from Twilio number")
     } finally {
       setIsLoading(false)
@@ -462,7 +454,6 @@ export default function CallingPage() {
 
         toast.success("Live call initiated! You will receive a call on your phone to connect.")
 
-        // Refresh call history
         setTimeout(() => {
           fetchCallHistory()
         }, 2000)
@@ -470,7 +461,6 @@ export default function CallingPage() {
         throw new Error(data.error || "Failed to make live call")
       }
     } catch (error) {
-      console.error("Error making live call:", error)
       toast.error(error.message || "Failed to make live call")
     } finally {
       setIsLiveCalling(false)
@@ -525,7 +515,6 @@ export default function CallingPage() {
 
         toast.success("Voice call initiated successfully")
 
-        // Refresh call history
         setTimeout(() => {
           fetchCallHistory()
         }, 2000)
@@ -533,7 +522,6 @@ export default function CallingPage() {
         throw new Error(data.error || "Failed to make call")
       }
     } catch (error) {
-      console.error("Error making call:", error)
       toast.error(error.message || "Failed to make call")
     } finally {
       setIsLoading(false)
@@ -574,11 +562,9 @@ export default function CallingPage() {
       if (data.success) {
         toast.success("Conference call initiated! Both parties will be called.")
 
-        // Clear the form
         setPhoneNumber1("")
         setPhoneNumber2("")
 
-        // Refresh call history after a delay
         setTimeout(() => {
           fetchCallHistory()
         }, 3000)
@@ -586,7 +572,6 @@ export default function CallingPage() {
         throw new Error(data.error || "Failed to create conference call")
       }
     } catch (error) {
-      console.error("Error making conference call:", error)
       toast.error(error.message || "Failed to create conference call")
     } finally {
       setIsConnecting(false)
@@ -598,12 +583,10 @@ export default function CallingPage() {
     setIsRecording(false)
     setCurrentCallSid(null)
 
-    // Deduct cost from balance
     setBalance((prev) => Math.max(0, prev - callCost))
 
     toast.success(`Call ended. Cost: $${callCost.toFixed(2)}`)
 
-    // Refresh call history
     setTimeout(() => {
       fetchCallHistory()
     }, 1000)
@@ -636,7 +619,6 @@ export default function CallingPage() {
         throw new Error(data.error)
       }
     } catch (error) {
-      console.error("Error deleting call record:", error)
       toast.error("Failed to delete call record")
     }
   }
@@ -660,7 +642,7 @@ export default function CallingPage() {
         fetchVoicemails()
       }
     } catch (error) {
-      console.error("Error marking voicemail as read:", error)
+      // Silent fail
     }
   }
 
@@ -798,7 +780,6 @@ export default function CallingPage() {
 
         <TabsContent value="twilio-call" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Twilio Number Call Card */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
@@ -827,7 +808,6 @@ export default function CallingPage() {
                   </p>
                 </div>
 
-                {/* Dial Pad for Twilio Call */}
                 <div className="grid grid-cols-3 gap-2 max-w-xs mx-auto">
                   {dialPadNumbers.map((row, rowIndex) =>
                     row.map((digit) => (
@@ -895,7 +875,6 @@ export default function CallingPage() {
               </CardContent>
             </Card>
 
-            {/* Incoming Call Info Card */}
             <Card>
               <CardHeader>
                 <CardTitle>Incoming Call Features</CardTitle>
@@ -956,7 +935,6 @@ export default function CallingPage() {
 
         <TabsContent value="live" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Live Call Card */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
@@ -985,7 +963,6 @@ export default function CallingPage() {
                   </p>
                 </div>
 
-                {/* Dial Pad for Live Call */}
                 <div className="grid grid-cols-3 gap-2 max-w-xs mx-auto">
                   {dialPadNumbers.map((row, rowIndex) =>
                     row.map((digit) => (
@@ -1056,7 +1033,6 @@ export default function CallingPage() {
               </CardContent>
             </Card>
 
-            {/* Call Controls Card */}
             <Card>
               <CardHeader>
                 <CardTitle>Call Controls</CardTitle>
@@ -1132,7 +1108,6 @@ export default function CallingPage() {
 
         <TabsContent value="voice" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Voice Call Card */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
@@ -1157,7 +1132,6 @@ export default function CallingPage() {
                   />
                 </div>
 
-                {/* Dial Pad for Voice Call */}
                 <div className="grid grid-cols-3 gap-2 max-w-xs mx-auto">
                   {dialPadNumbers.map((row, rowIndex) =>
                     row.map((digit) => (
@@ -1230,7 +1204,6 @@ export default function CallingPage() {
               </CardContent>
             </Card>
 
-            {/* Voice Settings Card */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">

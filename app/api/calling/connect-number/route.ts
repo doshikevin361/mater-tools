@@ -6,8 +6,6 @@ export async function POST(request: NextRequest) {
     const digits = formData.get("Digits") as string
     const from = formData.get("From") as string
 
-    console.log("Connect number request:", { digits, from })
-
     if (!digits || digits.length !== 10) {
       const errorTwiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
@@ -22,7 +20,6 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Format the number for calling
     const formattedNumber = `+91${digits}`
 
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -46,8 +43,6 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error("Error connecting number:", error)
-
     const errorTwiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Say voice="alice">Sorry, there was an error. Please try again later.</Say>

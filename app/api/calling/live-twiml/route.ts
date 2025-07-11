@@ -2,9 +2,7 @@ import type { NextRequest } from "next/server"
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("Live TwiML endpoint called")
-
-    const yourPhoneNumber = "+918733832957" // UPDATE THIS WITH YOUR ACTUAL PHONE NUMBER
+    const yourPhoneNumber = "+919876543210"
 
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
@@ -23,8 +21,6 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error("Error generating live TwiML:", error)
-
     const fallbackTwiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Say voice="alice">Sorry, there was an error connecting your call. Please try again later. Goodbye.</Say>

@@ -10,9 +10,6 @@ export async function POST(request: NextRequest) {
     const to = formData.get("To") as string
     const duration = formData.get("RecordingDuration") as string
 
-    console.log("Voicemail received:", { recordingUrl, recordingSid, from, to, duration })
-
-    // Store voicemail in database
     const { db } = await connectToDatabase()
 
     const voicemail = {
@@ -29,7 +26,6 @@ export async function POST(request: NextRequest) {
 
     await db.collection("voicemails").insertOne(voicemail)
 
-    // Send confirmation TwiML
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Say voice="alice">Thank you for your message. We will get back to you soon. Goodbye.</Say>
@@ -42,8 +38,6 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error("Error handling voicemail:", error)
-
     const errorTwiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
     <Say voice="alice">Thank you for calling. Goodbye.</Say>
