@@ -111,7 +111,7 @@ export default function WhatsAppPage() {
   const [userBalance, setUserBalance] = useState(0)
   const [realTemplates, setRealTemplates] = useState<RealTemplate[]>([])
   const [templatesLoading, setTemplatesLoading] = useState(false)
-  const [selectedRealTemplate, setSelectedRealTemplate] = useState<string>("auto")
+  const [selectedRealTemplate, setSelectedRealTemplate] = useState<string>("")
 
   // Load user data and campaigns
   useEffect(() => {
@@ -213,11 +213,8 @@ export default function WhatsAppPage() {
   const handleRealTemplateSelect = (templateId: string) => {
     setSelectedRealTemplate(templateId)
 
-    // “auto” means let the server decide a template later
-    if (templateId === "auto") {
-      setMessage("")
-      setMediaType("none")
-      setMediaUrl("")
+    // If no template selected, let system create template automatically
+    if (!templateId) {
       return
     }
 
@@ -297,7 +294,7 @@ export default function WhatsAppPage() {
         campaignName,
         mediaUrl: mediaType !== "none" ? mediaUrl.trim() : undefined,
         mediaType: mediaType !== "none" ? mediaType : undefined,
-        selectedTemplateId: selectedRealTemplate !== "auto" ? selectedRealTemplate : undefined,
+        selectedTemplateId: selectedRealTemplate || undefined,
         userId,
       }
 
@@ -318,7 +315,7 @@ export default function WhatsAppPage() {
         setMediaUrl("")
         setMediaType("none")
         setSelectedTemplate("custom")
-        setSelectedRealTemplate("auto")
+        setSelectedRealTemplate("")
         // Reload data
         loadCampaigns()
         loadUserData()
@@ -445,10 +442,9 @@ export default function WhatsAppPage() {
                     </div>
                     <Select value={selectedRealTemplate} onValueChange={handleRealTemplateSelect}>
                       <SelectTrigger className="border-green-200">
-                        <SelectValue placeholder="Choose from your approved templates" />
+                        <SelectValue placeholder="Choose from your approved templates (optional)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="auto">Auto-select best template</SelectItem>
                         {realTemplates.map((template) => (
                           <SelectItem key={template.id} value={template.id}>
                             <div className="flex flex-col">
@@ -462,12 +458,18 @@ export default function WhatsAppPage() {
                       </SelectContent>
                     </Select>
                     {realTemplates.length === 0 && !templatesLoading && (
-                      <p className="text-xs text-red-500">
-                        No approved templates found. Create templates in WhatsApp Business Manager first.
+                      <p className="text-xs text-blue-500">
+                        No approved templates found. System will create and approve template automatically when you
+                        send.
                       </p>
                     )}
-                    {selectedRealTemplate !== "auto" && (
+                    {selectedRealTemplate && (
                       <p className="text-xs text-green-600">✅ Template selected! Message auto-filled below.</p>
+                    )}
+                    {!selectedRealTemplate && realTemplates.length > 0 && (
+                      <p className="text-xs text-blue-600">
+                        💡 No template selected. System will create template automatically from your message.
+                      </p>
                     )}
                   </div>
 
@@ -555,8 +557,7 @@ export default function WhatsAppPage() {
                       <span>Characters: {message.length}</span>
                       <span>Supports emojis, *bold*, _italic_, ~strikethrough~</span>
                     </div>
-                    {/* helper note when a real template is chosen */}
-                    {selectedRealTemplate !== "auto" && (
+                    {selectedRealTemplate && (
                       <p className="text-xs text-blue-600">
                         💡 Template parameters like {"{{1}}"}, {"{{2}}"} will be automatically filled when sending.
                       </p>
