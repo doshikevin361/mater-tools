@@ -5,16 +5,15 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData()
     const to = formData.get("To") as string
     const from = formData.get("From") as string
-    const callSid = formData.get("CallSid") as string
 
-    // TwiML response for browser calling
+    console.log("TwiML App called - To:", to, "From:", from)
+
+    // Create TwiML response for outgoing call
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say voice="alice">Please hold while we connect you to the browser caller.</Say>
-    <Dial>
-        <Client>browser-user</Client>
+    <Dial callerId="${process.env.TWILIO_PHONE_NUMBER || "+19252617266"}">
+        <Number>${to}</Number>
     </Dial>
-    <Say voice="alice">The browser caller is not available. Please try again later.</Say>
 </Response>`
 
     return new NextResponse(twiml, {
@@ -23,12 +22,11 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error("Browser TwiML error:", error)
+    console.error("Error generating TwiML:", error)
 
     const errorTwiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say voice="alice">Sorry, there was an error connecting your call. Please try again later.</Say>
-    <Hangup/>
+    <Say voice="alice">Sorry, there was an error connecting your call. Please try again.</Say>
 </Response>`
 
     return new NextResponse(errorTwiml, {

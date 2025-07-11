@@ -7,46 +7,35 @@ export async function POST(request: NextRequest) {
     const callSid = formData.get("CallSid") as string
     const callStatus = formData.get("CallStatus") as string
     const callDuration = formData.get("CallDuration") as string
-    const to = formData.get("To") as string
     const from = formData.get("From") as string
+    const to = formData.get("To") as string
 
-    if (callSid) {
-      const { db } = await connectToDatabase()
+    console.log("Call webhook received:", {
+      callSid,
+      callStatus,
+      callDuration,
+      from,
+      to,
+    })
 
-      // Update or create call record
-      const updateData = {
-        status: callStatus,
-        updatedAt: new Date(),
-      }
+    // Connect to database and update call record
+    const { db } = await connectToDatabase()
 
-      // Add duration if call completed
-      if (callStatus === "completed" && callDuration) {
-        updateData.duration = Number.parseInt(callDuration)
-        updateData.cost = (Number.parseInt(callDuration) / 60) * 0.05 // $0.05 per minute
-      }
-
-      await db.collection("call_history").updateOne(
-        { callSid },
-        {
-          $set: updateData,
-          $setOnInsert: {
-            userId: "demo-user",
-            phoneNumber: to,
-            direction: "outbound",
-            callType: "browser-direct",
-            timestamp: new Date(),
-            createdAt: new Date(),
-          },
-        },
-        { upsert: true },
-      )
-
-      console.log(`Call ${callSid} status updated to: ${callStatus}`)
+    const callRecord = {
+      callSid,
+      status: callStatus,
+      duration: Number.parseInt(callDuration) || 0,
+      from,
+      to,
+      timestamp: new Date(),
+      cost: callDuration ? (Number.parseInt(callDuration) / 60) * 0.05 : 0, // $0.05 per minute
     }
+
+    await db.collection("call_history").updateOne({ callSid }, { $set: callRecord }, { upsert: true })
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Call webhook error:", error)
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    console.error("Error processing call webhook:", error)
+    return NextResponse.json({ error: "Failed to process webhook" }, { status: 500 })
   }
 }

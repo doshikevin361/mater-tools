@@ -1,13 +1,16 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Badge } from "@/components/ui/badge"
+import { Switch } from "@/components/ui/switch"
 import { Slider } from "@/components/ui/slider"
+import { toast } from "sonner"
+import { twilioVoiceBrowser } from "@/lib/twilio-voice-browser"
 import {
   Phone,
   PhoneCall,
@@ -16,278 +19,427 @@ import {
   MicOff,
   Volume2,
   VolumeX,
-  History,
-  RefreshCw,
-  Clock,
-  Download,
+  Square,
   Play,
-  Trash2,
-  AlertCircle,
+  Pause,
+  Download,
+  Clock,
+  DollarSign,
+  SkipBack,
+  SkipForward,
+  Wifi,
+  WifiOff,
 } from "lucide-react"
-import { toast } from "sonner"
 
 interface CallRecord {
   id: string
-  callSid: string
   phoneNumber: string
-  direction: "inbound" | "outbound"
   duration: number
-  status: "completed" | "failed" | "busy" | "no-answer" | "in-progress" | "ringing" | "initiated"
+  status: "completed" | "failed" | "busy" | "no-answer"
   cost: number
   recordingUrl?: string
+  transcript?: string
   timestamp: Date
-  callType?: string
 }
 
-export default function CallingPage() {
-  const [activeTab, setActiveTab] = useState("make-call")
-  const [phoneNumber, setPhoneNumber] = useState("")
-  const [isCallActive, setIsCallActive] = useState(false)
-  const [isMicEnabled, setIsMicEnabled] = useState(true)
-  const [isSpeakerEnabled, setIsSpeakerEnabled] = useState(true)
-  const [micLevel, setMicLevel] = useState(0)
-  const [callDuration, setCallDuration] = useState(0)
-  const [hasPermission, setHasPermission] = useState(false)
-  const [currentCallSid, setCurrentCallSid] = useState<string | null>(null)
-  const [callHistory, setCallHistory] = useState<CallRecord[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [volume, setVolume] = useState([80])
-  const [isSystemReady, setIsSystemReady] = useState(false)
+interface AudioPlayerProps {
+  recordingUrl: string
+  callId: string
+  phoneNumber: string
+}
 
-  const mediaStreamRef = useRef<MediaStream | null>(null)
-  const audioContextRef = useRef<AudioContext | null>(null)
-  const analyserRef = useRef<AnalyserNode | null>(null)
-  const callStartTimeRef = useRef<number>(0)
-  const intervalRef = useRef<NodeJS.Timeout | null>(null)
+function AudioPlayer({ recordingUrl, callId, phoneNumber }: AudioPlayerProps) {
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const [volume, setVolume] = useState([80])
+  const [isLoading, setIsLoading] = useState(false)
+  const audioRef = useRef<HTMLAudioElement>(null)
 
   useEffect(() => {
-    initializeSystem()
-    fetchCallHistory()
+    const audio = audioRef.current
+    if (!audio) return
+
+    const updateTime = () => setCurrentTime(audio.currentTime)
+    const updateDuration = () => setDuration(audio.duration)
+    const handleEnded = () => setIsPlaying(false)
+    const handleLoadStart = () => setIsLoading(true)
+    const handleCanPlay = () => setIsLoading(false)
+
+    audio.addEventListener("timeupdate", updateTime)
+    audio.addEventListener("loadedmetadata", updateDuration)
+    audio.addEventListener("ended", handleEnded)
+    audio.addEventListener("loadstart", handleLoadStart)
+    audio.addEventListener("canplay", handleCanPlay)
 
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-      }
-      cleanup()
+      audio.removeEventListener("timeupdate", updateTime)
+      audio.removeEventListener("loadedmetadata", updateDuration)
+      audio.removeEventListener("ended", handleEnded)
+      audio.removeEventListener("loadstart", handleLoadStart)
+      audio.removeEventListener("canplay", handleCanPlay)
     }
   }, [])
 
-  const initializeSystem = async () => {
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = volume[0] / 100
+    }
+  }, [volume])
+
+  const togglePlayPause = () => {
+    const audio = audioRef.current
+    if (!audio) return
+
+    if (isPlaying) {
+      audio.pause()
+      setIsPlaying(false)
+    } else {
+      audio.play()
+      setIsPlaying(true)
+    }
+  }
+
+  const handleSeek = (value: number[]) => {
+    const audio = audioRef.current
+    if (!audio || !duration) return
+
+    const newTime = (value[0] / 100) * duration
+    audio.currentTime = newTime
+    setCurrentTime(newTime)
+  }
+
+  const skipBackward = () => {
+    const audio = audioRef.current
+    if (!audio) return
+    audio.currentTime = Math.max(0, audio.currentTime - 10)
+  }
+
+  const skipForward = () => {
+    const audio = audioRef.current
+    if (!audio) return
+    audio.currentTime = Math.min(duration, audio.currentTime + 10)
+  }
+
+  const formatTime = (time: number) => {
+    if (isNaN(time)) return "0:00"
+    const minutes = Math.floor(time / 60)
+    const seconds = Math.floor(time % 60)
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`
+  }
+
+  const downloadRecording = async () => {
     try {
-      // Check if system is ready
-      setIsSystemReady(true)
-      toast.success("Browser calling system ready!")
+      const response = await fetch(recordingUrl)
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `call-recording-${phoneNumber.replace(/\D/g, "")}-${callId}.mp3`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      toast.success("Recording downloaded")
     } catch (error) {
-      console.error("Failed to initialize system:", error)
-      toast.error("Failed to initialize calling system")
+      toast.error("Failed to download recording")
     }
   }
 
-  const cleanup = () => {
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach((track) => track.stop())
-    }
-    if (audioContextRef.current) {
-      audioContextRef.current.close()
-    }
-  }
+  const progress = duration > 0 ? (currentTime / duration) * 100 : 0
 
-  const requestMicrophonePermission = async () => {
+  return (
+    <div className="bg-gray-50 rounded-lg p-4 space-y-3 border">
+      <audio ref={audioRef} src={recordingUrl} preload="metadata" />
+
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+            <Phone className="h-4 w-4 text-blue-600" />
+          </div>
+          <div>
+            <p className="text-sm font-medium">Call Recording</p>
+            <p className="text-xs text-gray-500">{phoneNumber}</p>
+          </div>
+        </div>
+        <Button size="sm" variant="outline" onClick={downloadRecording} className="h-8 bg-transparent">
+          <Download className="h-3 w-3" />
+        </Button>
+      </div>
+
+      <div className="space-y-2">
+        <Slider
+          value={[progress]}
+          onValueChange={handleSeek}
+          max={100}
+          step={0.1}
+          className="w-full"
+          disabled={!duration || isLoading}
+        />
+        <div className="flex justify-between text-xs text-gray-500">
+          <span>{formatTime(currentTime)}</span>
+          <span>{formatTime(duration)}</span>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={skipBackward}
+            disabled={!duration || isLoading}
+            className="h-8 w-8 p-0 bg-transparent"
+          >
+            <SkipBack className="h-3 w-3" />
+          </Button>
+
+          <Button size="sm" onClick={togglePlayPause} disabled={!duration || isLoading} className="h-8 w-8 p-0">
+            {isLoading ? (
+              <div className="w-3 h-3 border border-gray-300 border-t-blue-600 rounded-full animate-spin" />
+            ) : isPlaying ? (
+              <Pause className="h-3 w-3" />
+            ) : (
+              <Play className="h-3 w-3" />
+            )}
+          </Button>
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={skipForward}
+            disabled={!duration || isLoading}
+            className="h-8 w-8 p-0 bg-transparent"
+          >
+            <SkipForward className="h-3 w-3" />
+          </Button>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <VolumeX className="h-3 w-3 text-gray-400" />
+          <Slider value={volume} onValueChange={setVolume} max={100} step={1} className="w-16" />
+          <Volume2 className="h-3 w-3 text-gray-400" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default function CallingPage() {
+  const [activeTab, setActiveTab] = useState("dialer")
+  const [phoneNumber, setPhoneNumber] = useState("")
+  const [isCallActive, setIsCallActive] = useState(false)
+  const [callDuration, setCallDuration] = useState(0)
+  const [isMuted, setIsMuted] = useState(false)
+  const [isRecording, setIsRecording] = useState(false)
+  const [volume, setVolume] = useState([80])
+  const [callHistory, setCallHistory] = useState<CallRecord[]>([])
+  const [balance, setBalance] = useState(25.5)
+  const [autoRecord, setAutoRecord] = useState(true)
+  const [callCost, setCallCost] = useState(0)
+  const [isConnected, setIsConnected] = useState(false)
+  const [isInitializing, setIsInitializing] = useState(false)
+  const [callStatus, setCallStatus] = useState("idle")
+  const callTimerRef = useRef<NodeJS.Timeout>()
+
+  // Initialize Twilio Voice SDK
+  useEffect(() => {
+    initializeTwilioVoice()
+  }, [])
+
+  // Load call history on component mount
+  useEffect(() => {
+    fetchCallHistory()
+  }, [])
+
+  // Call timer effect
+  useEffect(() => {
+    if (isCallActive) {
+      callTimerRef.current = setInterval(() => {
+        setCallDuration((prev) => {
+          const newDuration = prev + 1
+          setCallCost(newDuration * 0.05) // $0.05 per minute
+          return newDuration
+        })
+      }, 1000)
+    } else {
+      if (callTimerRef.current) {
+        clearInterval(callTimerRef.current)
+      }
+    }
+
+    return () => {
+      if (callTimerRef.current) {
+        clearInterval(callTimerRef.current)
+      }
+    }
+  }, [isCallActive])
+
+  const initializeTwilioVoice = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-      })
+      setIsInitializing(true)
+      await twilioVoiceBrowser.initialize()
+      setIsConnected(true)
+      toast.success("Voice calling ready! You can now make calls directly from your browser.")
 
-      setHasPermission(true)
-      setIsMicEnabled(true)
-      mediaStreamRef.current = stream
-      setupAudioAnalyzer(stream)
-      toast.success("Microphone permission granted!")
-      return true
+      // Set up call event listeners
+      const device = twilioVoiceBrowser.getDevice()
+      if (device) {
+        device.on("connect", (call: any) => {
+          setIsCallActive(true)
+          setCallStatus("connected")
+          setCallDuration(0)
+          toast.success("Call connected!")
+        })
+
+        device.on("disconnect", (call: any) => {
+          setIsCallActive(false)
+          setCallStatus("idle")
+          setIsMuted(false)
+          toast.info("Call ended")
+
+          // Add to call history
+          const newCall: CallRecord = {
+            id: `call_${Date.now()}`,
+            phoneNumber: phoneNumber,
+            duration: callDuration,
+            status: "completed",
+            cost: callCost,
+            timestamp: new Date(),
+          }
+          setCallHistory((prev) => [newCall, ...prev])
+
+          // Deduct cost from balance
+          setBalance((prev) => Math.max(0, prev - callCost))
+        })
+
+        device.on("error", (error: any) => {
+          console.error("Call error:", error)
+          setIsCallActive(false)
+          setCallStatus("idle")
+          toast.error(`Call error: ${error.message}`)
+        })
+
+        device.on("incoming", (call: any) => {
+          toast.info(`Incoming call from ${call.parameters.From}`)
+          setCallStatus("incoming")
+        })
+      }
     } catch (error) {
-      toast.error("Microphone permission denied")
-      setHasPermission(false)
-      return false
+      console.error("Failed to initialize Twilio Voice:", error)
+      setIsConnected(false)
+      toast.error("Failed to initialize voice calling. Please refresh the page.")
+    } finally {
+      setIsInitializing(false)
     }
-  }
-
-  const setupAudioAnalyzer = (stream: MediaStream) => {
-    try {
-      const audioContext = new AudioContext()
-      const analyser = audioContext.createAnalyser()
-      const source = audioContext.createMediaStreamSource(stream)
-
-      source.connect(analyser)
-      analyser.fftSize = 256
-
-      audioContextRef.current = audioContext
-      analyserRef.current = analyser
-
-      monitorMicLevel()
-    } catch (error) {
-      console.error("Failed to setup audio analyzer:", error)
-    }
-  }
-
-  const monitorMicLevel = () => {
-    if (!analyserRef.current) return
-
-    const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount)
-
-    const updateLevel = () => {
-      if (!analyserRef.current || !isCallActive) return
-
-      analyserRef.current.getByteFrequencyData(dataArray)
-      const average = dataArray.reduce((a, b) => a + b) / dataArray.length
-      setMicLevel(Math.round((average / 255) * 100))
-
-      requestAnimationFrame(updateLevel)
-    }
-
-    updateLevel()
-  }
-
-  const startCallTimer = () => {
-    callStartTimeRef.current = Date.now()
-    intervalRef.current = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - callStartTimeRef.current) / 1000)
-      setCallDuration(elapsed)
-    }, 1000)
-  }
-
-  const stopCallTimer = () => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current)
-      intervalRef.current = null
-    }
-    setCallDuration(0)
   }
 
   const fetchCallHistory = async () => {
     try {
-      const response = await fetch("/api/calling/history?userId=demo-user")
-      const data = await response.json()
-      if (data.success) {
-        setCallHistory(data.calls)
-      }
+      // Mock data with some recordings
+      const mockHistory: CallRecord[] = [
+        {
+          id: "call_001",
+          phoneNumber: "+919876543210",
+          duration: 125,
+          status: "completed",
+          cost: 2.5,
+          recordingUrl: "/api/recordings/sample-call-1.mp3",
+          transcript: "Hello, this is a test call recording with customer service...",
+          timestamp: new Date(Date.now() - 3600000),
+        },
+        {
+          id: "call_002",
+          phoneNumber: "+919123456789",
+          duration: 89,
+          status: "completed",
+          cost: 1.75,
+          recordingUrl: "/api/recordings/sample-call-2.mp3",
+          timestamp: new Date(Date.now() - 7200000),
+        },
+        {
+          id: "call_003",
+          phoneNumber: "+919555123456",
+          duration: 45,
+          status: "completed",
+          cost: 1.25,
+          recordingUrl: "/api/recordings/sample-call-3.mp3",
+          timestamp: new Date(Date.now() - 10800000),
+        },
+        {
+          id: "call_004",
+          phoneNumber: "+919444987654",
+          duration: 0,
+          status: "failed",
+          cost: 0,
+          timestamp: new Date(Date.now() - 14400000),
+        },
+      ]
+
+      setCallHistory(mockHistory)
     } catch (error) {
       console.error("Failed to fetch call history:", error)
     }
   }
 
-  const formatIndianNumber = (number: string) => {
-    const cleaned = number.replace(/\D/g, "")
-    if (cleaned.startsWith("91") && cleaned.length === 12) {
-      return `+${cleaned}`
-    } else if (cleaned.length === 10) {
-      return `+91${cleaned}`
-    } else if (cleaned.startsWith("0") && cleaned.length === 11) {
-      return `+91${cleaned.substring(1)}`
-    }
-    return cleaned.startsWith("+") ? `+${cleaned}` : `+${cleaned}`
-  }
-
-  const startDirectCall = async () => {
+  const makeCall = async () => {
     if (!phoneNumber.trim()) {
       toast.error("Please enter a phone number")
       return
     }
 
-    if (!isSystemReady) {
-      toast.error("Calling system not ready. Please wait...")
+    if (!isConnected) {
+      toast.error("Voice calling not initialized. Please refresh the page.")
       return
     }
 
-    if (!hasPermission) {
-      const granted = await requestMicrophonePermission()
-      if (!granted) return
+    if (balance < 1) {
+      toast.error("Insufficient balance to make a call")
+      return
     }
-
-    setIsLoading(true)
 
     try {
-      const formattedNumber = formatIndianNumber(phoneNumber)
+      setCallStatus("connecting")
+      toast.info("Connecting call...")
 
-      // Start call via API
-      const response = await fetch("/api/calling/direct-browser-call", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "start",
-          phoneNumber: formattedNumber,
-          userId: "demo-user",
-        }),
-      })
+      await twilioVoiceBrowser.makeCall(phoneNumber)
 
-      const data = await response.json()
-
-      if (data.success) {
-        setIsCallActive(true)
-        setCurrentCallSid(data.callSid)
-        startCallTimer()
-        toast.success(`Calling ${formattedNumber}... They will receive your call directly!`)
-      } else {
-        throw new Error(data.error || "Failed to start call")
-      }
+      // The actual connection will be handled by the device event listeners
     } catch (error) {
-      toast.error("Failed to start call: " + error.message)
-    } finally {
-      setIsLoading(false)
+      console.error("Error making call:", error)
+      setCallStatus("idle")
+      toast.error("Failed to make call. Please try again.")
     }
   }
 
-  const endDirectCall = () => {
-    setIsCallActive(false)
-    stopCallTimer()
-    setCurrentCallSid(null)
-    toast.success("Call ended")
-
-    // Refresh call history after a delay
-    setTimeout(() => {
-      fetchCallHistory()
-    }, 2000)
-  }
-
-  const toggleMic = () => {
-    if (mediaStreamRef.current) {
-      const audioTracks = mediaStreamRef.current.getAudioTracks()
-      audioTracks.forEach((track) => {
-        track.enabled = !isMicEnabled
-      })
-      setIsMicEnabled(!isMicEnabled)
-      toast.success(isMicEnabled ? "Microphone muted" : "Microphone unmuted")
-    }
-  }
-
-  const toggleSpeaker = () => {
-    setIsSpeakerEnabled(!isSpeakerEnabled)
-    toast.success(isSpeakerEnabled ? "Speaker off" : "Speaker on")
-  }
-
-  const adjustVolume = (newVolume: number[]) => {
-    setVolume(newVolume)
-  }
-
-  const deleteCallRecord = async (callSid: string) => {
+  const endCall = async () => {
     try {
-      const response = await fetch(`/api/calling/history?callSid=${callSid}&userId=demo-user`, {
-        method: "DELETE",
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        toast.success("Call record deleted")
-        fetchCallHistory()
-      } else {
-        throw new Error(data.error)
-      }
+      await twilioVoiceBrowser.hangupCall()
+      // The disconnect will be handled by the device event listeners
     } catch (error) {
-      toast.error("Failed to delete call record")
+      console.error("Error ending call:", error)
+      toast.error("Failed to end call")
+    }
+  }
+
+  const toggleMute = async () => {
+    try {
+      const newMutedState = !isMuted
+      await twilioVoiceBrowser.muteCall(newMutedState)
+      setIsMuted(newMutedState)
+      toast.info(newMutedState ? "Microphone muted" : "Microphone unmuted")
+    } catch (error) {
+      console.error("Error toggling mute:", error)
+      toast.error("Failed to toggle mute")
+    }
+  }
+
+  const handleVolumeChange = async (newVolume: number[]) => {
+    try {
+      setVolume(newVolume)
+      await twilioVoiceBrowser.setVolume(newVolume[0])
+    } catch (error) {
+      console.error("Error setting volume:", error)
     }
   }
 
@@ -299,28 +451,18 @@ export default function CallingPage() {
 
   const formatPhoneNumber = (number: string) => {
     const cleaned = number.replace(/\D/g, "")
-    if (cleaned.length === 10) {
-      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`
-    } else if (cleaned.length === 12 && cleaned.startsWith("91")) {
-      const indianNumber = cleaned.substring(2)
-      return `+91 ${indianNumber.slice(0, 5)} ${indianNumber.slice(5)}`
-    }
-    return number
-  }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "completed":
-        return "default"
-      case "failed":
-        return "destructive"
-      case "in-progress":
-      case "ringing":
-      case "initiated":
-        return "secondary"
-      default:
-        return "outline"
+    // For Indian numbers
+    if (cleaned.startsWith("91") && cleaned.length === 12) {
+      const phoneDigits = cleaned.slice(2)
+      return `+91 ${phoneDigits.slice(0, 5)} ${phoneDigits.slice(5)}`
     }
+
+    if (cleaned.length === 10) {
+      return `+91 ${cleaned.slice(0, 5)} ${cleaned.slice(5)}`
+    }
+
+    return number
   }
 
   const dialPadNumbers = [
@@ -330,242 +472,202 @@ export default function CallingPage() {
     ["*", "0", "#"],
   ]
 
+  const addDigit = (digit: string) => {
+    if (!isCallActive) {
+      setPhoneNumber((prev) => prev + digit)
+    }
+  }
+
+  const clearNumber = () => {
+    if (!isCallActive) {
+      setPhoneNumber("")
+    }
+  }
+
   return (
-    <div className="container mx-auto p-6 max-w-6xl">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Direct Browser Calling</h1>
-        <p className="text-muted-foreground">
-          Call any person directly through your browser - talk with microphone, hear through speaker!
-        </p>
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Browser Voice Calling</h1>
+          <p className="text-muted-foreground">Make calls directly from your browser - no app download needed</p>
+        </div>
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            {isConnected ? <Wifi className="h-4 w-4 text-green-600" /> : <WifiOff className="h-4 w-4 text-red-600" />}
+            <span className={`text-sm ${isConnected ? "text-green-600" : "text-red-600"}`}>
+              {isInitializing ? "Initializing..." : isConnected ? "Connected" : "Disconnected"}
+            </span>
+          </div>
+          <div className="text-right">
+            <p className="text-sm text-muted-foreground">Account Balance</p>
+            <p className="text-2xl font-bold text-green-600">${balance.toFixed(2)}</p>
+          </div>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="make-call">
-            <PhoneCall className="h-4 w-4 mr-2" />
-            Direct Call
-          </TabsTrigger>
-          <TabsTrigger value="history">
-            <History className="h-4 w-4 mr-2" />
-            Call History ({callHistory.length})
-          </TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="dialer">Browser Dialer</TabsTrigger>
+          <TabsTrigger value="history">Call History</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="make-call" className="space-y-6">
-          <div className="grid gap-6 md:grid-cols-2">
-            {/* Call Interface */}
+        <TabsContent value="dialer" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Dialer Card */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center space-x-2">
                   <Phone className="h-5 w-5" />
-                  Direct Browser Call
+                  <span>Click-to-Call Dialer</span>
                 </CardTitle>
-                <CardDescription>
-                  Enter number → Click call → Talk directly through microphone → Hear through speaker
-                </CardDescription>
+                <CardDescription>Enter Indian mobile number (automatic +91 prefix)</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* System Status */}
-                <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                  <span className="text-sm">Calling System:</span>
-                  <Badge variant={isSystemReady ? "default" : "destructive"}>
-                    {isSystemReady ? "Ready" : "Loading..."}
-                  </Badge>
-                </div>
-
-                {/* Important Notice */}
-                <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
-                  <div className="flex items-start space-x-2">
-                    <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
-                    <div>
-                      <h4 className="font-medium text-amber-800 mb-1">Setup Required</h4>
-                      <p className="text-sm text-amber-700">
-                        To enable browser calling, you need to configure Twilio environment variables:
-                      </p>
-                      <ul className="text-xs text-amber-600 mt-2 space-y-1 list-disc list-inside">
-                        <li>TWILIO_ACCOUNT_SID</li>
-                        <li>TWILIO_AUTH_TOKEN</li>
-                        <li>TWILIO_PHONE_NUMBER</li>
-                        <li>TWILIO_TWIML_APP_SID (optional)</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Phone Number Input */}
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Phone Number</label>
+                  <Label htmlFor="phone">Mobile Number</Label>
                   <Input
+                    id="phone"
                     type="tel"
-                    placeholder="Enter phone number (e.g., 9876543210)"
+                    placeholder="9876543210"
                     value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    disabled={isCallActive}
+                    onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))}
+                    disabled={isCallActive || !isConnected}
                     className="text-lg text-center"
+                    maxLength={10}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    This person will receive a direct call - you talk through browser microphone/speaker
+                  <p className="text-xs text-muted-foreground text-center">
+                    Will call: {phoneNumber ? formatPhoneNumber(phoneNumber) : "+91 XXXXX XXXXX"}
                   </p>
                 </div>
 
                 {/* Dial Pad */}
-                <div className="grid grid-cols-3 gap-2">
-                  {dialPadNumbers.flat().map((num) => (
-                    <Button
-                      key={num}
-                      variant="outline"
-                      className="h-12 text-lg bg-transparent"
-                      onClick={() => setPhoneNumber((prev) => prev + num)}
-                      disabled={isCallActive}
-                    >
-                      {num}
-                    </Button>
-                  ))}
+                <div className="grid grid-cols-3 gap-2 max-w-xs mx-auto">
+                  {dialPadNumbers.map((row, rowIndex) =>
+                    row.map((digit) => (
+                      <Button
+                        key={digit}
+                        variant="outline"
+                        size="lg"
+                        onClick={() => addDigit(digit)}
+                        disabled={isCallActive || !isConnected}
+                        className="h-12 text-lg font-semibold"
+                      >
+                        {digit}
+                      </Button>
+                    )),
+                  )}
                 </div>
 
-                {/* Call Controls */}
-                <div className="flex gap-2">
+                <div className="flex space-x-2">
+                  <Button
+                    onClick={clearNumber}
+                    variant="outline"
+                    disabled={isCallActive || !isConnected}
+                    className="flex-1 bg-transparent"
+                  >
+                    Clear
+                  </Button>
+                  <Button
+                    onClick={phoneNumber.slice(0, -1) ? () => setPhoneNumber(phoneNumber.slice(0, -1)) : undefined}
+                    variant="outline"
+                    disabled={isCallActive || !phoneNumber || !isConnected}
+                    className="flex-1"
+                  >
+                    ⌫
+                  </Button>
+                </div>
+
+                <div className="flex space-x-2">
                   {!isCallActive ? (
                     <Button
-                      onClick={startDirectCall}
-                      className="flex-1 bg-green-600 hover:bg-green-700"
+                      onClick={makeCall}
+                      className="flex-1"
                       size="lg"
-                      disabled={isLoading || !isSystemReady}
+                      disabled={!isConnected || isInitializing || callStatus === "connecting"}
                     >
-                      {isLoading ? (
-                        <>
-                          <div className="w-4 h-4 border border-white border-t-transparent rounded-full animate-spin mr-2" />
-                          Calling...
-                        </>
-                      ) : (
-                        <>
-                          <PhoneCall className="h-4 w-4 mr-2" />
-                          Call Direct
-                        </>
-                      )}
+                      <PhoneCall className="mr-2 h-4 w-4" />
+                      {callStatus === "connecting" ? "Connecting..." : "Call Now"}
                     </Button>
                   ) : (
-                    <Button onClick={endDirectCall} className="flex-1 bg-red-600 hover:bg-red-700" size="lg">
-                      <PhoneOff className="h-4 w-4 mr-2" />
+                    <Button onClick={endCall} variant="destructive" className="flex-1" size="lg">
+                      <PhoneOff className="mr-2 h-4 w-4" />
                       End Call
                     </Button>
                   )}
                 </div>
 
-                {/* How it works */}
-                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                  <h4 className="font-medium text-green-800 mb-2">How Direct Browser Calling Works:</h4>
-                  <ol className="text-sm text-green-700 space-y-1 list-decimal list-inside">
-                    <li>Enter phone number and click "Call Direct"</li>
-                    <li>Browser asks for microphone permission (one-time)</li>
-                    <li>Person receives call directly from you</li>
-                    <li>You talk through microphone → They hear</li>
-                    <li>They talk → You hear through browser speaker</li>
-                    <li>Direct voice connection with recording!</li>
-                  </ol>
-                </div>
+                {!isConnected && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                    <p className="text-sm text-yellow-800">
+                      <strong>Note:</strong> Voice calling requires microphone access. Please allow microphone
+                      permission when prompted.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
-            {/* Call Status & Controls */}
+            {/* Call Controls Card */}
             <Card>
               <CardHeader>
                 <CardTitle>Live Call Controls</CardTitle>
-                <CardDescription>Real-time call controls and audio settings</CardDescription>
+                <CardDescription>
+                  {isCallActive ? `Active call - ${formatDuration(callDuration)}` : "No active call"}
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Call Duration */}
-                <div className="text-center p-4 bg-muted rounded-lg">
-                  <div className="text-2xl font-mono font-bold">{formatDuration(callDuration)}</div>
-                  <div className="text-sm text-muted-foreground">
-                    {isCallActive ? `Direct Call Active: ${formatPhoneNumber(phoneNumber)}` : "No Active Call"}
-                  </div>
-                  {currentCallSid && (
-                    <div className="text-xs text-muted-foreground mt-1">Call ID: {currentCallSid}</div>
-                  )}
-                </div>
-
-                {/* Audio Controls */}
-                <div className="grid grid-cols-2 gap-4">
-                  <Button
-                    variant={isMicEnabled ? "default" : "destructive"}
-                    onClick={toggleMic}
-                    disabled={!isCallActive}
-                    className="h-16"
-                  >
-                    {isMicEnabled ? <Mic className="h-6 w-6" /> : <MicOff className="h-6 w-6" />}
-                    <div className="ml-2 text-left">
-                      <div className="text-sm font-medium">Microphone</div>
-                      <div className="text-xs">{isMicEnabled ? "On" : "Muted"}</div>
-                    </div>
-                  </Button>
-
-                  <Button
-                    variant={isSpeakerEnabled ? "default" : "outline"}
-                    onClick={toggleSpeaker}
-                    disabled={!isCallActive}
-                    className="h-16"
-                  >
-                    {isSpeakerEnabled ? <Volume2 className="h-6 w-6" /> : <VolumeX className="h-6 w-6" />}
-                    <div className="ml-2 text-left">
-                      <div className="text-sm font-medium">Speaker</div>
-                      <div className="text-xs">{isSpeakerEnabled ? "On" : "Off"}</div>
-                    </div>
-                  </Button>
-                </div>
-
-                {/* Microphone Level */}
                 {isCallActive && (
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Microphone Level</span>
-                      <span>{micLevel}%</span>
+                  <>
+                    <div className="text-center space-y-2">
+                      <div className="text-2xl font-bold">{formatPhoneNumber(phoneNumber)}</div>
+                      <div className="flex items-center justify-center space-x-4 text-sm text-muted-foreground">
+                        <div className="flex items-center space-x-1">
+                          <Clock className="h-4 w-4" />
+                          <span>{formatDuration(callDuration)}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <DollarSign className="h-4 w-4" />
+                          <span>${callCost.toFixed(2)}</span>
+                        </div>
+                      </div>
+                      <Badge variant="default" className="bg-green-600">
+                        🔴 LIVE - Browser Call
+                      </Badge>
                     </div>
-                    <div className="w-full bg-muted rounded-full h-2">
-                      <div
-                        className="bg-green-500 h-2 rounded-full transition-all duration-100"
-                        style={{ width: `${micLevel}%` }}
-                      />
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <Button onClick={toggleMute} variant={isMuted ? "destructive" : "outline"} size="lg">
+                        {isMuted ? <MicOff className="mr-2 h-4 w-4" /> : <Mic className="mr-2 h-4 w-4" />}
+                        {isMuted ? "Unmute" : "Mute"}
+                      </Button>
+
+                      <Button variant="outline" size="lg" disabled>
+                        <Square className="mr-2 h-4 w-4" />
+                        Recording
+                      </Button>
                     </div>
-                  </div>
+
+                    <div className="space-y-2">
+                      <Label className="flex items-center space-x-2">
+                        {volume[0] > 0 ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+                        <span>Call Volume: {volume[0]}%</span>
+                      </Label>
+                      <Slider value={volume} onValueChange={handleVolumeChange} max={100} step={1} className="w-full" />
+                    </div>
+                  </>
                 )}
 
-                {/* Volume Control */}
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Speaker Volume</span>
-                    <span>{volume[0]}%</span>
+                {!isCallActive && (
+                  <div className="text-center text-muted-foreground py-8">
+                    <Phone className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No active call</p>
+                    <p className="text-sm">Enter a number and press "Call Now" to start</p>
+                    <p className="text-xs mt-2 text-blue-600">
+                      ✨ Calls work directly through your browser microphone & speakers
+                    </p>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <VolumeX className="h-4 w-4" />
-                    <Slider value={volume} onValueChange={adjustVolume} max={100} step={1} className="flex-1" />
-                    <Volume2 className="h-4 w-4" />
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Call Info */}
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span>Call Type:</span>
-                    <Badge variant="outline">Direct Browser Call</Badge>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Audio:</span>
-                    <span className="text-green-600">Microphone → Speaker</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Connection:</span>
-                    <span className="text-blue-600">REST API Direct</span>
-                  </div>
-                  {callDuration > 0 && (
-                    <div className="flex justify-between">
-                      <span>Duration:</span>
-                      <span className="text-green-600">{formatDuration(callDuration)}</span>
-                    </div>
-                  )}
-                </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -574,107 +676,138 @@ export default function CallingPage() {
         <TabsContent value="history" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <History className="h-5 w-5" />
-                  <span>Call History</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Button onClick={fetchCallHistory} variant="outline" size="sm">
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Refresh
-                  </Button>
-                  <Badge variant="secondary">{callHistory.length} Total Calls</Badge>
-                </div>
-              </CardTitle>
-              <CardDescription>Complete history of all your direct browser calls with recordings</CardDescription>
+              <CardTitle>Call History</CardTitle>
+              <CardDescription>View your recent browser calls and listen to recordings</CardDescription>
             </CardHeader>
             <CardContent>
               {callHistory.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <PhoneCall className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>No call history yet</p>
-                  <p className="text-sm">Your direct calls will appear here after you make them</p>
+                  <p className="text-sm">Your browser calls will appear here</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-6">
                   {callHistory.map((call) => (
-                    <div key={call.id} className="p-4 rounded-lg border bg-card">
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center space-x-3">
-                          <PhoneCall className="h-4 w-4 text-blue-600" />
+                    <div key={call.id} className="border rounded-lg p-4 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          <div className="flex-shrink-0">
+                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                              <Phone className="h-5 w-5 text-blue-600" />
+                            </div>
+                          </div>
                           <div>
-                            <p className="font-medium">{formatPhoneNumber(call.phoneNumber)}</p>
-                            <p className="text-sm text-muted-foreground">{new Date(call.timestamp).toLocaleString()}</p>
+                            <p className="font-medium text-lg">{formatPhoneNumber(call.phoneNumber)}</p>
+                            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                              <span className="flex items-center space-x-1">
+                                <Clock className="h-3 w-3" />
+                                <span>{formatDuration(call.duration)}</span>
+                              </span>
+                              <span className="flex items-center space-x-1">
+                                <DollarSign className="h-3 w-3" />
+                                <span>${call.cost.toFixed(2)}</span>
+                              </span>
+                              <span>{new Date(call.timestamp).toLocaleString()}</span>
+                            </div>
                           </div>
                         </div>
-                        <div className="flex items-center space-x-2">
-                          <Badge variant="outline">Direct Call</Badge>
-                          <Badge variant={getStatusColor(call.status)}>{call.status}</Badge>
-                          {call.duration > 0 && (
-                            <Badge variant="outline">
-                              <Clock className="h-3 w-3 mr-1" />
-                              {formatDuration(call.duration)}
-                            </Badge>
-                          )}
-                        </div>
+                        <Badge
+                          variant={
+                            call.status === "completed"
+                              ? "default"
+                              : call.status === "failed"
+                                ? "destructive"
+                                : "secondary"
+                          }
+                        >
+                          {call.status}
+                        </Badge>
                       </div>
 
-                      {/* Recording Player */}
                       {call.recordingUrl && (
-                        <div className="mb-3 p-3 bg-gray-50 rounded-lg border">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                                <Play className="h-4 w-4 text-blue-600" />
-                              </div>
-                              <div>
-                                <p className="text-sm font-medium">Call Recording</p>
-                                <p className="text-xs text-gray-500">Duration: {formatDuration(call.duration)}</p>
-                              </div>
+                        <AudioPlayer recordingUrl={call.recordingUrl} callId={call.id} phoneNumber={call.phoneNumber} />
+                      )}
+
+                      {call.transcript && (
+                        <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <div className="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center">
+                              <span className="text-xs text-white font-bold">T</span>
                             </div>
-                            <div className="flex space-x-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-8 bg-transparent"
-                                onClick={() => {
-                                  const audio = new Audio(call.recordingUrl)
-                                  audio.play()
-                                }}
-                              >
-                                <Play className="h-3 w-3 mr-1" />
-                                Play
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-8 bg-transparent"
-                                onClick={() => window.open(call.recordingUrl, "_blank")}
-                              >
-                                <Download className="h-3 w-3" />
-                              </Button>
-                            </div>
+                            <span className="text-sm font-medium text-blue-800">Transcript</span>
                           </div>
+                          <p className="text-sm text-blue-700 leading-relaxed">{call.transcript}</p>
                         </div>
                       )}
 
-                      <div className="flex justify-between items-center">
-                        <div className="text-xs text-muted-foreground">Call ID: {call.callSid}</div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => deleteCallRecord(call.callSid)}
-                          className="bg-transparent text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-3 w-3 mr-1" />
-                          Delete
-                        </Button>
-                      </div>
+                      {!call.recordingUrl && call.status === "completed" && (
+                        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                          <p className="text-sm text-gray-600 text-center">No recording available for this call</p>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="settings" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Browser Calling Settings</CardTitle>
+              <CardDescription>Configure your browser-based calling preferences</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Auto-record calls</Label>
+                  <p className="text-sm text-muted-foreground">Automatically start recording when a call begins</p>
+                </div>
+                <Switch checked={autoRecord} onCheckedChange={setAutoRecord} />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Call Rate (India)</Label>
+                <p className="text-sm text-muted-foreground">$0.05 per minute to Indian mobile numbers</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Current Balance</Label>
+                <p className="text-2xl font-bold text-green-600">${balance.toFixed(2)}</p>
+                <Button variant="outline" size="sm">
+                  Add Funds
+                </Button>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Browser Requirements</Label>
+                <div className="text-sm text-muted-foreground space-y-1">
+                  <p>✅ Chrome, Firefox, Safari, Edge (latest versions)</p>
+                  <p>✅ Microphone access required</p>
+                  <p>✅ HTTPS connection (secure)</p>
+                  <p>✅ No app download needed</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Connection Status</Label>
+                <div className="flex items-center space-x-2">
+                  {isConnected ? (
+                    <>
+                      <Wifi className="h-4 w-4 text-green-600" />
+                      <span className="text-sm text-green-600">Connected - Ready to make calls</span>
+                    </>
+                  ) : (
+                    <>
+                      <WifiOff className="h-4 w-4 text-red-600" />
+                      <span className="text-sm text-red-600">Disconnected - Please refresh page</span>
+                    </>
+                  )}
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
