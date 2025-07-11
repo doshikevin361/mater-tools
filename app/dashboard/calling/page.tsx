@@ -35,6 +35,8 @@ import {
   Settings,
   History,
   MessageSquare,
+  Users,
+  Link,
 } from "lucide-react"
 
 interface CallRecord {
@@ -238,6 +240,8 @@ function AudioPlayer({ recordingUrl, callId, phoneNumber }: AudioPlayerProps) {
 export default function CallingPage() {
   const [activeTab, setActiveTab] = useState("dialer")
   const [phoneNumber, setPhoneNumber] = useState("")
+  const [phoneNumber1, setPhoneNumber1] = useState("")
+  const [phoneNumber2, setPhoneNumber2] = useState("")
   const [message, setMessage] = useState("Hello! This is a test call from our system. Thank you for your time.")
   const [isCallActive, setIsCallActive] = useState(false)
   const [callDuration, setCallDuration] = useState(0)
@@ -250,6 +254,7 @@ export default function CallingPage() {
   const [callCost, setCallCost] = useState(0)
   const [currentCallSid, setCurrentCallSid] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const [isConnecting, setIsConnecting] = useState(false)
   const [voiceSettings, setVoiceSettings] = useState({
     voice: "alice",
     language: "en-US",
@@ -313,6 +318,22 @@ export default function CallingPage() {
     }
   }
 
+  const formatIndianNumber = (number: string) => {
+    // Remove all non-digit characters
+    const cleaned = number.replace(/\D/g, "")
+
+    // Handle different Indian number formats
+    if (cleaned.startsWith("91") && cleaned.length === 12) {
+      return cleaned // Already has country code
+    } else if (cleaned.length === 10) {
+      return `91${cleaned}` // Add India country code
+    } else if (cleaned.startsWith("0") && cleaned.length === 11) {
+      return `91${cleaned.substring(1)}` // Remove leading 0 and add country code
+    }
+
+    return cleaned
+  }
+
   const makeCall = async () => {
     if (!phoneNumber.trim()) {
       toast.error("Please enter a phone number")
@@ -332,13 +353,15 @@ export default function CallingPage() {
     setIsLoading(true)
 
     try {
+      const formattedNumber = formatIndianNumber(phoneNumber)
+
       const response = await fetch("/api/calling/make-call", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          phoneNumber,
+          phoneNumber: `+${formattedNumber}`,
           message,
           voiceOptions: voiceSettings,
           userId: "demo-user",
@@ -371,6 +394,59 @@ export default function CallingPage() {
       toast.error(error.message || "Failed to make call")
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const makeConferenceCall = async () => {
+    if (!phoneNumber1.trim() || !phoneNumber2.trim()) {
+      toast.error("Please enter both phone numbers")
+      return
+    }
+
+    if (balance < 2) {
+      toast.error("Insufficient balance for conference call (minimum $2 required)")
+      return
+    }
+
+    setIsConnecting(true)
+
+    try {
+      const formattedNumber1 = formatIndianNumber(phoneNumber1)
+      const formattedNumber2 = formatIndianNumber(phoneNumber2)
+
+      const response = await fetch("/api/calling/connect", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          phoneNumber1: `+${formattedNumber1}`,
+          phoneNumber2: `+${formattedNumber2}`,
+          userId: "demo-user",
+        }),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        toast.success("Conference call initiated! Both parties will be called.")
+
+        // Clear the form
+        setPhoneNumber1("")
+        setPhoneNumber2("")
+
+        // Refresh call history after a delay
+        setTimeout(() => {
+          fetchCallHistory()
+        }, 3000)
+      } else {
+        throw new Error(data.error || "Failed to create conference call")
+      }
+    } catch (error) {
+      console.error("Error making conference call:", error)
+      toast.error(error.message || "Failed to create conference call")
+    } finally {
+      setIsConnecting(false)
     }
   }
 
@@ -432,6 +508,9 @@ export default function CallingPage() {
     const cleaned = number.replace(/\D/g, "")
     if (cleaned.length === 10) {
       return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`
+    } else if (cleaned.length === 12 && cleaned.startsWith("91")) {
+      const indianNumber = cleaned.substring(2)
+      return `+91 ${indianNumber.slice(0, 5)} ${indianNumber.slice(5)}`
     }
     return number
   }
@@ -483,7 +562,7 @@ export default function CallingPage() {
         <div>
           <h1 className="text-3xl font-bold">Live Calling System</h1>
           <p className="text-muted-foreground">
-            Make calls, receive calls, record conversations, and manage your calling history
+            Make calls, 2-way calling, record conversations, and manage your calling history
           </p>
         </div>
         <div className="flex items-center space-x-4">
@@ -499,14 +578,18 @@ export default function CallingPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="dialer">
             <Phone className="h-4 w-4 mr-2" />
             Dialer
           </TabsTrigger>
+          <TabsTrigger value="conference">
+            <Users className="h-4 w-4 mr-2" />
+            2-Way Call
+          </TabsTrigger>
           <TabsTrigger value="history">
             <History className="h-4 w-4 mr-2" />
-            Call History ({callHistory.length})
+            History ({callHistory.length})
           </TabsTrigger>
           <TabsTrigger value="settings">
             <Settings className="h-4 w-4 mr-2" />
@@ -527,16 +610,17 @@ export default function CallingPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
+                  <Label htmlFor="phone">Phone Number (Indian format supported)</Label>
                   <Input
                     id="phone"
                     type="tel"
-                    placeholder="+1 (555) 123-4567"
-                    value={formatPhoneNumber(phoneNumber)}
-                    onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))}
+                    placeholder="9876543210 or +919876543210"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
                     disabled={isCallActive}
                     className="text-lg text-center"
                   />
+                  <p className="text-xs text-muted-foreground">Supports: 9876543210, +919876543210, 09876543210</p>
                 </div>
 
                 <div className="space-y-2">
@@ -666,6 +750,99 @@ export default function CallingPage() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="conference" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Users className="h-5 w-5" />
+                <span>2-Way Conference Call</span>
+              </CardTitle>
+              <CardDescription>
+                Connect two phone numbers together. Both parties will be called and connected in a conference.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="phone1">First Phone Number</Label>
+                    <Input
+                      id="phone1"
+                      type="tel"
+                      placeholder="9876543210"
+                      value={phoneNumber1}
+                      onChange={(e) => setPhoneNumber1(e.target.value)}
+                      disabled={isConnecting}
+                      className="text-lg"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="phone2">Second Phone Number</Label>
+                    <Input
+                      id="phone2"
+                      type="tel"
+                      placeholder="9123456789"
+                      value={phoneNumber2}
+                      onChange={(e) => setPhoneNumber2(e.target.value)}
+                      disabled={isConnecting}
+                      className="text-lg"
+                    />
+                  </div>
+
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <h4 className="font-medium text-blue-800 mb-2">How it works:</h4>
+                    <ul className="text-sm text-blue-700 space-y-1">
+                      <li>• Both numbers will receive a call simultaneously</li>
+                      <li>• Once both parties answer, they'll be connected</li>
+                      <li>• The call will be recorded automatically</li>
+                      <li>• Cost: $0.10 per minute for conference calls</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="text-center p-8 border-2 border-dashed border-gray-300 rounded-lg">
+                    <Link className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                    <p className="text-lg font-medium mb-2">Connect Two Numbers</p>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Enter both phone numbers and click connect to start a 2-way call
+                    </p>
+
+                    <Button
+                      onClick={makeConferenceCall}
+                      size="lg"
+                      disabled={isConnecting || !phoneNumber1 || !phoneNumber2}
+                      className="w-full"
+                    >
+                      {isConnecting ? (
+                        <>
+                          <div className="w-4 h-4 border border-white border-t-transparent rounded-full animate-spin mr-2" />
+                          Connecting...
+                        </>
+                      ) : (
+                        <>
+                          <Link className="mr-2 h-4 w-4" />
+                          Connect Numbers
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Supported Formats:</Label>
+                    <div className="text-sm text-muted-foreground space-y-1">
+                      <p>• 9876543210 (10 digits)</p>
+                      <p>• +919876543210 (with country code)</p>
+                      <p>• 09876543210 (with leading zero)</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="history" className="space-y-6">
@@ -826,8 +1003,15 @@ export default function CallingPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Call Rate</Label>
-                  <p className="text-sm text-muted-foreground">$0.05 per minute</p>
+                  <Label>Speech Speed: {voiceSettings.speed}x</Label>
+                  <Slider
+                    value={[voiceSettings.speed]}
+                    onValueChange={(value) => setVoiceSettings((prev) => ({ ...prev, speed: value[0] }))}
+                    min={0.5}
+                    max={2}
+                    step={0.1}
+                    className="w-full"
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -838,26 +1022,29 @@ export default function CallingPage() {
                 <CardDescription>Your account balance and usage</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <Label>Current Balance</Label>
-                  <p className="text-2xl font-bold text-green-600">${balance.toFixed(2)}</p>
-                  <Button variant="outline" size="sm">
-                    Add Funds
-                  </Button>
+                <div className="text-center space-y-2">
+                  <p className="text-sm text-muted-foreground">Current Balance</p>
+                  <p className="text-3xl font-bold text-green-600">${balance.toFixed(2)}</p>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Recording Storage</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Recordings are stored for 30 days and can be downloaded anytime
-                  </p>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">Voice calls</span>
+                    <span className="text-sm font-medium">$0.05/minute</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">Conference calls</span>
+                    <span className="text-sm font-medium">$0.10/minute</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm">Recording storage</span>
+                    <span className="text-sm font-medium">Free</span>
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Webhook URL</Label>
-                  <p className="text-sm text-muted-foreground">Configure webhook endpoints for call status updates</p>
-                  <Input placeholder="https://your-domain.com/webhook" className="text-sm" disabled />
-                </div>
+                <Button className="w-full bg-transparent" variant="outline">
+                  Add Funds
+                </Button>
               </CardContent>
             </Card>
           </div>

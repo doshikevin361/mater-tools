@@ -6,47 +6,22 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get("userId") || "demo-user"
     const limit = Number.parseInt(searchParams.get("limit") || "50")
-    const offset = Number.parseInt(searchParams.get("offset") || "0")
 
     const { db } = await connectToDatabase()
 
-    // Get total count
-    const totalCount = await db.collection("call_history").countDocuments({ userId })
+    const calls = await db.collection("call_history").find({ userId }).sort({ timestamp: -1 }).limit(limit).toArray()
 
-    // Get call history with pagination
-    const calls = await db
-      .collection("call_history")
-      .find({ userId })
-      .sort({ timestamp: -1 })
-      .skip(offset)
-      .limit(limit)
-      .toArray()
-
+    // Convert MongoDB _id to string id
     const formattedCalls = calls.map((call) => ({
-      id: call.callSid,
-      callSid: call.callSid,
-      phoneNumber: call.phoneNumber,
-      direction: call.direction || "outbound",
-      duration: call.duration || 0,
-      status: call.status || "completed",
-      cost: call.cost || 0,
-      recordingUrl: call.recordingUrl || null,
-      recordingSid: call.recordingSid || null,
-      transcript: call.transcript || null,
-      timestamp: call.timestamp,
-      createdAt: call.createdAt,
-      message: call.message || null,
+      ...call,
+      id: call._id.toString(),
+      _id: undefined,
     }))
 
     return NextResponse.json({
       success: true,
       calls: formattedCalls,
-      pagination: {
-        total: totalCount,
-        limit,
-        offset,
-        hasMore: offset + limit < totalCount,
-      },
+      total: calls.length,
     })
   } catch (error) {
     console.error("Error fetching call history:", error)
@@ -54,7 +29,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Delete call record
 export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)

@@ -43,7 +43,8 @@ class TwilioService {
         from: this.phoneNumber,
         twiml: twiml,
         timeout: 30, // Ring for 30 seconds
-        record: false, // Don't record the call
+        record: true, // Record the call
+        recordingStatusCallback: `${process.env.NEXT_PUBLIC_BASE_URL}/api/calling/recording-webhook`,
       })
 
       return {
@@ -57,6 +58,36 @@ class TwilioService {
     } catch (error) {
       console.error("Twilio voice call error:", error)
       throw new Error(`Voice call failed: ${error.message}`)
+    }
+  }
+
+  // Make a conference call (2-way calling)
+  async makeConferenceCall(toNumber: string, conferenceId: string, callType: "first" | "second") {
+    try {
+      const cleanNumber = this.formatPhoneNumber(toNumber)
+
+      console.log(`Making conference call to ${cleanNumber} for conference ${conferenceId}`)
+
+      const call = await this.client.calls.create({
+        to: cleanNumber,
+        from: this.phoneNumber,
+        url: `${process.env.NEXT_PUBLIC_BASE_URL}/api/calling/twiml-conference?conferenceId=${conferenceId}&callType=${callType}`,
+        statusCallback: `${process.env.NEXT_PUBLIC_BASE_URL}/api/calling/webhook`,
+        statusCallbackEvent: ["initiated", "ringing", "answered", "completed"],
+        timeout: 30,
+      })
+
+      return {
+        success: true,
+        callSid: call.sid,
+        status: call.status,
+        to: call.to,
+        from: call.from,
+        conferenceId,
+      }
+    } catch (error) {
+      console.error("Twilio conference call error:", error)
+      throw new Error(`Conference call failed: ${error.message}`)
     }
   }
 
@@ -143,22 +174,19 @@ class TwilioService {
     // Remove all non-digit characters
     const cleaned = phoneNumber.replace(/\D/g, "")
 
-    // If it starts with 91 (India), add + prefix
+    // Handle Indian number formats
     if (cleaned.startsWith("91") && cleaned.length === 12) {
-      return `+${cleaned}`
+      return `+${cleaned}` // Already has country code
+    } else if (cleaned.length === 10) {
+      return `+91${cleaned}` // Add India country code
+    } else if (cleaned.startsWith("0") && cleaned.length === 11) {
+      return `+91${cleaned.substring(1)}` // Remove leading 0 and add country code
+    } else if (cleaned.startsWith("1") && cleaned.length === 11) {
+      return `+${cleaned}` // US number
     }
 
-    // If it's 10 digits, assume it's Indian number and add +91
-    if (cleaned.length === 10) {
-      return `+91${cleaned}`
-    }
-
-    // If it doesn't start with +, add it
-    if (!phoneNumber.startsWith("+")) {
-      return `+${cleaned}`
-    }
-
-    return phoneNumber
+    // If it already has + or other country code, return as is
+    return phoneNumber.startsWith("+") ? phoneNumber : `+${cleaned}`
   }
 
   // Escape XML characters for TwiML
@@ -201,6 +229,23 @@ class TwilioService {
       }
     } catch (error) {
       console.error("Get account balance error:", error)
+      throw error
+    }
+  }
+
+  // Get conference details
+  async getConferenceDetails(conferenceSid: string) {
+    try {
+      const conference = await this.client.conferences(conferenceSid).fetch()
+      return {
+        success: true,
+        status: conference.status,
+        dateCreated: conference.dateCreated,
+        dateUpdated: conference.dateUpdated,
+        participantCount: conference.participantCount,
+      }
+    } catch (error) {
+      console.error("Get conference details error:", error)
       throw error
     }
   }
