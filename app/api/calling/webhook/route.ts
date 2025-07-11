@@ -4,55 +4,51 @@ import { connectToDatabase } from "@/lib/mongodb"
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
+
     const callSid = formData.get("CallSid") as string
     const callStatus = formData.get("CallStatus") as string
     const callDuration = formData.get("CallDuration") as string
     const from = formData.get("From") as string
     const to = formData.get("To") as string
 
+    console.log("Webhook received:", { callSid, callStatus, callDuration, from, to })
+
     if (!callSid) {
-      return NextResponse.json({ error: "CallSid required" }, { status: 400 })
+      return NextResponse.json({ error: "Missing CallSid" }, { status: 400 })
     }
 
-    const { db } = await connectToDatabase()
+    // Calculate cost based on duration (₹1.5 per minute)
+    const duration = Number.parseInt(callDuration) || 0
+    const cost = Math.ceil(duration / 60) * 1.5
 
-    // Update call record
-    const updateData: any = {
-      status: callStatus,
-      updatedAt: new Date(),
-    }
+    // Update call record in database
+    try {
+      const { db } = await connectToDatabase()
 
-    if (callDuration) {
-      const duration = Number.parseInt(callDuration)
-      const cost = (duration / 60) * 1.5 // ₹1.5 per minute
-      updateData.duration = duration
-      updateData.cost = cost
-      updateData.endTime = new Date()
-
-      // Deduct cost from user balance if call completed
-      if (callStatus === "completed") {
-        const callRecord = await db.collection("calls").findOne({ callSid })
-        if (callRecord) {
-          await db.collection("users").updateOne({ _id: callRecord.userId }, { $inc: { balance: -cost } })
-
-          // Create transaction record
-          await db.collection("transactions").insertOne({
-            userId: callRecord.userId,
-            type: "call",
-            amount: -cost,
-            description: `Call to ${to}`,
-            callSid,
-            createdAt: new Date(),
-          })
-        }
+      const updateData: any = {
+        status: callStatus,
+        updatedAt: new Date(),
       }
-    }
 
-    await db.collection("calls").updateOne({ callSid }, { $set: updateData })
+      if (duration > 0) {
+        updateData.duration = duration
+        updateData.cost = cost
+      }
+
+      if (callStatus === "completed") {
+        updateData.endTime = new Date()
+      }
+
+      await db.collection("calls").updateOne({ callSid }, { $set: updateData })
+
+      console.log("Call record updated:", callSid, callStatus)
+    } catch (dbError) {
+      console.error("Database error in webhook:", dbError)
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Error processing webhook:", error)
+    console.error("Webhook error:", error)
     return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 })
   }
 }
