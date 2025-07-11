@@ -5,29 +5,26 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const callSid = formData.get("CallSid") as string
-    const callStatus = formData.get("CallStatus") as string
-    const duration = formData.get("CallDuration") as string
-    const to = formData.get("To") as string
-    const from = formData.get("From") as string
+    const recordingUrl = formData.get("RecordingUrl") as string
+    const recordingSid = formData.get("RecordingSid") as string
 
     const { db } = await connectToDatabase()
 
-    // Update call record in database
+    // Update call record with recording URL
     await db.collection("call_history").updateOne(
       { callSid },
       {
         $set: {
-          status: callStatus,
-          duration: Number.parseInt(duration) || 0,
+          recordingUrl: recordingUrl + ".mp3",
+          recordingSid,
           updatedAt: new Date(),
         },
       },
-      { upsert: true },
     )
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Webhook error:", error)
-    return NextResponse.json({ error: "Webhook failed" }, { status: 500 })
+    console.error("Recording webhook error:", error)
+    return NextResponse.json({ error: "Recording webhook failed" }, { status: 500 })
   }
 }
