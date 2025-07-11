@@ -52,6 +52,7 @@ interface CallRecord {
   transcript?: string
   timestamp: Date
   message?: string
+  callType?: "voice" | "live" | "conference"
 }
 
 interface AudioPlayerProps {
@@ -238,8 +239,9 @@ function AudioPlayer({ recordingUrl, callId, phoneNumber }: AudioPlayerProps) {
 }
 
 export default function CallingPage() {
-  const [activeTab, setActiveTab] = useState("dialer")
+  const [activeTab, setActiveTab] = useState("live")
   const [phoneNumber, setPhoneNumber] = useState("")
+  const [livePhoneNumber, setLivePhoneNumber] = useState("")
   const [phoneNumber1, setPhoneNumber1] = useState("")
   const [phoneNumber2, setPhoneNumber2] = useState("")
   const [message, setMessage] = useState("Hello! This is a test call from our system. Thank you for your time.")
@@ -255,6 +257,7 @@ export default function CallingPage() {
   const [currentCallSid, setCurrentCallSid] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isConnecting, setIsConnecting] = useState(false)
+  const [isLiveCalling, setIsLiveCalling] = useState(false)
   const [voiceSettings, setVoiceSettings] = useState({
     voice: "alice",
     language: "en-US",
@@ -334,6 +337,62 @@ export default function CallingPage() {
     return cleaned
   }
 
+  const makeLiveCall = async () => {
+    if (!livePhoneNumber.trim()) {
+      toast.error("Please enter a phone number")
+      return
+    }
+
+    if (balance < 1) {
+      toast.error("Insufficient balance to make a call")
+      return
+    }
+
+    setIsLiveCalling(true)
+
+    try {
+      const formattedNumber = formatIndianNumber(livePhoneNumber)
+
+      const response = await fetch("/api/calling/live-call", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          phoneNumber: `+${formattedNumber}`,
+          userId: "demo-user",
+        }),
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        setIsCallActive(true)
+        setCallDuration(0)
+        setCallCost(0)
+        setCurrentCallSid(data.callSid)
+
+        if (autoRecord) {
+          setIsRecording(true)
+        }
+
+        toast.success("Live call initiated! You will receive a call on your phone to connect.")
+
+        // Refresh call history
+        setTimeout(() => {
+          fetchCallHistory()
+        }, 2000)
+      } else {
+        throw new Error(data.error || "Failed to make live call")
+      }
+    } catch (error) {
+      console.error("Error making live call:", error)
+      toast.error(error.message || "Failed to make live call")
+    } finally {
+      setIsLiveCalling(false)
+    }
+  }
+
   const makeCall = async () => {
     if (!phoneNumber.trim()) {
       toast.error("Please enter a phone number")
@@ -380,7 +439,7 @@ export default function CallingPage() {
           setIsRecording(true)
         }
 
-        toast.success("Call initiated successfully")
+        toast.success("Voice call initiated successfully")
 
         // Refresh call history
         setTimeout(() => {
@@ -522,15 +581,23 @@ export default function CallingPage() {
     ["*", "0", "#"],
   ]
 
-  const addDigit = (digit: string) => {
+  const addDigit = (digit: string, target: "voice" | "live") => {
     if (!isCallActive) {
-      setPhoneNumber((prev) => prev + digit)
+      if (target === "voice") {
+        setPhoneNumber((prev) => prev + digit)
+      } else {
+        setLivePhoneNumber((prev) => prev + digit)
+      }
     }
   }
 
-  const clearNumber = () => {
+  const clearNumber = (target: "voice" | "live") => {
     if (!isCallActive) {
-      setPhoneNumber("")
+      if (target === "voice") {
+        setPhoneNumber("")
+      } else {
+        setLivePhoneNumber("")
+      }
     }
   }
 
@@ -556,13 +623,24 @@ export default function CallingPage() {
     )
   }
 
+  const getCallTypeIcon = (callType?: string) => {
+    switch (callType) {
+      case "live":
+        return <PhoneCall className="h-3 w-3 text-green-600" />
+      case "conference":
+        return <Users className="h-3 w-3 text-purple-600" />
+      default:
+        return <MessageSquare className="h-3 w-3 text-blue-600" />
+    }
+  }
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Live Calling System</h1>
           <p className="text-muted-foreground">
-            Make calls, 2-way calling, record conversations, and manage your calling history
+            Make live calls, voice calls, 2-way calling, and manage your calling history
           </p>
         </div>
         <div className="flex items-center space-x-4">
@@ -578,10 +656,14 @@ export default function CallingPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="dialer">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="live">
+            <PhoneCall className="h-4 w-4 mr-2" />
+            Live Call
+          </TabsTrigger>
+          <TabsTrigger value="voice">
             <Phone className="h-4 w-4 mr-2" />
-            Dialer
+            Voice Call
           </TabsTrigger>
           <TabsTrigger value="conference">
             <Users className="h-4 w-4 mr-2" />
@@ -597,53 +679,46 @@ export default function CallingPage() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="dialer" className="space-y-6">
+        <TabsContent value="live" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Dialer Card */}
+            {/* Live Call Card */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
-                  <Phone className="h-5 w-5" />
-                  <span>Phone Dialer</span>
+                  <PhoneCall className="h-5 w-5 text-green-600" />
+                  <span>Live Call</span>
                 </CardTitle>
-                <CardDescription>Enter a phone number and message to make a call</CardDescription>
+                <CardDescription>
+                  Make a live call where you can talk directly to the person. You'll receive a call on your phone to
+                  connect.
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number (Indian format supported)</Label>
+                  <Label htmlFor="livePhone">Phone Number to Call</Label>
                   <Input
-                    id="phone"
+                    id="livePhone"
                     type="tel"
                     placeholder="9876543210 or +919876543210"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    value={livePhoneNumber}
+                    onChange={(e) => setLivePhoneNumber(e.target.value)}
                     disabled={isCallActive}
                     className="text-lg text-center"
                   />
-                  <p className="text-xs text-muted-foreground">Supports: 9876543210, +919876543210, 09876543210</p>
+                  <p className="text-xs text-muted-foreground">
+                    The person will be called, and you'll receive a call to connect
+                  </p>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="message">Voice Message</Label>
-                  <Textarea
-                    id="message"
-                    placeholder="Enter the message to be spoken during the call..."
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    disabled={isCallActive}
-                    rows={3}
-                  />
-                </div>
-
-                {/* Dial Pad */}
+                {/* Dial Pad for Live Call */}
                 <div className="grid grid-cols-3 gap-2 max-w-xs mx-auto">
                   {dialPadNumbers.map((row, rowIndex) =>
                     row.map((digit) => (
                       <Button
-                        key={digit}
+                        key={`live-${digit}`}
                         variant="outline"
                         size="lg"
-                        onClick={() => addDigit(digit)}
+                        onClick={() => addDigit(digit, "live")}
                         disabled={isCallActive}
                         className="h-12 text-lg font-semibold"
                       >
@@ -655,7 +730,7 @@ export default function CallingPage() {
 
                 <div className="flex space-x-2">
                   <Button
-                    onClick={clearNumber}
+                    onClick={() => clearNumber("live")}
                     variant="outline"
                     disabled={isCallActive}
                     className="flex-1 bg-transparent"
@@ -663,39 +738,53 @@ export default function CallingPage() {
                     Clear
                   </Button>
                   <Button
-                    onClick={phoneNumber.slice(0, -1) ? () => setPhoneNumber(phoneNumber.slice(0, -1)) : undefined}
+                    onClick={
+                      livePhoneNumber.slice(0, -1) ? () => setLivePhoneNumber(livePhoneNumber.slice(0, -1)) : undefined
+                    }
                     variant="outline"
-                    disabled={isCallActive || !phoneNumber}
+                    disabled={isCallActive || !livePhoneNumber}
                     className="flex-1"
                   >
                     ⌫
                   </Button>
                 </div>
 
-                <div className="flex space-x-2">
-                  {!isCallActive ? (
-                    <Button onClick={makeCall} className="flex-1" size="lg" disabled={isLoading}>
-                      {isLoading ? (
-                        <div className="w-4 h-4 border border-white border-t-transparent rounded-full animate-spin mr-2" />
-                      ) : (
-                        <PhoneCall className="mr-2 h-4 w-4" />
-                      )}
-                      {isLoading ? "Calling..." : "Make Call"}
-                    </Button>
-                  ) : (
-                    <Button onClick={endCall} variant="destructive" className="flex-1" size="lg">
-                      <PhoneOff className="mr-2 h-4 w-4" />
-                      End Call
-                    </Button>
-                  )}
+                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                  <h4 className="font-medium text-green-800 mb-2">How Live Calling Works:</h4>
+                  <ul className="text-sm text-green-700 space-y-1">
+                    <li>• Enter the number you want to call</li>
+                    <li>• Click "Start Live Call"</li>
+                    <li>• You'll receive a call on your phone</li>
+                    <li>• Answer to be connected to the other person</li>
+                    <li>• Have a normal conversation!</li>
+                  </ul>
                 </div>
+
+                <Button
+                  onClick={makeLiveCall}
+                  className="w-full bg-green-600 hover:bg-green-700"
+                  size="lg"
+                  disabled={isLiveCalling || !livePhoneNumber}
+                >
+                  {isLiveCalling ? (
+                    <>
+                      <div className="w-4 h-4 border border-white border-t-transparent rounded-full animate-spin mr-2" />
+                      Initiating Live Call...
+                    </>
+                  ) : (
+                    <>
+                      <PhoneCall className="mr-2 h-4 w-4" />
+                      Start Live Call
+                    </>
+                  )}
+                </Button>
               </CardContent>
             </Card>
 
-            {/* Call Controls Card */}
+            {/* Call Status Card */}
             <Card>
               <CardHeader>
-                <CardTitle>Call Controls</CardTitle>
+                <CardTitle>Call Status</CardTitle>
                 <CardDescription>
                   {isCallActive ? `Active call - ${formatDuration(callDuration)}` : "No active call"}
                 </CardDescription>
@@ -704,7 +793,7 @@ export default function CallingPage() {
                 {isCallActive && (
                   <>
                     <div className="text-center space-y-2">
-                      <div className="text-2xl font-bold">{formatPhoneNumber(phoneNumber)}</div>
+                      <div className="text-2xl font-bold">{formatPhoneNumber(livePhoneNumber || phoneNumber)}</div>
                       <div className="flex items-center justify-center space-x-4 text-sm text-muted-foreground">
                         <div className="flex items-center space-x-1">
                           <Clock className="h-4 w-4" />
@@ -730,23 +819,177 @@ export default function CallingPage() {
                       </Button>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label className="flex items-center space-x-2">
-                        {volume[0] > 0 ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-                        <span>Volume: {volume[0]}%</span>
-                      </Label>
-                      <Slider value={volume} onValueChange={setVolume} max={100} step={1} className="w-full" />
-                    </div>
+                    <Button onClick={endCall} variant="destructive" className="w-full" size="lg">
+                      <PhoneOff className="mr-2 h-4 w-4" />
+                      End Call
+                    </Button>
                   </>
                 )}
 
                 {!isCallActive && (
                   <div className="text-center text-muted-foreground py-8">
-                    <Phone className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <PhoneCall className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>No active call</p>
-                    <p className="text-sm">Enter a number and message, then press "Make Call" to start</p>
+                    <p className="text-sm">Start a live call to see controls here</p>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="voice" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Voice Call Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Phone className="h-5 w-5" />
+                  <span>Voice Call (Text-to-Speech)</span>
+                </CardTitle>
+                <CardDescription>Send a voice message that will be spoken to the recipient</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone Number</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="9876543210 or +919876543210"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    disabled={isCallActive}
+                    className="text-lg text-center"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="message">Voice Message</Label>
+                  <Textarea
+                    id="message"
+                    placeholder="Enter the message to be spoken during the call..."
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    disabled={isCallActive}
+                    rows={3}
+                  />
+                </div>
+
+                {/* Dial Pad for Voice Call */}
+                <div className="grid grid-cols-3 gap-2 max-w-xs mx-auto">
+                  {dialPadNumbers.map((row, rowIndex) =>
+                    row.map((digit) => (
+                      <Button
+                        key={`voice-${digit}`}
+                        variant="outline"
+                        size="lg"
+                        onClick={() => addDigit(digit, "voice")}
+                        disabled={isCallActive}
+                        className="h-12 text-lg font-semibold"
+                      >
+                        {digit}
+                      </Button>
+                    )),
+                  )}
+                </div>
+
+                <div className="flex space-x-2">
+                  <Button
+                    onClick={() => clearNumber("voice")}
+                    variant="outline"
+                    disabled={isCallActive}
+                    className="flex-1 bg-transparent"
+                  >
+                    Clear
+                  </Button>
+                  <Button
+                    onClick={phoneNumber.slice(0, -1) ? () => setPhoneNumber(phoneNumber.slice(0, -1)) : undefined}
+                    variant="outline"
+                    disabled={isCallActive || !phoneNumber}
+                    className="flex-1"
+                  >
+                    ⌫
+                  </Button>
+                </div>
+
+                <Button onClick={makeCall} className="w-full" size="lg" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <div className="w-4 h-4 border border-white border-t-transparent rounded-full animate-spin mr-2" />
+                      Calling...
+                    </>
+                  ) : (
+                    <>
+                      <Phone className="mr-2 h-4 w-4" />
+                      Make Voice Call
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Voice Settings Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Voice Settings</CardTitle>
+                <CardDescription>Configure how your message will be spoken</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm">Voice</Label>
+                    <Select
+                      value={voiceSettings.voice}
+                      onValueChange={(value) => setVoiceSettings((prev) => ({ ...prev, voice: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="alice">Alice (Female)</SelectItem>
+                        <SelectItem value="man">Man (Male)</SelectItem>
+                        <SelectItem value="woman">Woman (Female)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm">Language</Label>
+                    <Select
+                      value={voiceSettings.language}
+                      onValueChange={(value) => setVoiceSettings((prev) => ({ ...prev, language: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="en-US">English (US)</SelectItem>
+                        <SelectItem value="en-GB">English (UK)</SelectItem>
+                        <SelectItem value="es-ES">Spanish</SelectItem>
+                        <SelectItem value="fr-FR">French</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Speech Speed: {voiceSettings.speed}x</Label>
+                  <Slider
+                    value={[voiceSettings.speed]}
+                    onValueChange={(value) => setVoiceSettings((prev) => ({ ...prev, speed: value[0] }))}
+                    min={0.5}
+                    max={2}
+                    step={0.1}
+                    className="w-full"
+                  />
+                </div>
+
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h4 className="font-medium text-blue-800 mb-2">Preview Message:</h4>
+                  <p className="text-sm text-blue-700 italic">"{message || "Enter a message to see preview"}"</p>
+                  <p className="text-xs text-blue-600 mt-2">
+                    Voice: {voiceSettings.voice} | Speed: {voiceSettings.speed}x
+                  </p>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -792,9 +1035,9 @@ export default function CallingPage() {
                     />
                   </div>
 
-                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                    <h4 className="font-medium text-blue-800 mb-2">How it works:</h4>
-                    <ul className="text-sm text-blue-700 space-y-1">
+                  <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                    <h4 className="font-medium text-purple-800 mb-2">How it works:</h4>
+                    <ul className="text-sm text-purple-700 space-y-1">
                       <li>• Both numbers will receive a call simultaneously</li>
                       <li>• Once both parties answer, they'll be connected</li>
                       <li>• The call will be recorded automatically</li>
@@ -815,7 +1058,7 @@ export default function CallingPage() {
                       onClick={makeConferenceCall}
                       size="lg"
                       disabled={isConnecting || !phoneNumber1 || !phoneNumber2}
-                      className="w-full"
+                      className="w-full bg-purple-600 hover:bg-purple-700"
                     >
                       {isConnecting ? (
                         <>
@@ -882,6 +1125,12 @@ export default function CallingPage() {
                               <Badge variant="outline" className="text-xs">
                                 {call.direction === "inbound" ? "Incoming" : "Outgoing"}
                               </Badge>
+                              <div className="flex items-center space-x-1">
+                                {getCallTypeIcon(call.callType)}
+                                <span className="text-xs text-muted-foreground capitalize">
+                                  {call.callType || "voice"}
+                                </span>
+                              </div>
                             </div>
                             <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                               <span className="flex items-center space-x-1">
@@ -964,54 +1213,32 @@ export default function CallingPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Voice Settings</Label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-sm">Voice</Label>
-                      <Select
-                        value={voiceSettings.voice}
-                        onValueChange={(value) => setVoiceSettings((prev) => ({ ...prev, voice: value }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="alice">Alice (Female)</SelectItem>
-                          <SelectItem value="man">Man (Male)</SelectItem>
-                          <SelectItem value="woman">Woman (Female)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-sm">Language</Label>
-                      <Select
-                        value={voiceSettings.language}
-                        onValueChange={(value) => setVoiceSettings((prev) => ({ ...prev, language: value }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="en-US">English (US)</SelectItem>
-                          <SelectItem value="en-GB">English (UK)</SelectItem>
-                          <SelectItem value="es-ES">Spanish</SelectItem>
-                          <SelectItem value="fr-FR">French</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
+                  <Label>Your Phone Number (for live calls)</Label>
+                  <Input placeholder="+919876543210" className="text-sm" defaultValue="+919876543210" disabled />
+                  <p className="text-xs text-muted-foreground">
+                    This is the number you'll receive calls on for live calling
+                  </p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Speech Speed: {voiceSettings.speed}x</Label>
-                  <Slider
-                    value={[voiceSettings.speed]}
-                    onValueChange={(value) => setVoiceSettings((prev) => ({ ...prev, speed: value[0] }))}
-                    min={0.5}
-                    max={2}
-                    step={0.1}
-                    className="w-full"
-                  />
+                  <Label>Call Types</Label>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center space-x-2">
+                      <PhoneCall className="h-4 w-4 text-green-600" />
+                      <span className="font-medium">Live Call:</span>
+                      <span className="text-muted-foreground">Real conversation with the person</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Phone className="h-4 w-4 text-blue-600" />
+                      <span className="font-medium">Voice Call:</span>
+                      <span className="text-muted-foreground">Text-to-speech message delivery</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Users className="h-4 w-4 text-purple-600" />
+                      <span className="font-medium">Conference:</span>
+                      <span className="text-muted-foreground">Connect two people together</span>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -1029,6 +1256,10 @@ export default function CallingPage() {
 
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
+                    <span className="text-sm">Live calls</span>
+                    <span className="text-sm font-medium">$0.05/minute</span>
+                  </div>
+                  <div className="flex justify-between items-center">
                     <span className="text-sm">Voice calls</span>
                     <span className="text-sm font-medium">$0.05/minute</span>
                   </div>
@@ -1045,6 +1276,14 @@ export default function CallingPage() {
                 <Button className="w-full bg-transparent" variant="outline">
                   Add Funds
                 </Button>
+
+                <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                  <h4 className="font-medium text-yellow-800 mb-2">Important Note:</h4>
+                  <p className="text-sm text-yellow-700">
+                    For live calls, make sure to update your phone number in the TwiML endpoint
+                    (/api/calling/live-twiml/route.ts) to receive the connection calls.
+                  </p>
+                </div>
               </CardContent>
             </Card>
           </div>

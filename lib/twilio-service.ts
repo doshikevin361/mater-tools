@@ -19,6 +19,37 @@ class TwilioService {
     })
   }
 
+  // Make a live call where you can talk to the person
+  async makeLiveCall(toNumber: string) {
+    try {
+      const cleanNumber = this.formatPhoneNumber(toNumber)
+
+      console.log(`Making live call to ${cleanNumber}`)
+
+      const call = await this.client.calls.create({
+        to: cleanNumber,
+        from: this.phoneNumber,
+        url: `${process.env.NEXT_PUBLIC_BASE_URL}/api/calling/live-twiml`,
+        statusCallback: `${process.env.NEXT_PUBLIC_BASE_URL}/api/calling/webhook`,
+        statusCallbackEvent: ["initiated", "ringing", "answered", "completed"],
+        timeout: 30,
+        record: true,
+        recordingStatusCallback: `${process.env.NEXT_PUBLIC_BASE_URL}/api/calling/recording-webhook`,
+      })
+
+      return {
+        success: true,
+        callSid: call.sid,
+        status: call.status,
+        to: call.to,
+        from: call.from,
+      }
+    } catch (error) {
+      console.error("Twilio live call error:", error)
+      throw new Error(`Live call failed: ${error.message}`)
+    }
+  }
+
   // Make a voice call with text-to-speech
   async makeVoiceCall(
     toNumber: string,

@@ -5,23 +5,29 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get("userId") || "demo-user"
-    const limit = Number.parseInt(searchParams.get("limit") || "50")
 
     const { db } = await connectToDatabase()
 
-    const calls = await db.collection("call_history").find({ userId }).sort({ timestamp: -1 }).limit(limit).toArray()
+    const calls = await db.collection("call_history").find({ userId }).sort({ timestamp: -1 }).limit(50).toArray()
 
-    // Convert MongoDB _id to string id
     const formattedCalls = calls.map((call) => ({
-      ...call,
       id: call._id.toString(),
-      _id: undefined,
+      callSid: call.callSid,
+      phoneNumber: call.phoneNumber,
+      direction: call.direction || "outbound",
+      duration: call.duration || 0,
+      status: call.status || "unknown",
+      cost: call.cost || 0,
+      recordingUrl: call.recordingUrl,
+      recordingSid: call.recordingSid,
+      transcript: call.transcript,
+      timestamp: call.timestamp,
+      message: call.message,
     }))
 
     return NextResponse.json({
       success: true,
       calls: formattedCalls,
-      total: calls.length,
     })
   } catch (error) {
     console.error("Error fetching call history:", error)

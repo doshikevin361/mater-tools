@@ -6,46 +6,27 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData()
     const conferenceSid = formData.get("ConferenceSid") as string
     const statusCallbackEvent = formData.get("StatusCallbackEvent") as string
-    const timestamp = formData.get("Timestamp") as string
+    const participantCount = formData.get("ParticipantCount") as string
 
     console.log("Conference webhook received:", {
       conferenceSid,
       statusCallbackEvent,
-      timestamp,
+      participantCount,
     })
 
     const { db } = await connectToDatabase()
 
-    // Update conference status based on event
-    const updateData: any = {
+    const updateData = {
+      status: statusCallbackEvent,
+      participantCount: Number.parseInt(participantCount) || 0,
       updatedAt: new Date(),
     }
 
-    switch (statusCallbackEvent) {
-      case "conference-start":
-        updateData.status = "active"
-        updateData.startTime = new Date()
-        break
-      case "conference-end":
-        updateData.status = "completed"
-        updateData.endTime = new Date()
-        // Calculate duration and cost
-        const conference = await db.collection("conference_calls").findOne({ conferenceSid })
-        if (conference && conference.startTime) {
-          const duration = Math.floor((new Date().getTime() - new Date(conference.startTime).getTime()) / 1000)
-          updateData.duration = duration
-          updateData.cost = (duration / 60) * 0.1 // $0.10 per minute for conference calls
-        }
-        break
-      case "participant-join":
-        console.log("Participant joined conference")
-        break
-      case "participant-leave":
-        console.log("Participant left conference")
-        break
+    if (statusCallbackEvent === "conference-end") {
+      updateData.endTime = new Date()
     }
 
-    await db.collection("conference_calls").updateOne({ conferenceSid }, { $set: updateData })
+    await db.collection("conference_calls").updateOne({ conferenceId: conferenceSid }, { $set: updateData })
 
     return NextResponse.json({ success: true })
   } catch (error) {

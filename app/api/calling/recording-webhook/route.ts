@@ -4,18 +4,16 @@ import { connectToDatabase } from "@/lib/mongodb"
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
-    const callSid = formData.get("CallSid") as string
     const recordingSid = formData.get("RecordingSid") as string
     const recordingUrl = formData.get("RecordingUrl") as string
+    const callSid = formData.get("CallSid") as string
     const recordingStatus = formData.get("RecordingStatus") as string
-    const recordingDuration = formData.get("RecordingDuration") as string
 
     console.log("Recording webhook received:", {
-      callSid,
       recordingSid,
       recordingUrl,
+      callSid,
       recordingStatus,
-      recordingDuration,
     })
 
     if (recordingStatus === "completed" && recordingUrl) {
@@ -24,8 +22,7 @@ export async function POST(request: NextRequest) {
 
       const updateData = {
         recordingSid,
-        recordingUrl: `${recordingUrl}.mp3`, // Add .mp3 extension for download
-        recordingDuration: Number.parseInt(recordingDuration) || 0,
+        recordingUrl: recordingUrl + ".mp3", // Add .mp3 extension for download
         updatedAt: new Date(),
       }
 
