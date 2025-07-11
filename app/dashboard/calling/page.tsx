@@ -32,7 +32,7 @@ interface CallRecord {
   id: string
   phoneNumber: string
   duration: number
-  status: "completed" | "failed" | "busy" | "no-answer"
+  status: "completed" | "failed" | "busy" | "no-answer" | "in-progress"
   cost: number
   recordingUrl?: string
   transcript?: string
@@ -164,7 +164,6 @@ function AudioPlayer({ recordingUrl, callId, phoneNumber }: AudioPlayerProps) {
         </Button>
       </div>
 
-      {/* Progress Bar */}
       <div className="space-y-2">
         <Slider
           value={[progress]}
@@ -180,7 +179,6 @@ function AudioPlayer({ recordingUrl, callId, phoneNumber }: AudioPlayerProps) {
         </div>
       </div>
 
-      {/* Controls */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <Button
@@ -236,20 +234,21 @@ export default function CallingPage() {
   const [balance, setBalance] = useState(25.5)
   const [autoRecord, setAutoRecord] = useState(true)
   const [callCost, setCallCost] = useState(0)
+  const [currentCallSid, setCurrentCallSid] = useState<string | null>(null)
+  const [callStatus, setCallStatus] = useState<string>("")
   const callTimerRef = useRef<NodeJS.Timeout>()
 
-  // Load call history on component mount
   useEffect(() => {
     fetchCallHistory()
+    fetchUserBalance()
   }, [])
 
-  // Call timer effect
   useEffect(() => {
     if (isCallActive) {
       callTimerRef.current = setInterval(() => {
         setCallDuration((prev) => {
           const newDuration = prev + 1
-          setCallCost(newDuration * 0.05) // ₹0.05 per minute
+          setCallCost((newDuration / 60) * 1.5) // ₹1.5 per minute
           return newDuration
         })
       }, 1000)
@@ -266,49 +265,36 @@ export default function CallingPage() {
     }
   }, [isCallActive])
 
+  const fetchUserBalance = async () => {
+    try {
+      const userId = localStorage.getItem("userId")
+      if (!userId) return
+
+      const response = await fetch("/api/user/profile", {
+        headers: {
+          "user-id": userId,
+        },
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setBalance(data.user?.balance || 0)
+      }
+    } catch (error) {
+      console.error("Failed to fetch balance:", error)
+    }
+  }
+
   const fetchCallHistory = async () => {
     try {
-      // Mock data with Indian phone numbers
-      const mockHistory: CallRecord[] = [
-        {
-          id: "call_001",
-          phoneNumber: "+91 98765 43210",
-          duration: 125,
-          status: "completed",
-          cost: 2.5,
-          recordingUrl: "/api/recordings/sample-call-1.mp3",
-          transcript: "Hello, this is a test call recording with customer service...",
-          timestamp: new Date(Date.now() - 3600000),
-        },
-        {
-          id: "call_002",
-          phoneNumber: "+91 87654 32109",
-          duration: 89,
-          status: "completed",
-          cost: 1.75,
-          recordingUrl: "/api/recordings/sample-call-2.mp3",
-          timestamp: new Date(Date.now() - 7200000),
-        },
-        {
-          id: "call_003",
-          phoneNumber: "+91 76543 21098",
-          duration: 45,
-          status: "completed",
-          cost: 1.25,
-          recordingUrl: "/api/recordings/sample-call-3.mp3",
-          timestamp: new Date(Date.now() - 10800000),
-        },
-        {
-          id: "call_004",
-          phoneNumber: "+91 65432 10987",
-          duration: 0,
-          status: "failed",
-          cost: 0,
-          timestamp: new Date(Date.now() - 14400000),
-        },
-      ]
+      const userId = localStorage.getItem("userId")
+      if (!userId) return
 
-      setCallHistory(mockHistory)
+      const response = await fetch(`/api/calling/history?userId=${userId}`)
+      if (response.ok) {
+        const data = await response.json()
+        setCallHistory(data.calls || [])
+      }
     } catch (error) {
       console.error("Failed to fetch call history:", error)
     }
@@ -320,7 +306,12 @@ export default function CallingPage() {
       return
     }
 
-    if (balance < 1) {
+    if (!validateIndianPhoneNumber(phoneNumber)) {
+      toast.error("Please enter a valid Indian phone number")
+      return
+    }
+
+    if (balance < 1.5) {
       toast.error("Insufficient balance to make a call")
       return
     }
@@ -329,39 +320,90 @@ export default function CallingPage() {
       setIsCallActive(true)
       setCallDuration(0)
       setCallCost(0)
-      if (autoRecord) {
-        setIsRecording(true)
+      setCallStatus("Initiating call...")
+
+      const response = await fetch("/api/calling/make-call", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "user-id": localStorage.getItem("userId") || "",
+        },
+        body: JSON.stringify({
+          to: formatIndianPhoneNumber(phoneNumber),
+          record: autoRecord,
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setCurrentCallSid(data.callSid)
+        setCallStatus("Call initiated")
+        if (autoRecord) {
+          setIsRecording(true)
+        }
+        toast.success("Call initiated successfully")
+
+        // Simulate call progression
+        setTimeout(() => setCallStatus("Ringing..."), 2000)
+        setTimeout(() => {
+          setCallStatus("Connected")
+          toast.success("Call connected!")
+        }, 5000)
+      } else {
+        const error = await response.json()
+        toast.error(error.message || "Failed to make call")
+        setIsCallActive(false)
+        setCallStatus("")
       }
-      toast.success("Call initiated successfully")
     } catch (error) {
       console.error("Error making call:", error)
       toast.error("Failed to make call")
+      setIsCallActive(false)
+      setCallStatus("")
     }
   }
 
-  const endCall = () => {
-    setIsCallActive(false)
-    setIsRecording(false)
+  const endCall = async () => {
+    if (!currentCallSid) return
 
-    // Add the completed call to history
-    const newCall: CallRecord = {
-      id: `call_${Date.now()}`,
-      phoneNumber: formatIndianPhoneNumber(phoneNumber),
-      duration: callDuration,
-      status: "completed",
-      cost: callCost,
-      recordingUrl: isRecording ? `/api/recordings/call_${Date.now()}.mp3` : undefined,
-      transcript: "Transcript will be added here",
-      timestamp: new Date(),
+    try {
+      const response = await fetch("/api/calling/end-call", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          callSid: currentCallSid,
+        }),
+      })
+
+      if (response.ok) {
+        setIsCallActive(false)
+        setIsRecording(false)
+        setCallStatus("")
+        setCurrentCallSid(null)
+
+        // Deduct cost from balance
+        setBalance((prev) => Math.max(0, prev - callCost))
+
+        toast.success(`Call ended. Duration: ${formatDuration(callDuration)}. Cost: ₹${callCost.toFixed(2)}`)
+
+        // Refresh call history
+        fetchCallHistory()
+        fetchUserBalance()
+      }
+    } catch (error) {
+      console.error("Error ending call:", error)
+      toast.error("Error ending call")
     }
 
-    setCallHistory((prev) => [newCall, ...prev])
+    // Reset state regardless
+    setIsCallActive(false)
+    setIsRecording(false)
     setCallDuration(0)
-
-    // Deduct cost from balance
-    setBalance((prev) => Math.max(0, prev - callCost))
-
-    toast.success(`Call ended. Cost: ₹${callCost.toFixed(2)}`)
+    setCallCost(0)
+    setCallStatus("")
+    setCurrentCallSid(null)
   }
 
   const toggleMute = () => {
@@ -382,23 +424,32 @@ export default function CallingPage() {
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
   }
 
-  // Format Indian phone numbers: +91 98765 43210
   const formatIndianPhoneNumber = (number: string) => {
     const cleaned = number.replace(/\D/g, "")
     if (cleaned.length === 10) {
-      return `+91 ${cleaned.slice(0, 5)} ${cleaned.slice(5)}`
+      return `+91${cleaned}`
     } else if (cleaned.length === 12 && cleaned.startsWith("91")) {
-      return `+91 ${cleaned.slice(2, 7)} ${cleaned.slice(7)}`
+      return `+${cleaned}`
     } else if (cleaned.length === 13 && cleaned.startsWith("91")) {
-      return `+${cleaned.slice(0, 2)} ${cleaned.slice(2, 7)} ${cleaned.slice(7)}`
+      return `+${cleaned}`
+    }
+    return `+91${cleaned}`
+  }
+
+  const displayIndianPhoneNumber = (number: string) => {
+    const cleaned = number.replace(/\D/g, "")
+    if (cleaned.length === 10) {
+      return `+91 ${cleaned.slice(0, 5)} ${cleaned.slice(5)}`
+    } else if (cleaned.length >= 12) {
+      const withoutCountryCode = cleaned.slice(-10)
+      return `+91 ${withoutCountryCode.slice(0, 5)} ${withoutCountryCode.slice(5)}`
     }
     return number
   }
 
-  // Validate Indian phone number (10 digits)
   const validateIndianPhoneNumber = (number: string) => {
     const cleaned = number.replace(/\D/g, "")
-    return cleaned.length === 10 || (cleaned.length === 12 && cleaned.startsWith("91"))
+    return cleaned.length === 10 || (cleaned.length >= 12 && cleaned.includes("91"))
   }
 
   const dialPadNumbers = [
@@ -450,7 +501,6 @@ export default function CallingPage() {
 
         <TabsContent value="dialer" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Dialer Card */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
@@ -466,14 +516,13 @@ export default function CallingPage() {
                     id="phone"
                     type="tel"
                     placeholder="+91 98765 43210"
-                    value={formatIndianPhoneNumber(phoneNumber)}
+                    value={displayIndianPhoneNumber(phoneNumber)}
                     onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))}
                     disabled={isCallActive}
                     className="text-lg text-center"
                   />
                 </div>
 
-                {/* Dial Pad */}
                 <div className="grid grid-cols-3 gap-2 max-w-xs mx-auto">
                   {dialPadNumbers.map((row, rowIndex) =>
                     row.map((digit) => (
@@ -531,19 +580,18 @@ export default function CallingPage() {
               </CardContent>
             </Card>
 
-            {/* Call Controls Card */}
             <Card>
               <CardHeader>
                 <CardTitle>Call Controls</CardTitle>
                 <CardDescription>
-                  {isCallActive ? `Active call - ${formatDuration(callDuration)}` : "No active call"}
+                  {isCallActive ? `${callStatus} - ${formatDuration(callDuration)}` : "No active call"}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {isCallActive && (
                   <>
                     <div className="text-center space-y-2">
-                      <div className="text-2xl font-bold">{formatIndianPhoneNumber(phoneNumber)}</div>
+                      <div className="text-2xl font-bold">{displayIndianPhoneNumber(phoneNumber)}</div>
                       <div className="flex items-center justify-center space-x-4 text-sm text-muted-foreground">
                         <div className="flex items-center space-x-1">
                           <Clock className="h-4 w-4" />
@@ -554,6 +602,7 @@ export default function CallingPage() {
                           <span>₹{callCost.toFixed(2)}</span>
                         </div>
                       </div>
+                      <div className="text-sm text-blue-600 font-medium">{callStatus}</div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -607,7 +656,6 @@ export default function CallingPage() {
                 <div className="space-y-6">
                   {callHistory.map((call) => (
                     <div key={call.id} className="border rounded-lg p-4 space-y-4">
-                      {/* Call Info Header */}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
                           <div className="flex-shrink-0">
@@ -643,12 +691,10 @@ export default function CallingPage() {
                         </Badge>
                       </div>
 
-                      {/* Recording Player */}
                       {call.recordingUrl && (
                         <AudioPlayer recordingUrl={call.recordingUrl} callId={call.id} phoneNumber={call.phoneNumber} />
                       )}
 
-                      {/* Transcript */}
                       {call.transcript && (
                         <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
                           <div className="flex items-center space-x-2 mb-2">
@@ -661,7 +707,6 @@ export default function CallingPage() {
                         </div>
                       )}
 
-                      {/* No Recording Message */}
                       {!call.recordingUrl && call.status === "completed" && (
                         <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
                           <p className="text-sm text-gray-600 text-center">No recording available for this call</p>
@@ -692,7 +737,7 @@ export default function CallingPage() {
 
               <div className="space-y-2">
                 <Label>Call Rate</Label>
-                <p className="text-sm text-muted-foreground">₹0.05 per minute for Indian numbers</p>
+                <p className="text-sm text-muted-foreground">₹1.50 per minute for Indian numbers</p>
               </div>
 
               <div className="space-y-2">

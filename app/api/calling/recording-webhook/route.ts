@@ -16,24 +16,30 @@ export async function POST(request: NextRequest) {
       recordingDuration,
     })
 
-    // Connect to database and update call record with recording info
     const { db } = await connectToDatabase()
 
+    // Update call record with recording information
     await db.collection("call_history").updateOne(
       { callSid },
       {
         $set: {
-          recordingUrl: recordingUrl + ".mp3",
+          recordingUrl: recordingUrl + ".mp3", // Add .mp3 extension for download
           recordingSid,
           recordingDuration: Number.parseInt(recordingDuration) || 0,
           recordingAvailable: true,
+          updatedAt: new Date(),
         },
       },
     )
 
-    return NextResponse.json({ success: true })
+    console.log(`Recording saved for call ${callSid}: ${recordingUrl}`)
+
+    return NextResponse.json({ success: true, message: "Recording webhook processed successfully" })
   } catch (error) {
-    console.error("Error processing recording webhook:", error)
-    return NextResponse.json({ error: "Failed to process recording webhook" }, { status: 500 })
+    console.error("Recording webhook error:", error)
+    return NextResponse.json(
+      { success: false, message: "Failed to process recording webhook", error: error.message },
+      { status: 500 },
+    )
   }
 }

@@ -4,7 +4,7 @@ import { connectToDatabase } from "@/lib/mongodb"
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const userId = request.headers.get("user-id")
+    const userId = searchParams.get("userId")
 
     if (!userId) {
       return NextResponse.json({ error: "User ID is required" }, { status: 401 })
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
 
     const { db } = await connectToDatabase()
 
-    const calls = await db.collection("call_history").find({ userId }).sort({ timestamp: -1 }).limit(50).toArray()
+    const calls = await db.collection("call_history").find({ userId }).sort({ createdAt: -1 }).limit(50).toArray()
 
     const formattedCalls = calls.map((call) => ({
       id: call.callSid,
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
       cost: call.cost || 0,
       recordingUrl: call.recordingUrl || null,
       transcript: call.transcript || null,
-      timestamp: call.timestamp,
+      timestamp: call.createdAt,
     }))
 
     return NextResponse.json({
