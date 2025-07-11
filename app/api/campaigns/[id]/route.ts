@@ -10,7 +10,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
     const db = await getDatabase()
 
-    // Get campaign details - ALWAYS filter by userId
     const campaign = await db.collection("campaigns").findOne({
       _id: new ObjectId(campaignId),
       userId: userId,
@@ -26,7 +25,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       )
     }
 
-    // Get message logs for this campaign
     const messageLogs = await db
       .collection("message_logs")
       .find({ campaignId: campaignId, userId: userId })
@@ -34,7 +32,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       .limit(100)
       .toArray()
 
-    // Get delivery statistics
     const deliveryStats = await db
       .collection("message_logs")
       .aggregate([
@@ -64,7 +61,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       messageLogs,
     })
   } catch (error) {
-    console.error("Get campaign details error:", error)
     return NextResponse.json(
       {
         success: false,
@@ -83,7 +79,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 
     const db = await getDatabase()
 
-    // Check if campaign exists and belongs to user
     const campaign = await db.collection("campaigns").findOne({
       _id: new ObjectId(campaignId),
       userId: userId,
@@ -99,7 +94,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       )
     }
 
-    // Update campaign
     const result = await db.collection("campaigns").updateOne(
       { _id: new ObjectId(campaignId), userId: userId },
       {
@@ -120,7 +114,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       )
     }
 
-    // Get updated campaign
     const updatedCampaign = await db.collection("campaigns").findOne({ _id: new ObjectId(campaignId) })
 
     return NextResponse.json({
@@ -129,7 +122,6 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       campaign: updatedCampaign,
     })
   } catch (error) {
-    console.error("Update campaign error:", error)
     return NextResponse.json(
       {
         success: false,

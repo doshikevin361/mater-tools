@@ -1,49 +1,46 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { connectToDatabase } from "@/lib/mongodb"
+import { getDatabase } from "@/lib/mongodb"
 
 export async function POST(request: NextRequest) {
   try {
-    const { phoneNumber, message } = await request.json()
+    const body = await request.json()
+    let { phoneNumber, userId = "demo-user-123" } = body
 
     if (!phoneNumber) {
-      return NextResponse.json({ success: false, error: "Phone number is required" }, { status: 400 })
+      return NextResponse.json({ success: false, message: "Phone number is required" }, { status: 400 })
     }
 
-    // Format Indian phone number
-    const formatIndianNumber = (number: string): string => {
-      const cleaned = number.replace(/\D/g, "")
-      if (cleaned.length === 10) {
-        return `+91${cleaned}`
-      }
-      if (cleaned.startsWith("91") && cleaned.length === 12) {
-        return `+${cleaned}`
-      }
-      return `+91${cleaned}`
+    phoneNumber = phoneNumber.replace(/\D/g, "")
+
+    if (phoneNumber.length === 10) {
+      phoneNumber = "+91" + phoneNumber
+    } else if (phoneNumber.length === 12 && phoneNumber.startsWith("91")) {
+      phoneNumber = "+" + phoneNumber
+    } else if (!phoneNumber.startsWith("+91")) {
+      phoneNumber = "+91" + phoneNumber.slice(-10)
     }
 
-    const formattedNumber = formatIndianNumber(phoneNumber)
+    const db = await getDatabase()
 
-    // Store call record in database
-    const { db } = await connectToDatabase()
     const callRecord = {
-      phoneNumber: formattedNumber,
+      userId,
+      phoneNumber,
       status: "initiated",
-      timestamp: new Date(),
+      direction: "outbound",
       duration: 0,
       cost: 0,
-      type: "browser_call",
+      createdAt: new Date(),
     }
 
-    const result = await db.collection("calls").insertOne(callRecord)
+    const result = await db.collection("call_history").insertOne(callRecord)
 
     return NextResponse.json({
       success: true,
-      callId: result.insertedId,
-      phoneNumber: formattedNumber,
       message: "Call initiated successfully",
+      callId: result.insertedId.toString(),
+      phoneNumber,
     })
   } catch (error) {
-    console.error("Error making call:", error)
-    return NextResponse.json({ success: false, error: "Failed to make call" }, { status: 500 })
+    return NextResponse.json({ success: false, message: "Failed to initiate call" }, { status: 500 })
   }
 }

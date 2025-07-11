@@ -1,29 +1,39 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { connectToDatabase } from "@/lib/mongodb"
+import { getDatabase } from "@/lib/mongodb"
 
 export async function GET(request: NextRequest) {
   try {
-    const { db } = await connectToDatabase()
+    const { searchParams } = new URL(request.url)
+    const userId = searchParams.get("userId") || "demo-user-123"
+    const page = Number.parseInt(searchParams.get("page") || "1")
+    const limit = Number.parseInt(searchParams.get("limit") || "20")
 
-    const calls = await db.collection("calls").find({}).sort({ timestamp: -1 }).limit(50).toArray()
+    const db = await getDatabase()
 
-    const formattedCalls = calls.map((call) => ({
-      id: call._id.toString(),
-      phoneNumber: call.phoneNumber,
-      duration: call.duration || 0,
-      status: call.status === "completed" ? "completed" : call.status === "failed" ? "failed" : "completed",
-      cost: call.cost || 0,
-      recordingUrl: call.recordingUrl,
-      timestamp: call.timestamp,
-      type: call.type || "browser_call",
-    }))
+    const total = await db.collection("call_history").countDocuments({ userId })
+
+    const calls = await db
+      .collection("call_history")
+      .find({ userId })
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .toArray()
 
     return NextResponse.json({
       success: true,
-      calls: formattedCalls,
+      calls: calls.map((call) => ({
+        ...call,
+        id: call._id.toString(),
+      })),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
     })
   } catch (error) {
-    console.error("Error fetching call history:", error)
-    return NextResponse.json({ success: false, error: "Failed to fetch call history" }, { status: 500 })
+    return NextResponse.json({ success: false, message: "Failed to fetch call history" }, { status: 500 })
   }
 }

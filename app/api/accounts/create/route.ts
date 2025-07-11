@@ -2,7 +2,6 @@ import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
 import axios from "axios"
 
-// Proxy Configuration
 const PROXY_CONFIG = {
   user: "PF4IyIyXUrCPsfy",
   pass: "b9PKevM9xA9iJaa",
@@ -15,10 +14,8 @@ const headers = {
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
 }
 
-// Create temporary email
 async function createTempEmail() {
   try {
-    // Try with proxy
     const response = await axios.get("https://www.1secmail.com/api/v1/?action=genRandomMailbox&count=1", {
       proxy: {
         protocol: "http",
@@ -34,7 +31,6 @@ async function createTempEmail() {
     })
     return response.data[0]
   } catch (error) {
-    // Try without proxy
     try {
       const response = await axios.get("https://www.1secmail.com/api/v1/?action=genRandomMailbox&count=1", {
         headers,
@@ -42,7 +38,6 @@ async function createTempEmail() {
       })
       return response.data[0]
     } catch (err) {
-      // Manual generation
       const username = `user${Math.floor(Math.random() * 900000) + 100000}`
       const domains = ["1secmail.com", "1secmail.org", "esiix.com"]
       const domain = domains[Math.floor(Math.random() * domains.length)]
@@ -51,14 +46,13 @@ async function createTempEmail() {
   }
 }
 
-// Generate profile data
 function generateProfile() {
   const firstNames = ["Alex", "Jordan", "Taylor", "Casey", "Morgan", "Riley", "Avery", "Quinn"]
   const lastNames = ["Smith", "Johnson", "Brown", "Davis", "Miller", "Wilson", "Moore", "Taylor"]
 
   const firstName = firstNames[Math.floor(Math.random() * firstNames.length)]
   const lastName = lastNames[Math.floor(Math.random() * lastNames.length)]
-  const birthYear = Math.floor(Math.random() * 16) + 1990 // 1990-2005
+  const birthYear = Math.floor(Math.random() * 16) + 1990
   const birthMonth = Math.floor(Math.random() * 12) + 1
   const birthDay = Math.floor(Math.random() * 28) + 1
   const gender = Math.random() > 0.5 ? "male" : "female"
@@ -98,11 +92,7 @@ export async function POST(request: NextRequest) {
     const { db } = await connectToDatabase()
     const accounts = []
 
-    console.log(`Creating ${count} temporary accounts...`)
-
     for (let i = 0; i < count; i++) {
-      console.log(`Creating account ${i + 1}/${count}...`)
-
       const email = await createTempEmail()
       const profile = generateProfile()
 
@@ -118,13 +108,11 @@ export async function POST(request: NextRequest) {
 
       accounts.push(account)
 
-      // Small delay to avoid rate limiting
       if (i < count - 1) {
         await new Promise((resolve) => setTimeout(resolve, 1000))
       }
     }
 
-    // Store accounts in database
     await db.collection("temp_accounts").insertMany(accounts)
 
     return NextResponse.json({
@@ -134,7 +122,6 @@ export async function POST(request: NextRequest) {
       message: `Successfully created ${accounts.length} accounts`,
     })
   } catch (error) {
-    console.error("Error creating accounts:", error)
     return NextResponse.json(
       {
         success: false,
@@ -164,7 +151,6 @@ export async function GET(request: NextRequest) {
       count: accounts.length,
     })
   } catch (error) {
-    console.error("Error fetching accounts:", error)
     return NextResponse.json(
       {
         success: false,

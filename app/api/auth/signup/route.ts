@@ -5,7 +5,6 @@ export async function POST(request: NextRequest) {
   try {
     const { name, email, password, company, phone } = await request.json()
 
-    // Input validation
     if (!name || !email || !password) {
       return NextResponse.json(
         {
@@ -16,7 +15,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(email)) {
       return NextResponse.json(
@@ -30,7 +28,6 @@ export async function POST(request: NextRequest) {
 
     const db = await getDatabase()
 
-    // Check if user already exists
     const existingUser = await db.collection("users").findOne({
       email: email.toLowerCase(),
     })
@@ -45,15 +42,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create new user
     const newUser = {
       name,
       email: email.toLowerCase(),
-      password, // In production, hash this with bcrypt
+      password,
       company: company || "",
       phone: phone || "",
       plan: "Free",
-      balance: 1000, // Welcome bonus
+      balance: 1000,
       avatar: "",
       status: "active",
       createdAt: new Date(),
@@ -63,7 +59,6 @@ export async function POST(request: NextRequest) {
 
     const result = await db.collection("users").insertOne(newUser)
 
-    // Return user data (exclude password)
     const userData = {
       id: result.insertedId.toString(),
       name: newUser.name,
@@ -83,7 +78,6 @@ export async function POST(request: NextRequest) {
       token: "jwt-token-" + result.insertedId.toString() + "-" + Date.now(),
     })
   } catch (error) {
-    console.error("Signup error:", error)
     return NextResponse.json(
       {
         success: false,

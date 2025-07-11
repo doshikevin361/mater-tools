@@ -131,6 +131,9 @@ importers:
       input-otp:
         specifier: latest
         version: 1.4.2(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+      jsonwebtoken:
+        specifier: latest
+        version: 9.0.2
       kerberos:
         specifier: latest
         version: 2.2.2

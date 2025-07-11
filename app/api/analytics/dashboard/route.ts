@@ -7,11 +7,8 @@ export async function GET(request: NextRequest) {
     const period = searchParams.get("period") || "30d"
     const userId = searchParams.get("userId") || "demo-user-123"
 
-    console.log("Analytics request for userId:", userId, "period:", period)
-
     const db = await getDatabase()
 
-    // Calculate date range based on period
     const now = new Date()
     const startDate = new Date()
 
@@ -29,7 +26,6 @@ export async function GET(request: NextRequest) {
         startDate.setDate(now.getDate() - 30)
     }
 
-    // Get user's campaigns for the period - ALWAYS filter by userId
     const campaigns = await db
       .collection("campaigns")
       .find({
@@ -38,16 +34,12 @@ export async function GET(request: NextRequest) {
       })
       .toArray()
 
-    console.log(`Found ${campaigns.length} campaigns for user ${userId}`)
-
-    // Calculate overview stats
     const totalMessagesSent = campaigns.reduce((sum, campaign) => sum + (campaign.sent || 0), 0)
     const activeCampaigns = campaigns.filter((c) => c.status === "Processing" || c.status === "Sending").length
     const totalDelivered = campaigns.reduce((sum, campaign) => sum + (campaign.delivered || 0), 0)
     const successRate = totalMessagesSent > 0 ? (totalDelivered / totalMessagesSent) * 100 : 0
     const totalRevenue = campaigns.reduce((sum, campaign) => sum + (campaign.cost || 0), 0)
 
-    // Get platform stats
     const platformStats = [
       {
         platform: "WhatsApp",
@@ -95,7 +87,6 @@ export async function GET(request: NextRequest) {
       },
     ]
 
-    // Get campaign performance
     const campaignPerformance = campaigns
       .filter((c) => c.status === "Completed")
       .slice(0, 10)
@@ -110,7 +101,6 @@ export async function GET(request: NextRequest) {
         status: campaign.status,
       }))
 
-    // Generate time series data
     const timeSeriesData = {
       labels: ["Week 1", "Week 2", "Week 3", "Week 4"],
       datasets: [
@@ -159,7 +149,6 @@ export async function GET(request: NextRequest) {
       period,
     })
   } catch (error) {
-    console.error("Analytics error:", error)
     return NextResponse.json(
       {
         success: false,

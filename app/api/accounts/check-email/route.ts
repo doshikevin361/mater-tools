@@ -50,7 +50,6 @@ export async function POST(request: NextRequest) {
       })
     }
   } catch (error) {
-    console.error("Error checking email:", error)
     return NextResponse.json(
       {
         success: false,

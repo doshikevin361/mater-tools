@@ -11,7 +11,6 @@ export async function POST(request: NextRequest) {
 
     const { db } = await connectToDatabase()
 
-    // Get all accounts for the user
     const accounts = await db.collection("temp_accounts").find({ userId }).sort({ createdAt: -1 }).toArray()
 
     return NextResponse.json({
@@ -20,7 +19,6 @@ export async function POST(request: NextRequest) {
       count: accounts.length,
     })
   } catch (error) {
-    console.error("Error fetching accounts:", error)
     return NextResponse.json(
       {
         success: false,
