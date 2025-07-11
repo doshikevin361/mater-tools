@@ -249,7 +249,7 @@ export default function CallingPage() {
       callTimerRef.current = setInterval(() => {
         setCallDuration((prev) => {
           const newDuration = prev + 1
-          setCallCost(newDuration * 0.05) // $0.05 per minute
+          setCallCost(newDuration * 0.05) // ₹0.05 per minute
           return newDuration
         })
       }, 1000)
@@ -268,11 +268,11 @@ export default function CallingPage() {
 
   const fetchCallHistory = async () => {
     try {
-      // Mock data with some recordings
+      // Mock data with Indian phone numbers
       const mockHistory: CallRecord[] = [
         {
           id: "call_001",
-          phoneNumber: "+1234567890",
+          phoneNumber: "+91 98765 43210",
           duration: 125,
           status: "completed",
           cost: 2.5,
@@ -282,7 +282,7 @@ export default function CallingPage() {
         },
         {
           id: "call_002",
-          phoneNumber: "+1987654321",
+          phoneNumber: "+91 87654 32109",
           duration: 89,
           status: "completed",
           cost: 1.75,
@@ -291,7 +291,7 @@ export default function CallingPage() {
         },
         {
           id: "call_003",
-          phoneNumber: "+1555123456",
+          phoneNumber: "+91 76543 21098",
           duration: 45,
           status: "completed",
           cost: 1.25,
@@ -300,7 +300,7 @@ export default function CallingPage() {
         },
         {
           id: "call_004",
-          phoneNumber: "+1444987654",
+          phoneNumber: "+91 65432 10987",
           duration: 0,
           status: "failed",
           cost: 0,
@@ -346,7 +346,7 @@ export default function CallingPage() {
     // Add the completed call to history
     const newCall: CallRecord = {
       id: `call_${Date.now()}`,
-      phoneNumber: phoneNumber,
+      phoneNumber: formatIndianPhoneNumber(phoneNumber),
       duration: callDuration,
       status: "completed",
       cost: callCost,
@@ -361,7 +361,7 @@ export default function CallingPage() {
     // Deduct cost from balance
     setBalance((prev) => Math.max(0, prev - callCost))
 
-    toast.success(`Call ended. Cost: $${callCost.toFixed(2)}`)
+    toast.success(`Call ended. Cost: ₹${callCost.toFixed(2)}`)
   }
 
   const toggleMute = () => {
@@ -382,12 +382,23 @@ export default function CallingPage() {
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
   }
 
-  const formatPhoneNumber = (number: string) => {
+  // Format Indian phone numbers: +91 98765 43210
+  const formatIndianPhoneNumber = (number: string) => {
     const cleaned = number.replace(/\D/g, "")
     if (cleaned.length === 10) {
-      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`
+      return `+91 ${cleaned.slice(0, 5)} ${cleaned.slice(5)}`
+    } else if (cleaned.length === 12 && cleaned.startsWith("91")) {
+      return `+91 ${cleaned.slice(2, 7)} ${cleaned.slice(7)}`
+    } else if (cleaned.length === 13 && cleaned.startsWith("91")) {
+      return `+${cleaned.slice(0, 2)} ${cleaned.slice(2, 7)} ${cleaned.slice(7)}`
     }
     return number
+  }
+
+  // Validate Indian phone number (10 digits)
+  const validateIndianPhoneNumber = (number: string) => {
+    const cleaned = number.replace(/\D/g, "")
+    return cleaned.length === 10 || (cleaned.length === 12 && cleaned.startsWith("91"))
   }
 
   const dialPadNumbers = [
@@ -409,6 +420,12 @@ export default function CallingPage() {
     }
   }
 
+  const backspaceNumber = () => {
+    if (!isCallActive && phoneNumber.length > 0) {
+      setPhoneNumber((prev) => prev.slice(0, -1))
+    }
+  }
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -419,7 +436,7 @@ export default function CallingPage() {
         <div className="flex items-center space-x-4">
           <div className="text-right">
             <p className="text-sm text-muted-foreground">Account Balance</p>
-            <p className="text-2xl font-bold text-green-600">${balance.toFixed(2)}</p>
+            <p className="text-2xl font-bold text-green-600">₹{balance.toFixed(2)}</p>
           </div>
         </div>
       </div>
@@ -440,7 +457,7 @@ export default function CallingPage() {
                   <Phone className="h-5 w-5" />
                   <span>Phone Dialer</span>
                 </CardTitle>
-                <CardDescription>Enter a phone number to make a call</CardDescription>
+                <CardDescription>Enter an Indian phone number to make a call</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
@@ -448,8 +465,8 @@ export default function CallingPage() {
                   <Input
                     id="phone"
                     type="tel"
-                    placeholder="+1 (555) 123-4567"
-                    value={formatPhoneNumber(phoneNumber)}
+                    placeholder="+91 98765 43210"
+                    value={formatIndianPhoneNumber(phoneNumber)}
                     onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))}
                     disabled={isCallActive}
                     className="text-lg text-center"
@@ -484,10 +501,10 @@ export default function CallingPage() {
                     Clear
                   </Button>
                   <Button
-                    onClick={phoneNumber.slice(0, -1) ? () => setPhoneNumber(phoneNumber.slice(0, -1)) : undefined}
+                    onClick={backspaceNumber}
                     variant="outline"
                     disabled={isCallActive || !phoneNumber}
-                    className="flex-1"
+                    className="flex-1 bg-transparent"
                   >
                     ⌫
                   </Button>
@@ -495,7 +512,12 @@ export default function CallingPage() {
 
                 <div className="flex space-x-2">
                   {!isCallActive ? (
-                    <Button onClick={makeCall} className="flex-1" size="lg">
+                    <Button
+                      onClick={makeCall}
+                      className="flex-1"
+                      size="lg"
+                      disabled={!validateIndianPhoneNumber(phoneNumber)}
+                    >
                       <PhoneCall className="mr-2 h-4 w-4" />
                       Call
                     </Button>
@@ -521,7 +543,7 @@ export default function CallingPage() {
                 {isCallActive && (
                   <>
                     <div className="text-center space-y-2">
-                      <div className="text-2xl font-bold">{formatPhoneNumber(phoneNumber)}</div>
+                      <div className="text-2xl font-bold">{formatIndianPhoneNumber(phoneNumber)}</div>
                       <div className="flex items-center justify-center space-x-4 text-sm text-muted-foreground">
                         <div className="flex items-center space-x-1">
                           <Clock className="h-4 w-4" />
@@ -529,7 +551,7 @@ export default function CallingPage() {
                         </div>
                         <div className="flex items-center space-x-1">
                           <DollarSign className="h-4 w-4" />
-                          <span>${callCost.toFixed(2)}</span>
+                          <span>₹{callCost.toFixed(2)}</span>
                         </div>
                       </div>
                     </div>
@@ -560,7 +582,7 @@ export default function CallingPage() {
                   <div className="text-center text-muted-foreground py-8">
                     <Phone className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>No active call</p>
-                    <p className="text-sm">Enter a number and press call to start</p>
+                    <p className="text-sm">Enter an Indian number and press call to start</p>
                   </div>
                 )}
               </CardContent>
@@ -594,7 +616,7 @@ export default function CallingPage() {
                             </div>
                           </div>
                           <div>
-                            <p className="font-medium text-lg">{formatPhoneNumber(call.phoneNumber)}</p>
+                            <p className="font-medium text-lg">{call.phoneNumber}</p>
                             <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                               <span className="flex items-center space-x-1">
                                 <Clock className="h-3 w-3" />
@@ -602,7 +624,7 @@ export default function CallingPage() {
                               </span>
                               <span className="flex items-center space-x-1">
                                 <DollarSign className="h-3 w-3" />
-                                <span>${call.cost.toFixed(2)}</span>
+                                <span>₹{call.cost.toFixed(2)}</span>
                               </span>
                               <span>{new Date(call.timestamp).toLocaleString()}</span>
                             </div>
@@ -670,12 +692,12 @@ export default function CallingPage() {
 
               <div className="space-y-2">
                 <Label>Call Rate</Label>
-                <p className="text-sm text-muted-foreground">$0.05 per minute</p>
+                <p className="text-sm text-muted-foreground">₹0.05 per minute for Indian numbers</p>
               </div>
 
               <div className="space-y-2">
                 <Label>Current Balance</Label>
-                <p className="text-2xl font-bold text-green-600">${balance.toFixed(2)}</p>
+                <p className="text-2xl font-bold text-green-600">₹{balance.toFixed(2)}</p>
                 <Button variant="outline" size="sm">
                   Add Funds
                 </Button>
@@ -685,6 +707,13 @@ export default function CallingPage() {
                 <Label>Recording Storage</Label>
                 <p className="text-sm text-muted-foreground">
                   Recordings are stored for 30 days and can be downloaded anytime
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Supported Numbers</Label>
+                <p className="text-sm text-muted-foreground">
+                  Indian mobile numbers (10 digits) - Format: +91 98765 43210
                 </p>
               </div>
             </CardContent>

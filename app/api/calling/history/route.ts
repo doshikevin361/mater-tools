@@ -12,7 +12,6 @@ export async function GET(request: NextRequest) {
 
     const { db } = await connectToDatabase()
 
-    // Get call history for the user
     const calls = await db.collection("call_history").find({ userId }).sort({ timestamp: -1 }).limit(50).toArray()
 
     const formattedCalls = calls.map((call) => ({
