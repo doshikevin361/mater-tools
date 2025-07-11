@@ -27,9 +27,9 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarRail } fr
 // This is sample data.
 const data = {
   user: {
-    name: "BrandBuzz User",
-    email: "user@brandbuzz.com",
-    avatar: "/placeholder-user.jpg",
+    name: "shadcn",
+    email: "m@example.com",
+    avatar: "/avatars/shadcn.jpg",
   },
   teams: [
     {
@@ -38,14 +38,14 @@ const data = {
       plan: "Enterprise",
     },
     {
-      name: "Marketing Team",
+      name: "Acme Corp.",
       logo: AudioWaveform,
-      plan: "Pro",
+      plan: "Startup",
     },
     {
-      name: "Growth Team",
+      name: "Evil Corp.",
       logo: Command,
-      plan: "Startup",
+      plan: "Free",
     },
   ],
   navMain: [
@@ -63,7 +63,6 @@ const data = {
         {
           title: "WhatsApp",
           url: "/dashboard/whatsapp",
-          badge: "New",
         },
         {
           title: "SMS",
@@ -80,7 +79,6 @@ const data = {
         {
           title: "Calling",
           url: "/dashboard/calling",
-          badge: "Live",
         },
       ],
     },
@@ -92,53 +90,37 @@ const data = {
         {
           title: "Instagram",
           url: "/dashboard/instagram",
-          badge: "Growth",
         },
         {
           title: "Facebook",
           url: "/dashboard/facebook",
-          badge: "Growth",
         },
         {
           title: "Twitter",
           url: "/dashboard/twitter",
-          badge: "Trading",
         },
         {
           title: "YouTube",
           url: "/dashboard/youtube",
-          badge: "Growth",
         },
       ],
     },
     {
-      title: "Account Creation",
+      title: "Account Management",
       url: "#",
       icon: UserPlus,
       items: [
         {
-          title: "Instagram Accounts",
-          url: "/dashboard/create-instagram",
-          badge: "Auto",
+          title: "Social Automation",
+          url: "/dashboard/social-automation",
         },
         {
-          title: "Facebook Accounts",
-          url: "/dashboard/create-facebook",
-          badge: "Auto",
-        },
-        {
-          title: "Twitter Accounts",
-          url: "/dashboard/create-twitter",
-          badge: "Auto",
-        },
-        {
-          title: "All Social Accounts",
+          title: "Social Accounts",
           url: "/dashboard/social-accounts",
         },
         {
           title: "Email Accounts",
           url: "/dashboard/accounts",
-          badge: "New",
         },
       ],
     },
@@ -164,36 +146,36 @@ const data = {
       items: [
         {
           title: "General",
-          url: "/dashboard/settings/general",
+          url: "#",
         },
         {
           title: "Team",
-          url: "/dashboard/settings/team",
+          url: "#",
         },
         {
           title: "Billing",
-          url: "/dashboard/settings/billing",
+          url: "#",
         },
         {
           title: "Limits",
-          url: "/dashboard/settings/limits",
+          url: "#",
         },
       ],
     },
   ],
   projects: [
     {
-      name: "Marketing Campaigns",
+      name: "Design Engineering",
       url: "#",
       icon: Frame,
     },
     {
-      name: "Social Growth",
+      name: "Sales & Marketing",
       url: "#",
       icon: PieChart,
     },
     {
-      name: "Lead Generation",
+      name: "Travel",
       url: "#",
       icon: Map,
     },

@@ -1,65 +1,95 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { connectToDatabase } from "@/lib/mongodb"
-
-export async function POST(request: NextRequest) {
-  try {
-    const notificationData = await request.json()
-
-    const { db } = await connectToDatabase()
-
-    // Save notification to database
-    const notification = {
-      ...notificationData,
-      timestamp: new Date(),
-      read: false,
-    }
-
-    await db.collection("notifications").insertOne(notification)
-
-    return NextResponse.json({ success: true, notification })
-  } catch (error) {
-    console.error("Error saving notification:", error)
-    return NextResponse.json({ error: "Failed to save notification" }, { status: 500 })
-  }
-}
+import { getDatabase } from "@/lib/mongodb"
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get("userId")
-    const limit = Number.parseInt(searchParams.get("limit") || "50")
+    const userId = searchParams.get("userId") || "demo-user"
+    const limit = Number.parseInt(searchParams.get("limit") || "10")
 
-    if (!userId) {
-      return NextResponse.json({ error: "User ID is required" }, { status: 400 })
-    }
+    const db = await getDatabase()
 
-    const { db } = await connectToDatabase()
-
+    // Get user's notifications, including automation notifications
     const notifications = await db
       .collection("notifications")
       .find({ userId })
-      .sort({ timestamp: -1 })
+      .sort({ createdAt: -1 })
       .limit(limit)
       .toArray()
 
-    return NextResponse.json({ notifications })
+    return NextResponse.json({
+      success: true,
+      notifications: notifications.map((notification) => ({
+        id: notification._id,
+        title: notification.title,
+        message: notification.message,
+        type: notification.type,
+        read: notification.read,
+        time: formatTimeAgo(notification.createdAt),
+        createdAt: notification.createdAt,
+      })),
+    })
   } catch (error) {
-    console.error("Error fetching notifications:", error)
-    return NextResponse.json({ error: "Failed to fetch notifications" }, { status: 500 })
+    console.error("Get notifications error:", error)
+    return NextResponse.json({ success: false, message: "Failed to fetch notifications" }, { status: 500 })
   }
 }
 
 export async function PUT(request: NextRequest) {
   try {
-    const { notificationId, read } = await request.json()
+    const body = await request.json()
+    const { notificationId, read } = body
 
-    const { db } = await connectToDatabase()
+    const db = await getDatabase()
 
-    await db.collection("notifications").updateOne({ _id: notificationId }, { $set: { read } })
+    await db.collection("notifications").updateOne({ _id: notificationId }, { $set: { read, updatedAt: new Date() } })
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({
+      success: true,
+      message: "Notification updated successfully",
+    })
   } catch (error) {
-    console.error("Error updating notification:", error)
-    return NextResponse.json({ error: "Failed to update notification" }, { status: 500 })
+    console.error("Update notification error:", error)
+    return NextResponse.json({ success: false, message: "Failed to update notification" }, { status: 500 })
+  }
+}
+
+// Mark all notifications as read
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { userId } = body
+
+    const db = await getDatabase()
+
+    await db
+      .collection("notifications")
+      .updateMany({ userId, read: false }, { $set: { read: true, updatedAt: new Date() } })
+
+    return NextResponse.json({
+      success: true,
+      message: "All notifications marked as read",
+    })
+  } catch (error) {
+    console.error("Mark all notifications read error:", error)
+    return NextResponse.json({ success: false, message: "Failed to update notifications" }, { status: 500 })
+  }
+}
+
+function formatTimeAgo(date: Date): string {
+  const now = new Date()
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+
+  if (diffInSeconds < 60) {
+    return "Just now"
+  } else if (diffInSeconds < 3600) {
+    const minutes = Math.floor(diffInSeconds / 60)
+    return `${minutes} minute${minutes > 1 ? "s" : ""} ago`
+  } else if (diffInSeconds < 86400) {
+    const hours = Math.floor(diffInSeconds / 3600)
+    return `${hours} hour${hours > 1 ? "s" : ""} ago`
+  } else {
+    const days = Math.floor(diffInSeconds / 86400)
+    return `${days} day${days > 1 ? "s" : ""} ago`
   }
 }
