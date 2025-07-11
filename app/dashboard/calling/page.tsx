@@ -1,770 +1,354 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import type React from "react"
+
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
-import { Slider } from "@/components/ui/slider"
 import { toast } from "sonner"
-import {
-  Phone,
-  PhoneCall,
-  PhoneOff,
-  Mic,
-  MicOff,
-  Volume2,
-  VolumeX,
-  Square,
-  Play,
-  Pause,
-  Download,
-  Clock,
-  DollarSign,
-  SkipBack,
-  SkipForward,
-} from "lucide-react"
+import { Phone, PhoneCall, Clock, User, Calendar, Square, Mic, MicOff } from "lucide-react"
 
-interface CallRecord {
+interface CallHistory {
   id: string
-  phoneNumber: string
+  to: string
+  from: string
+  status: string
   duration: number
-  status: "completed" | "failed" | "busy" | "no-answer" | "in-progress"
-  cost: number
+  timestamp: string
   recordingUrl?: string
-  transcript?: string
-  timestamp: Date
-}
-
-interface AudioPlayerProps {
-  recordingUrl: string
-  callId: string
-  phoneNumber: string
-}
-
-function AudioPlayer({ recordingUrl, callId, phoneNumber }: AudioPlayerProps) {
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [currentTime, setCurrentTime] = useState(0)
-  const [duration, setDuration] = useState(0)
-  const [volume, setVolume] = useState([80])
-  const [isLoading, setIsLoading] = useState(false)
-  const audioRef = useRef<HTMLAudioElement>(null)
-
-  useEffect(() => {
-    const audio = audioRef.current
-    if (!audio) return
-
-    const updateTime = () => setCurrentTime(audio.currentTime)
-    const updateDuration = () => setDuration(audio.duration)
-    const handleEnded = () => setIsPlaying(false)
-    const handleLoadStart = () => setIsLoading(true)
-    const handleCanPlay = () => setIsLoading(false)
-
-    audio.addEventListener("timeupdate", updateTime)
-    audio.addEventListener("loadedmetadata", updateDuration)
-    audio.addEventListener("ended", handleEnded)
-    audio.addEventListener("loadstart", handleLoadStart)
-    audio.addEventListener("canplay", handleCanPlay)
-
-    return () => {
-      audio.removeEventListener("timeupdate", updateTime)
-      audio.removeEventListener("loadedmetadata", updateDuration)
-      audio.removeEventListener("ended", handleEnded)
-      audio.removeEventListener("loadstart", handleLoadStart)
-      audio.removeEventListener("canplay", handleCanPlay)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume[0] / 100
-    }
-  }, [volume])
-
-  const togglePlayPause = () => {
-    const audio = audioRef.current
-    if (!audio) return
-
-    if (isPlaying) {
-      audio.pause()
-      setIsPlaying(false)
-    } else {
-      audio.play()
-      setIsPlaying(true)
-    }
-  }
-
-  const handleSeek = (value: number[]) => {
-    const audio = audioRef.current
-    if (!audio || !duration) return
-
-    const newTime = (value[0] / 100) * duration
-    audio.currentTime = newTime
-    setCurrentTime(newTime)
-  }
-
-  const skipBackward = () => {
-    const audio = audioRef.current
-    if (!audio) return
-    audio.currentTime = Math.max(0, audio.currentTime - 10)
-  }
-
-  const skipForward = () => {
-    const audio = audioRef.current
-    if (!audio) return
-    audio.currentTime = Math.min(duration, audio.currentTime + 10)
-  }
-
-  const formatTime = (time: number) => {
-    if (isNaN(time)) return "0:00"
-    const minutes = Math.floor(time / 60)
-    const seconds = Math.floor(time % 60)
-    return `${minutes}:${seconds.toString().padStart(2, "0")}`
-  }
-
-  const downloadRecording = async () => {
-    try {
-      const response = await fetch(recordingUrl)
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `call-recording-${phoneNumber.replace(/\D/g, "")}-${callId}.mp3`
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
-      toast.success("Recording downloaded")
-    } catch (error) {
-      toast.error("Failed to download recording")
-    }
-  }
-
-  const progress = duration > 0 ? (currentTime / duration) * 100 : 0
-
-  return (
-    <div className="bg-gray-50 rounded-lg p-4 space-y-3 border">
-      <audio ref={audioRef} src={recordingUrl} preload="metadata" />
-
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-            <Phone className="h-4 w-4 text-blue-600" />
-          </div>
-          <div>
-            <p className="text-sm font-medium">Call Recording</p>
-            <p className="text-xs text-gray-500">{phoneNumber}</p>
-          </div>
-        </div>
-        <Button size="sm" variant="outline" onClick={downloadRecording} className="h-8 bg-transparent">
-          <Download className="h-3 w-3" />
-        </Button>
-      </div>
-
-      <div className="space-y-2">
-        <Slider
-          value={[progress]}
-          onValueChange={handleSeek}
-          max={100}
-          step={0.1}
-          className="w-full"
-          disabled={!duration || isLoading}
-        />
-        <div className="flex justify-between text-xs text-gray-500">
-          <span>{formatTime(currentTime)}</span>
-          <span>{formatTime(duration)}</span>
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={skipBackward}
-            disabled={!duration || isLoading}
-            className="h-8 w-8 p-0 bg-transparent"
-          >
-            <SkipBack className="h-3 w-3" />
-          </Button>
-
-          <Button size="sm" onClick={togglePlayPause} disabled={!duration || isLoading} className="h-8 w-8 p-0">
-            {isLoading ? (
-              <div className="w-3 h-3 border border-gray-300 border-t-blue-600 rounded-full animate-spin" />
-            ) : isPlaying ? (
-              <Pause className="h-3 w-3" />
-            ) : (
-              <Play className="h-3 w-3" />
-            )}
-          </Button>
-
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={skipForward}
-            disabled={!duration || isLoading}
-            className="h-8 w-8 p-0 bg-transparent"
-          >
-            <SkipForward className="h-3 w-3" />
-          </Button>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <VolumeX className="h-3 w-3 text-gray-400" />
-          <Slider value={volume} onValueChange={setVolume} max={100} step={1} className="w-16" />
-          <Volume2 className="h-3 w-3 text-gray-400" />
-        </div>
-      </div>
-    </div>
-  )
+  cost: number
 }
 
 export default function CallingPage() {
-  const [activeTab, setActiveTab] = useState("dialer")
   const [phoneNumber, setPhoneNumber] = useState("")
-  const [isCallActive, setIsCallActive] = useState(false)
-  const [callDuration, setCallDuration] = useState(0)
-  const [isMuted, setIsMuted] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
-  const [volume, setVolume] = useState([80])
-  const [callHistory, setCallHistory] = useState<CallRecord[]>([])
-  const [balance, setBalance] = useState(25.5)
-  const [autoRecord, setAutoRecord] = useState(true)
-  const [callCost, setCallCost] = useState(0)
-  const [currentCallSid, setCurrentCallSid] = useState<string | null>(null)
-  const [callStatus, setCallStatus] = useState<string>("")
-  const callTimerRef = useRef<NodeJS.Timeout>()
+  const [isCalling, setIsCalling] = useState(false)
+  const [currentCall, setCurrentCall] = useState<any>(null)
+  const [callHistory, setCallHistory] = useState<CallHistory[]>([])
+  const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
-    fetchCallHistory()
-    fetchUserBalance()
-  }, [])
+  // Format phone number as user types
+  const formatPhoneNumber = (value: string) => {
+    // Remove all non-digits
+    const digits = value.replace(/\D/g, "")
 
-  useEffect(() => {
-    if (isCallActive) {
-      callTimerRef.current = setInterval(() => {
-        setCallDuration((prev) => {
-          const newDuration = prev + 1
-          setCallCost((newDuration / 60) * 1.5) // ₹1.5 per minute
-          return newDuration
-        })
-      }, 1000)
-    } else {
-      if (callTimerRef.current) {
-        clearInterval(callTimerRef.current)
-      }
+    // Limit to 10 digits for Indian numbers
+    const limitedDigits = digits.slice(0, 10)
+
+    // Format as XXXXX XXXXX
+    if (limitedDigits.length > 5) {
+      return `${limitedDigits.slice(0, 5)} ${limitedDigits.slice(5)}`
     }
-
-    return () => {
-      if (callTimerRef.current) {
-        clearInterval(callTimerRef.current)
-      }
-    }
-  }, [isCallActive])
-
-  const fetchUserBalance = async () => {
-    try {
-      const userId = localStorage.getItem("userId")
-      if (!userId) return
-
-      const response = await fetch("/api/user/profile", {
-        headers: {
-          "user-id": userId,
-        },
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        setBalance(data.user?.balance || 0)
-      }
-    } catch (error) {
-      console.error("Failed to fetch balance:", error)
-    }
+    return limitedDigits
   }
 
-  const fetchCallHistory = async () => {
-    try {
-      const userId = localStorage.getItem("userId")
-      if (!userId) return
-
-      const response = await fetch(`/api/calling/history?userId=${userId}`)
-      if (response.ok) {
-        const data = await response.json()
-        setCallHistory(data.calls || [])
-      }
-    } catch (error) {
-      console.error("Failed to fetch call history:", error)
-    }
+  const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhoneNumber(e.target.value)
+    setPhoneNumber(formatted)
   }
 
   const makeCall = async () => {
-    if (!phoneNumber.trim()) {
-      toast.error("Please enter a phone number")
+    if (!phoneNumber || phoneNumber.replace(/\s/g, "").length !== 10) {
+      toast.error("कृपया 10 अंकों का वैध भारतीय मोबाइल नंबर दर्ज करें")
       return
     }
 
-    if (!validateIndianPhoneNumber(phoneNumber)) {
-      toast.error("Please enter a valid Indian phone number")
-      return
-    }
-
-    if (balance < 1.5) {
-      toast.error("Insufficient balance to make a call")
-      return
-    }
+    setIsCalling(true)
+    setLoading(true)
 
     try {
-      setIsCallActive(true)
-      setCallDuration(0)
-      setCallCost(0)
-      setCallStatus("Initiating call...")
+      // Convert formatted number to +91 format
+      const cleanNumber = phoneNumber.replace(/\s/g, "")
+      const fullNumber = `+91${cleanNumber}`
 
       const response = await fetch("/api/calling/make-call", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "user-id": localStorage.getItem("userId") || "",
         },
         body: JSON.stringify({
-          to: formatIndianPhoneNumber(phoneNumber),
-          record: autoRecord,
+          to: fullNumber,
+          record: isRecording,
         }),
       })
 
-      if (response.ok) {
-        const data = await response.json()
-        setCurrentCallSid(data.callSid)
-        setCallStatus("Call initiated")
-        if (autoRecord) {
-          setIsRecording(true)
+      const data = await response.json()
+
+      if (data.success) {
+        setCurrentCall(data)
+        toast.success(`कॉल शुरू की गई: ${fullNumber}`)
+
+        // Add to call history
+        const newCall: CallHistory = {
+          id: data.callSid,
+          to: fullNumber,
+          from: "+19252617266",
+          status: data.status,
+          duration: 0,
+          timestamp: new Date().toISOString(),
+          cost: 0.5, // ₹0.50 per minute for Indian calls
         }
-        toast.success("Call initiated successfully")
-
-        // Simulate call progression
-        setTimeout(() => setCallStatus("Ringing..."), 2000)
-        setTimeout(() => {
-          setCallStatus("Connected")
-          toast.success("Call connected!")
-        }, 5000)
+        setCallHistory((prev) => [newCall, ...prev])
       } else {
-        const error = await response.json()
-        toast.error(error.message || "Failed to make call")
-        setIsCallActive(false)
-        setCallStatus("")
+        toast.error(data.message || "कॉल करने में त्रुटि")
       }
     } catch (error) {
-      console.error("Error making call:", error)
-      toast.error("Failed to make call")
-      setIsCallActive(false)
-      setCallStatus("")
+      console.error("Call error:", error)
+      toast.error("कॉल करने में त्रुटि हुई")
+    } finally {
+      setIsCalling(false)
+      setLoading(false)
     }
   }
 
-  const endCall = async () => {
-    if (!currentCallSid) return
+  const endCall = () => {
+    setCurrentCall(null)
+    setIsCalling(false)
+    toast.info("कॉल समाप्त की गई")
+  }
 
+  const loadCallHistory = async () => {
     try {
-      const response = await fetch("/api/calling/end-call", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          callSid: currentCallSid,
-        }),
-      })
-
-      if (response.ok) {
-        setIsCallActive(false)
-        setIsRecording(false)
-        setCallStatus("")
-        setCurrentCallSid(null)
-
-        // Deduct cost from balance
-        setBalance((prev) => Math.max(0, prev - callCost))
-
-        toast.success(`Call ended. Duration: ${formatDuration(callDuration)}. Cost: ₹${callCost.toFixed(2)}`)
-
-        // Refresh call history
-        fetchCallHistory()
-        fetchUserBalance()
+      const response = await fetch("/api/calling/history")
+      const data = await response.json()
+      if (data.success) {
+        setCallHistory(data.calls)
       }
     } catch (error) {
-      console.error("Error ending call:", error)
-      toast.error("Error ending call")
-    }
-
-    // Reset state regardless
-    setIsCallActive(false)
-    setIsRecording(false)
-    setCallDuration(0)
-    setCallCost(0)
-    setCallStatus("")
-    setCurrentCallSid(null)
-  }
-
-  const toggleMute = () => {
-    setIsMuted(!isMuted)
-    toast.info(isMuted ? "Microphone unmuted" : "Microphone muted")
-  }
-
-  const toggleRecording = () => {
-    if (isCallActive) {
-      setIsRecording(!isRecording)
-      toast.info(isRecording ? "Recording stopped" : "Recording started")
+      console.error("Failed to load call history:", error)
     }
   }
+
+  useEffect(() => {
+    loadCallHistory()
+  }, [])
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
+    return `${mins}:${secs.toString().padStart(2, "0")}`
   }
 
-  const formatIndianPhoneNumber = (number: string) => {
-    const cleaned = number.replace(/\D/g, "")
-    if (cleaned.length === 10) {
-      return `+91${cleaned}`
-    } else if (cleaned.length === 12 && cleaned.startsWith("91")) {
-      return `+${cleaned}`
-    } else if (cleaned.length === 13 && cleaned.startsWith("91")) {
-      return `+${cleaned}`
-    }
-    return `+91${cleaned}`
-  }
-
-  const displayIndianPhoneNumber = (number: string) => {
-    const cleaned = number.replace(/\D/g, "")
-    if (cleaned.length === 10) {
-      return `+91 ${cleaned.slice(0, 5)} ${cleaned.slice(5)}`
-    } else if (cleaned.length >= 12) {
-      const withoutCountryCode = cleaned.slice(-10)
-      return `+91 ${withoutCountryCode.slice(0, 5)} ${withoutCountryCode.slice(5)}`
-    }
-    return number
-  }
-
-  const validateIndianPhoneNumber = (number: string) => {
-    const cleaned = number.replace(/\D/g, "")
-    return cleaned.length === 10 || (cleaned.length >= 12 && cleaned.includes("91"))
-  }
-
-  const dialPadNumbers = [
-    ["1", "2", "3"],
-    ["4", "5", "6"],
-    ["7", "8", "9"],
-    ["*", "0", "#"],
-  ]
-
-  const addDigit = (digit: string) => {
-    if (!isCallActive) {
-      setPhoneNumber((prev) => prev + digit)
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "completed":
+        return "default"
+      case "busy":
+        return "destructive"
+      case "no-answer":
+        return "secondary"
+      case "failed":
+        return "destructive"
+      default:
+        return "outline"
     }
   }
 
-  const clearNumber = () => {
-    if (!isCallActive) {
-      setPhoneNumber("")
-    }
-  }
-
-  const backspaceNumber = () => {
-    if (!isCallActive && phoneNumber.length > 0) {
-      setPhoneNumber((prev) => prev.slice(0, -1))
+  const getStatusText = (status: string) => {
+    switch (status.toLowerCase()) {
+      case "completed":
+        return "पूर्ण"
+      case "busy":
+        return "व्यस्त"
+      case "no-answer":
+        return "कोई उत्तर नहीं"
+      case "failed":
+        return "असफल"
+      case "ringing":
+        return "रिंग हो रहा है"
+      case "in-progress":
+        return "चल रहा है"
+      default:
+        return status
     }
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Live Calling</h1>
-          <p className="text-muted-foreground">Make calls, record conversations, and manage your calling history</p>
-        </div>
-        <div className="flex items-center space-x-4">
-          <div className="text-right">
-            <p className="text-sm text-muted-foreground">Account Balance</p>
-            <p className="text-2xl font-bold text-green-600">₹{balance.toFixed(2)}</p>
-          </div>
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+      <div className="flex items-center justify-between space-y-2">
+        <h2 className="text-3xl font-bold tracking-tight">कॉलिंग / Calling</h2>
+        <div className="flex items-center space-x-2">
+          <Badge variant="secondary">Live</Badge>
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="dialer">Dialer</TabsTrigger>
-          <TabsTrigger value="history">Call History</TabsTrigger>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="dialer" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Phone className="h-5 w-5" />
-                  <span>Phone Dialer</span>
-                </CardTitle>
-                <CardDescription>Enter an Indian phone number to make a call</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="+91 98765 43210"
-                    value={displayIndianPhoneNumber(phoneNumber)}
-                    onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))}
-                    disabled={isCallActive}
-                    className="text-lg text-center"
-                  />
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+        {/* Dialer Card */}
+        <Card className="col-span-4">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Phone className="h-5 w-5" />
+              <span>भारतीय फोन डायलर / Indian Phone Dialer</span>
+            </CardTitle>
+            <CardDescription>भारतीय मोबाइल नंबर पर कॉल करें (+91) / Make calls to Indian mobile numbers</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="phone">फोन नंबर / Phone Number</Label>
+              <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-1 px-3 py-2 border rounded-md bg-gray-50">
+                  <span className="text-sm font-medium">+91</span>
                 </div>
-
-                <div className="grid grid-cols-3 gap-2 max-w-xs mx-auto">
-                  {dialPadNumbers.map((row, rowIndex) =>
-                    row.map((digit) => (
-                      <Button
-                        key={digit}
-                        variant="outline"
-                        size="lg"
-                        onClick={() => addDigit(digit)}
-                        disabled={isCallActive}
-                        className="h-12 text-lg font-semibold"
-                      >
-                        {digit}
-                      </Button>
-                    )),
-                  )}
-                </div>
-
-                <div className="flex space-x-2">
-                  <Button
-                    onClick={clearNumber}
-                    variant="outline"
-                    disabled={isCallActive}
-                    className="flex-1 bg-transparent"
-                  >
-                    Clear
-                  </Button>
-                  <Button
-                    onClick={backspaceNumber}
-                    variant="outline"
-                    disabled={isCallActive || !phoneNumber}
-                    className="flex-1 bg-transparent"
-                  >
-                    ⌫
-                  </Button>
-                </div>
-
-                <div className="flex space-x-2">
-                  {!isCallActive ? (
-                    <Button
-                      onClick={makeCall}
-                      className="flex-1"
-                      size="lg"
-                      disabled={!validateIndianPhoneNumber(phoneNumber)}
-                    >
-                      <PhoneCall className="mr-2 h-4 w-4" />
-                      Call
-                    </Button>
-                  ) : (
-                    <Button onClick={endCall} variant="destructive" className="flex-1" size="lg">
-                      <PhoneOff className="mr-2 h-4 w-4" />
-                      End Call
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Call Controls</CardTitle>
-                <CardDescription>
-                  {isCallActive ? `${callStatus} - ${formatDuration(callDuration)}` : "No active call"}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {isCallActive && (
-                  <>
-                    <div className="text-center space-y-2">
-                      <div className="text-2xl font-bold">{displayIndianPhoneNumber(phoneNumber)}</div>
-                      <div className="flex items-center justify-center space-x-4 text-sm text-muted-foreground">
-                        <div className="flex items-center space-x-1">
-                          <Clock className="h-4 w-4" />
-                          <span>{formatDuration(callDuration)}</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <DollarSign className="h-4 w-4" />
-                          <span>₹{callCost.toFixed(2)}</span>
-                        </div>
-                      </div>
-                      <div className="text-sm text-blue-600 font-medium">{callStatus}</div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <Button onClick={toggleMute} variant={isMuted ? "destructive" : "outline"} size="lg">
-                        {isMuted ? <MicOff className="mr-2 h-4 w-4" /> : <Mic className="mr-2 h-4 w-4" />}
-                        {isMuted ? "Unmute" : "Mute"}
-                      </Button>
-
-                      <Button onClick={toggleRecording} variant={isRecording ? "destructive" : "outline"} size="lg">
-                        {isRecording ? <Square className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
-                        {isRecording ? "Stop Rec" : "Record"}
-                      </Button>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="flex items-center space-x-2">
-                        {volume[0] > 0 ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-                        <span>Volume: {volume[0]}%</span>
-                      </Label>
-                      <Slider value={volume} onValueChange={setVolume} max={100} step={1} className="w-full" />
-                    </div>
-                  </>
-                )}
-
-                {!isCallActive && (
-                  <div className="text-center text-muted-foreground py-8">
-                    <Phone className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>No active call</p>
-                    <p className="text-sm">Enter an Indian number and press call to start</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="history" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Call History</CardTitle>
-              <CardDescription>View your recent calls and listen to recordings</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {callHistory.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <PhoneCall className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No call history yet</p>
-                  <p className="text-sm">Your calls will appear here</p>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {callHistory.map((call) => (
-                    <div key={call.id} className="border rounded-lg p-4 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <div className="flex-shrink-0">
-                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                              <Phone className="h-5 w-5 text-blue-600" />
-                            </div>
-                          </div>
-                          <div>
-                            <p className="font-medium text-lg">{call.phoneNumber}</p>
-                            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                              <span className="flex items-center space-x-1">
-                                <Clock className="h-3 w-3" />
-                                <span>{formatDuration(call.duration)}</span>
-                              </span>
-                              <span className="flex items-center space-x-1">
-                                <DollarSign className="h-3 w-3" />
-                                <span>₹{call.cost.toFixed(2)}</span>
-                              </span>
-                              <span>{new Date(call.timestamp).toLocaleString()}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <Badge
-                          variant={
-                            call.status === "completed"
-                              ? "default"
-                              : call.status === "failed"
-                                ? "destructive"
-                                : "secondary"
-                          }
-                        >
-                          {call.status}
-                        </Badge>
-                      </div>
-
-                      {call.recordingUrl && (
-                        <AudioPlayer recordingUrl={call.recordingUrl} callId={call.id} phoneNumber={call.phoneNumber} />
-                      )}
-
-                      {call.transcript && (
-                        <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <div className="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center">
-                              <span className="text-xs text-white font-bold">T</span>
-                            </div>
-                            <span className="text-sm font-medium text-blue-800">Transcript</span>
-                          </div>
-                          <p className="text-sm text-blue-700 leading-relaxed">{call.transcript}</p>
-                        </div>
-                      )}
-
-                      {!call.recordingUrl && call.status === "completed" && (
-                        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                          <p className="text-sm text-gray-600 text-center">No recording available for this call</p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="settings" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Call Settings</CardTitle>
-              <CardDescription>Configure your calling preferences</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Auto-record calls</Label>
-                  <p className="text-sm text-muted-foreground">Automatically start recording when a call begins</p>
-                </div>
-                <Switch checked={autoRecord} onCheckedChange={setAutoRecord} />
+                <Input
+                  id="phone"
+                  placeholder="98765 43210"
+                  value={phoneNumber}
+                  onChange={handlePhoneNumberChange}
+                  maxLength={11} // 5 + 1 space + 5
+                  className="flex-1"
+                />
               </div>
+              <p className="text-xs text-muted-foreground">
+                10 अंकों का भारतीय मोबाइल नंबर दर्ज करें / Enter 10-digit Indian mobile number
+              </p>
+            </div>
 
-              <div className="space-y-2">
-                <Label>Call Rate</Label>
-                <p className="text-sm text-muted-foreground">₹1.50 per minute for Indian numbers</p>
-              </div>
+            <div className="flex items-center space-x-2">
+              <Switch id="recording" checked={isRecording} onCheckedChange={setIsRecording} />
+              <Label htmlFor="recording" className="flex items-center space-x-2">
+                {isRecording ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
+                <span>रिकॉर्डिंग / Recording</span>
+              </Label>
+            </div>
 
-              <div className="space-y-2">
-                <Label>Current Balance</Label>
-                <p className="text-2xl font-bold text-green-600">₹{balance.toFixed(2)}</p>
-                <Button variant="outline" size="sm">
-                  Add Funds
+            <div className="flex space-x-2">
+              {!isCalling ? (
+                <Button
+                  onClick={makeCall}
+                  disabled={loading || !phoneNumber || phoneNumber.replace(/\s/g, "").length !== 10}
+                  className="flex-1"
+                >
+                  <PhoneCall className="mr-2 h-4 w-4" />
+                  {loading ? "कॉल कर रहे हैं..." : "कॉल करें / Call"}
                 </Button>
-              </div>
+              ) : (
+                <Button onClick={endCall} variant="destructive" className="flex-1">
+                  <Square className="mr-2 h-4 w-4" />
+                  कॉल समाप्त करें / End Call
+                </Button>
+              )}
+            </div>
 
-              <div className="space-y-2">
-                <Label>Recording Storage</Label>
-                <p className="text-sm text-muted-foreground">
-                  Recordings are stored for 30 days and can be downloaded anytime
-                </p>
+            {currentCall && (
+              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">कॉल चल रहा है / Call in Progress</p>
+                    <p className="text-sm text-muted-foreground">
+                      To: {currentCall.to} | From: {currentCall.from}
+                    </p>
+                  </div>
+                  <Badge variant="default">{getStatusText(currentCall.status)}</Badge>
+                </div>
               </div>
+            )}
 
-              <div className="space-y-2">
-                <Label>Supported Numbers</Label>
-                <p className="text-sm text-muted-foreground">
-                  Indian mobile numbers (10 digits) - Format: +91 98765 43210
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p>• भारतीय कॉल दर: ₹0.50 प्रति मिनट / Indian call rate: ₹0.50 per minute</p>
+              <p>• Twilio Account: AC86b70...74cd</p>
+              <p>• From Number: +1 (925) 261-7266</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Call History */}
+        <Card className="col-span-3">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <Clock className="h-5 w-5" />
+              <span>कॉल हिस्ट्री / Call History</span>
+            </CardTitle>
+            <CardDescription>हाल की कॉल्स / Recent calls</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {callHistory.length === 0 ? (
+                <p className="text-center text-muted-foreground py-4">कोई कॉल हिस्ट्री नहीं / No call history</p>
+              ) : (
+                callHistory.slice(0, 10).map((call) => (
+                  <div key={call.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="p-2 bg-blue-100 rounded-full">
+                        <User className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium">{call.to}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(call.timestamp).toLocaleString("hi-IN")}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <Badge variant={getStatusColor(call.status)} className="mb-1">
+                        {getStatusText(call.status)}
+                      </Badge>
+                      <p className="text-xs text-muted-foreground">
+                        {call.duration > 0 ? formatDuration(call.duration) : "0:00"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">₹{call.cost.toFixed(2)}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Statistics */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">कुल कॉल्स / Total Calls</CardTitle>
+            <PhoneCall className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{callHistory.length}</div>
+            <p className="text-xs text-muted-foreground">आज तक / Till date</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">सफल कॉल्स / Successful</CardTitle>
+            <Phone className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{callHistory.filter((call) => call.status === "completed").length}</div>
+            <p className="text-xs text-muted-foreground">पूर्ण कॉल्स / Completed calls</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">कुल समय / Total Duration</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {formatDuration(callHistory.reduce((total, call) => total + call.duration, 0))}
+            </div>
+            <p className="text-xs text-muted-foreground">मिनट:सेकंड / Minutes:Seconds</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">कुल लागत / Total Cost</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              ₹{callHistory.reduce((total, call) => total + call.cost, 0).toFixed(2)}
+            </div>
+            <p className="text-xs text-muted-foreground">भारतीय रुपये / Indian Rupees</p>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

@@ -3,6 +3,7 @@
 import type * as React from "react"
 import {
   AudioWaveform,
+  Bot,
   Command,
   Frame,
   GalleryVerticalEnd,
@@ -10,19 +11,11 @@ import {
   PieChart,
   Settings2,
   SquareTerminal,
-  Phone,
-  MessageSquare,
-  Mail,
   Users,
+  MessageSquare,
   BarChart3,
   CreditCard,
-  Bell,
-  Facebook,
-  Instagram,
-  Twitter,
-  Youtube,
-  Smartphone,
-  PhoneCall,
+  UserPlus,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -34,9 +27,9 @@ import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarRail } fr
 // This is sample data.
 const data = {
   user: {
-    name: "BrandBuzz User",
-    email: "user@brandbuzz.com",
-    avatar: "/placeholder-user.jpg",
+    name: "shadcn",
+    email: "m@example.com",
+    avatar: "/avatars/shadcn.jpg",
   },
   teams: [
     {
@@ -45,12 +38,12 @@ const data = {
       plan: "Enterprise",
     },
     {
-      name: "Marketing Team",
+      name: "Acme Corp.",
       logo: AudioWaveform,
       plan: "Startup",
     },
     {
-      name: "Sales Division",
+      name: "Evil Corp.",
       logo: Command,
       plan: "Free",
     },
@@ -63,59 +56,67 @@ const data = {
       isActive: true,
     },
     {
-      title: "Contacts",
-      url: "/dashboard/contacts",
-      icon: Users,
-    },
-    {
-      title: "Email Marketing",
-      url: "/dashboard/email",
-      icon: Mail,
-    },
-    {
-      title: "SMS Marketing",
-      url: "/dashboard/sms",
-      icon: Smartphone,
-    },
-    {
-      title: "WhatsApp",
-      url: "/dashboard/whatsapp",
+      title: "Communication",
+      url: "#",
       icon: MessageSquare,
-    },
-    {
-      title: "Voice Calling",
-      url: "/dashboard/calling",
-      icon: PhoneCall,
-    },
-    {
-      title: "Voice Broadcasting",
-      url: "/dashboard/voice",
-      icon: Phone,
+      items: [
+        {
+          title: "WhatsApp",
+          url: "/dashboard/whatsapp",
+        },
+        {
+          title: "SMS",
+          url: "/dashboard/sms",
+        },
+        {
+          title: "Email",
+          url: "/dashboard/email",
+        },
+        {
+          title: "Voice",
+          url: "/dashboard/voice",
+        },
+        {
+          title: "Calling",
+          url: "/dashboard/calling",
+        },
+      ],
     },
     {
       title: "Social Media",
       url: "#",
-      icon: Frame,
+      icon: Bot,
       items: [
-        {
-          title: "Facebook",
-          url: "/dashboard/facebook",
-          icon: Facebook,
-        },
         {
           title: "Instagram",
           url: "/dashboard/instagram",
-          icon: Instagram,
+        },
+        {
+          title: "Facebook",
+          url: "/dashboard/facebook",
         },
         {
           title: "Twitter",
           url: "/dashboard/twitter",
-          icon: Twitter,
         },
         {
           title: "YouTube",
           url: "/dashboard/youtube",
-          icon: Youtube,
+        },
+      ],
+    },
+    {
+      title: "Account Management",
+      url: "#",
+      icon: UserPlus,
+      items: [
+        {
+          title: "Social Accounts",
+          url: "/dashboard/social-accounts",
+        },
+        {
+          title: "Email Accounts",
+          url: "/dashboard/accounts",
         },
       ],
     },
@@ -125,19 +126,9 @@ const data = {
       icon: BarChart3,
     },
     {
-      title: "Account Management",
-      url: "#",
-      icon: Settings2,
-      items: [
-        {
-          title: "Email Accounts",
-          url: "/dashboard/accounts",
-        },
-        {
-          title: "Social Accounts",
-          url: "/dashboard/social-accounts",
-        },
-      ],
+      title: "Contacts",
+      url: "/dashboard/contacts",
+      icon: Users,
     },
     {
       title: "Billing",
@@ -145,24 +136,42 @@ const data = {
       icon: CreditCard,
     },
     {
-      title: "Notifications",
-      url: "/dashboard/notifications",
-      icon: Bell,
+      title: "Settings",
+      url: "#",
+      icon: Settings2,
+      items: [
+        {
+          title: "General",
+          url: "#",
+        },
+        {
+          title: "Team",
+          url: "#",
+        },
+        {
+          title: "Billing",
+          url: "#",
+        },
+        {
+          title: "Limits",
+          url: "#",
+        },
+      ],
     },
   ],
   projects: [
     {
-      name: "Email Campaign 2024",
+      name: "Design Engineering",
       url: "#",
       icon: Frame,
     },
     {
-      name: "Social Media Boost",
+      name: "Sales & Marketing",
       url: "#",
       icon: PieChart,
     },
     {
-      name: "SMS Outreach",
+      name: "Travel",
       url: "#",
       icon: Map,
     },

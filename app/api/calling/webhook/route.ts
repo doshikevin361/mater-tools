@@ -10,45 +10,45 @@ export async function POST(request: NextRequest) {
     const callDuration = formData.get("CallDuration") as string
     const from = formData.get("From") as string
     const to = formData.get("To") as string
+    const timestamp = formData.get("Timestamp") as string
 
-    console.log("Webhook received:", { callSid, callStatus, callDuration, from, to })
+    console.log("Call webhook received:", {
+      callSid,
+      callStatus,
+      callDuration,
+      from,
+      to,
+      timestamp,
+    })
 
-    if (!callSid) {
-      return NextResponse.json({ error: "Missing CallSid" }, { status: 400 })
-    }
-
-    // Calculate cost based on duration (₹1.5 per minute)
-    const duration = Number.parseInt(callDuration) || 0
-    const cost = Math.ceil(duration / 60) * 1.5
+    // Connect to database
+    const { db } = await connectToDatabase()
 
     // Update call record in database
-    try {
-      const { db } = await connectToDatabase()
-
-      const updateData: any = {
-        status: callStatus,
-        updatedAt: new Date(),
-      }
-
-      if (duration > 0) {
-        updateData.duration = duration
-        updateData.cost = cost
-      }
-
-      if (callStatus === "completed") {
-        updateData.endTime = new Date()
-      }
-
-      await db.collection("calls").updateOne({ callSid }, { $set: updateData })
-
-      console.log("Call record updated:", callSid, callStatus)
-    } catch (dbError) {
-      console.error("Database error in webhook:", dbError)
+    const callRecord = {
+      callSid,
+      status: callStatus,
+      duration: Number.parseInt(callDuration) || 0,
+      from,
+      to,
+      timestamp: timestamp || new Date().toISOString(),
+      cost: calculateCallCost(Number.parseInt(callDuration) || 0),
+      updatedAt: new Date(),
     }
+
+    await db.collection("call_history").updateOne({ callSid }, { $set: callRecord }, { upsert: true })
+
+    console.log("Call record updated:", callRecord)
 
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error("Webhook error:", error)
     return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 })
   }
+}
+
+function calculateCallCost(durationSeconds: number): number {
+  // ₹0.50 per minute for Indian calls
+  const minutes = Math.ceil(durationSeconds / 60)
+  return minutes * 0.5
 }
