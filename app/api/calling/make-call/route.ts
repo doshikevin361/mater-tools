@@ -3,7 +3,7 @@ import { connectToDatabase } from "@/lib/mongodb"
 
 export async function POST(request: NextRequest) {
   try {
-    const { phoneNumber } = await request.json()
+    const { phoneNumber, message } = await request.json()
 
     if (!phoneNumber) {
       return NextResponse.json({ success: false, error: "Phone number is required" }, { status: 400 })
@@ -12,51 +12,38 @@ export async function POST(request: NextRequest) {
     // Format Indian phone number
     const formatIndianNumber = (number: string): string => {
       const cleaned = number.replace(/\D/g, "")
-
-      if (cleaned.startsWith("91") && cleaned.length === 12) {
-        return `+${cleaned}`
-      }
-
       if (cleaned.length === 10) {
         return `+91${cleaned}`
       }
-
-      if (cleaned.startsWith("91")) {
+      if (cleaned.startsWith("91") && cleaned.length === 12) {
         return `+${cleaned}`
       }
-
       return `+91${cleaned}`
     }
 
     const formattedNumber = formatIndianNumber(phoneNumber)
 
-    // Log the call attempt to database
-    try {
-      const { db } = await connectToDatabase()
-
-      const callRecord = {
-        phoneNumber: formattedNumber,
-        status: "initiated",
-        timestamp: new Date(),
-        duration: 0,
-        cost: 0,
-        type: "browser_call",
-      }
-
-      await db.collection("call_history").insertOne(callRecord)
-      console.log(`Call attempt logged for ${formattedNumber}`)
-    } catch (dbError) {
-      console.error("Failed to log call to database:", dbError)
-      // Continue with call even if logging fails
+    // Store call record in database
+    const { db } = await connectToDatabase()
+    const callRecord = {
+      phoneNumber: formattedNumber,
+      status: "initiated",
+      timestamp: new Date(),
+      duration: 0,
+      cost: 0,
+      type: "browser_call",
     }
+
+    const result = await db.collection("calls").insertOne(callRecord)
 
     return NextResponse.json({
       success: true,
-      message: "Call initiated",
+      callId: result.insertedId,
       phoneNumber: formattedNumber,
+      message: "Call initiated successfully",
     })
   } catch (error) {
-    console.error("Error in make-call API:", error)
-    return NextResponse.json({ success: false, error: "Failed to initiate call" }, { status: 500 })
+    console.error("Error making call:", error)
+    return NextResponse.json({ success: false, error: "Failed to make call" }, { status: 500 })
   }
 }
