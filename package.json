@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@aws-sdk/credential-providers": "latest",
+    "@google/generative-ai": "latest",
     "@hookform/resolvers": "^3.9.1",
     "@mongodb-js/zstd": "latest",
     "@radix-ui/react-accordion": "latest",

@@ -23,6 +23,9 @@ import {
   Eye,
   Heart,
   MessageCircle,
+  ThumbsUp,
+  ThumbsDown,
+  Send,
 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 
@@ -39,9 +42,33 @@ interface FacebookCampaign {
   createdAt: string
 }
 
+interface FacebookAccount {
+  _id: string
+  email: string
+  username?: string
+  status: string
+  verified: boolean
+}
+
+interface CommentCampaign {
+  _id: string
+  name: string
+  platform: string
+  targetUrl: string
+  sentiment: string
+  totalComments: number
+  completedComments: number
+  failedComments: number
+  status: string
+  createdAt: string
+}
+
 export default function FacebookPage() {
   const [campaigns, setCampaigns] = useState<FacebookCampaign[]>([])
+  const [accounts, setAccounts] = useState<FacebookAccount[]>([])
+  const [commentCampaigns, setCommentCampaigns] = useState<CommentCampaign[]>([])
   const [loading, setLoading] = useState(false)
+  const [commentLoading, setCommentLoading] = useState(false)
   const [stats, setStats] = useState({
     totalCampaigns: 0,
     totalFollowers: 12500,
@@ -56,8 +83,17 @@ export default function FacebookPage() {
   const [targetCount, setTargetCount] = useState("")
   const [pageUrl, setPageUrl] = useState("")
 
+  // Comment form state
+  const [commentTargetUrl, setCommentTargetUrl] = useState("")
+  const [commentSentiment, setCommentSentiment] = useState<"positive" | "negative" | "">("")
+  const [commentCount, setCommentCount] = useState("50")
+  const [generatedComments, setGeneratedComments] = useState<string[]>([])
+  const [showComments, setShowComments] = useState(false)
+
   useEffect(() => {
     fetchCampaigns()
+    fetchAccounts()
+    fetchCommentCampaigns()
   }, [])
 
   const fetchCampaigns = async () => {
@@ -80,6 +116,42 @@ export default function FacebookPage() {
       }
     } catch (error) {
       console.error("Error fetching campaigns:", error)
+    }
+  }
+
+  const fetchAccounts = async () => {
+    try {
+      const userData = localStorage.getItem("user")
+      if (!userData) return
+
+      const user = JSON.parse(userData)
+      const userId = user._id || user.id
+
+      const response = await fetch(`/api/facebook-accounts/create?userId=${userId}`)
+      if (response.ok) {
+        const data = await response.json()
+        setAccounts(data.accounts || [])
+      }
+    } catch (error) {
+      console.error("Error fetching accounts:", error)
+    }
+  }
+
+  const fetchCommentCampaigns = async () => {
+    try {
+      const userData = localStorage.getItem("user")
+      if (!userData) return
+
+      const user = JSON.parse(userData)
+      const userId = user._id || user.id
+
+      const response = await fetch(`/api/comments/campaigns?userId=${userId}&platform=facebook`)
+      if (response.ok) {
+        const data = await response.json()
+        setCommentCampaigns(data.campaigns || [])
+      }
+    } catch (error) {
+      console.error("Error fetching comment campaigns:", error)
     }
   }
 
@@ -140,6 +212,120 @@ export default function FacebookPage() {
     }
   }
 
+  const generateComments = async () => {
+    if (!commentTargetUrl || !commentSentiment) {
+      toast({
+        title: "Missing Information",
+        description: "Please provide target URL and select sentiment",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setCommentLoading(true)
+    try {
+      const response = await fetch("/api/comments/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          platform: "facebook",
+          sentiment: commentSentiment,
+          targetUrl: commentTargetUrl,
+          count: Number.parseInt(commentCount),
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setGeneratedComments(data.comments)
+        setShowComments(true)
+        toast({
+          title: "Comments Generated!",
+          description: `Generated ${data.comments.length} ${commentSentiment} comments for Facebook.`,
+        })
+      } else {
+        throw new Error("Failed to generate comments")
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to generate comments. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setCommentLoading(false)
+    }
+  }
+
+  const postComments = async () => {
+    if (generatedComments.length === 0) {
+      toast({
+        title: "No Comments",
+        description: "Please generate comments first",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (accounts.length === 0) {
+      toast({
+        title: "No Accounts",
+        description: "No Facebook accounts available. Please create accounts first.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setCommentLoading(true)
+    try {
+      const userData = localStorage.getItem("user")
+      if (!userData) throw new Error("User not logged in")
+
+      const user = JSON.parse(userData)
+      const userId = user._id || user.id
+
+      const response = await fetch("/api/comments/post", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          platform: "facebook",
+          targetUrl: commentTargetUrl,
+          comments: generatedComments,
+          sentiment: commentSentiment,
+          campaignName: `Facebook ${commentSentiment} Comments - ${new Date().toLocaleDateString()}`,
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        toast({
+          title: "Comments Posted!",
+          description: `Started posting ${generatedComments.length} comments. ${data.results.successful} successful, ${data.results.failed} failed.`,
+        })
+
+        // Reset form
+        setCommentTargetUrl("")
+        setCommentSentiment("")
+        setGeneratedComments([])
+        setShowComments(false)
+
+        // Refresh comment campaigns
+        fetchCommentCampaigns()
+      } else {
+        throw new Error("Failed to post comments")
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to post comments. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setCommentLoading(false)
+    }
+  }
+
   const toggleCampaign = async (campaignId: string, currentStatus: string) => {
     try {
       const newStatus = currentStatus === "active" ? "paused" : "active"
@@ -177,7 +363,7 @@ export default function FacebookPage() {
           </div>
           <div>
             <h1 className="text-3xl font-bold text-brand-gradient">Facebook Growth</h1>
-            <p className="text-gray-600 mt-1">Boost your Facebook presence with targeted campaigns</p>
+            <p className="text-gray-600 mt-1">Boost your Facebook presence with targeted campaigns and comments</p>
           </div>
         </div>
       </div>
@@ -225,13 +411,14 @@ export default function FacebookPage() {
 
         <Card className="card-gradient shadow-brand hover:shadow-lg transition-all duration-300">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-700">Total Spent</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-700">Available Accounts</CardTitle>
             <DollarSign className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-brand-gradient">₹{stats.totalSpent.toFixed(2)}</div>
+            <div className="text-2xl font-bold text-brand-gradient">{accounts.length}</div>
             <p className="text-xs text-gray-600 mt-1">
-              <span className="text-blue-600 font-medium">₹0.05</span> per follower
+              <span className="text-blue-600 font-medium">{accounts.filter((a) => a.status === "active").length}</span>{" "}
+              active accounts
             </p>
           </CardContent>
         </Card>
@@ -239,7 +426,7 @@ export default function FacebookPage() {
 
       {/* Main Content */}
       <Tabs defaultValue="create" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 bg-white/50 backdrop-blur-sm border border-purple-200">
+        <TabsList className="grid w-full grid-cols-4 bg-white/50 backdrop-blur-sm border border-purple-200">
           <TabsTrigger value="create" className="data-[state=active]:bg-brand-gradient data-[state=active]:text-white">
             <Plus className="mr-2 h-4 w-4" />
             Create Campaign
@@ -250,6 +437,13 @@ export default function FacebookPage() {
           >
             <Target className="mr-2 h-4 w-4" />
             My Campaigns
+          </TabsTrigger>
+          <TabsTrigger
+            value="comments"
+            className="data-[state=active]:bg-brand-gradient data-[state=active]:text-white"
+          >
+            <MessageCircle className="mr-2 h-4 w-4" />
+            Comments
           </TabsTrigger>
           <TabsTrigger
             value="analytics"
@@ -426,39 +620,21 @@ export default function FacebookPage() {
                             className="border-purple-200 hover:border-purple-300"
                           >
                             {campaign.status === "active" ? (
-                              <Pause className="h-4 w-4" />
+                              <Pause className="h-4 w-4 text-gray-600" />
                             ) : (
-                              <Play className="h-4 w-4" />
+                              <Play className="h-4 w-4 text-gray-600" />
                             )}
                           </Button>
                         </div>
                       </div>
-
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
-                        <div className="text-center">
-                          <div className="text-lg font-bold text-brand-gradient">{campaign.currentCount}</div>
-                          <div className="text-xs text-gray-600">Current</div>
+                      <div className="flex justify-between">
+                        <div>
+                          <p className="text-sm text-gray-600">Target: {campaign.targetCount}</p>
+                          <p className="text-sm text-gray-600">Current: {campaign.currentCount}</p>
                         </div>
-                        <div className="text-center">
-                          <div className="text-lg font-bold text-brand-gradient">{campaign.targetCount}</div>
-                          <div className="text-xs text-gray-600">Target</div>
+                        <div>
+                          <Progress value={(campaign.currentCount / campaign.targetCount) * 100} />
                         </div>
-                        <div className="text-center">
-                          <div className="text-lg font-bold text-brand-gradient">{campaign.engagement}</div>
-                          <div className="text-xs text-gray-600">Engagement</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-lg font-bold text-brand-gradient">₹{campaign.cost.toFixed(2)}</div>
-                          <div className="text-xs text-gray-600">Spent</div>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>Progress</span>
-                          <span>{Math.round((campaign.currentCount / campaign.targetCount) * 100)}%</span>
-                        </div>
-                        <Progress value={(campaign.currentCount / campaign.targetCount) * 100} className="h-2" />
                       </div>
                     </div>
                   ))}
@@ -468,64 +644,123 @@ export default function FacebookPage() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="comments">
+          <Card className="card-gradient shadow-brand">
+            <CardHeader>
+              <CardTitle className="text-brand-gradient">Facebook Comments</CardTitle>
+              <CardDescription>Generate and post comments on your Facebook posts</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="commentTargetUrl">Target URL</Label>
+                  <Input
+                    id="commentTargetUrl"
+                    placeholder="https://facebook.com/your-post"
+                    value={commentTargetUrl}
+                    onChange={(e) => setCommentTargetUrl(e.target.value)}
+                    className="border-purple-200 focus:border-purple-400"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="commentSentiment">Sentiment</Label>
+                  <Select value={commentSentiment} onValueChange={setCommentSentiment}>
+                    <SelectTrigger className="border-purple-200 focus:border-purple-400">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="positive">
+                        <div className="flex items-center gap-2">
+                          <ThumbsUp className="h-4 w-4 text-green-600" />
+                          Positive
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="negative">
+                        <div className="flex items-center gap-2">
+                          <ThumbsDown className="h-4 w-4 text-red-600" />
+                          Negative
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="commentCount">Number of Comments</Label>
+                  <Input
+                    id="commentCount"
+                    type="number"
+                    placeholder="50"
+                    value={commentCount}
+                    onChange={(e) => setCommentCount(e.target.value)}
+                    className="border-purple-200 focus:border-purple-400"
+                  />
+                </div>
+              </div>
+
+              <Button
+                onClick={generateComments}
+                disabled={commentLoading}
+                className="w-full btn-gradient text-white shadow-brand"
+              >
+                {commentLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Generating Comments...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="mr-2 h-4 w-4" />
+                    Generate Comments
+                  </>
+                )}
+              </Button>
+
+              {showComments && (
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-gray-900">Generated Comments</h3>
+                  <div className="max-h-60 overflow-y-auto">
+                    {generatedComments.map((comment, index) => (
+                      <div key={index} className="p-4 bg-white rounded-lg border border-gray-200">
+                        {comment}
+                      </div>
+                    ))}
+                  </div>
+                  <Button
+                    onClick={postComments}
+                    disabled={commentLoading}
+                    className="w-full btn-gradient text-white shadow-brand"
+                  >
+                    {commentLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Posting Comments...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="mr-2 h-4 w-4" />
+                        Post Comments
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="analytics">
-          <div className="grid gap-6 md:grid-cols-2">
-            <Card className="card-gradient shadow-brand">
-              <CardHeader>
-                <CardTitle className="text-brand-gradient">Growth Analytics</CardTitle>
-                <CardDescription>Track your Facebook growth performance</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg border border-blue-200">
-                    <div className="text-2xl font-bold text-blue-700">{stats.totalFollowers}</div>
-                    <div className="text-sm text-blue-600">Total Followers</div>
-                  </div>
-                  <div className="text-center p-4 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg border border-pink-200">
-                    <div className="text-2xl font-bold text-pink-700">{stats.totalEngagement}</div>
-                    <div className="text-sm text-pink-600">Total Engagement</div>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Growth Rate</span>
-                    <span className="text-green-600 font-medium">+{stats.growthRate}%</span>
-                  </div>
-                  <Progress value={stats.growthRate} className="h-2" />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="card-gradient shadow-brand">
-              <CardHeader>
-                <CardTitle className="text-brand-gradient">Campaign Performance</CardTitle>
-                <CardDescription>Success metrics across all campaigns</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="text-center p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
-                    <div className="text-2xl font-bold text-green-700">
-                      {campaigns.filter((c) => c.status === "active").length}
-                    </div>
-                    <div className="text-sm text-green-600">Active Campaigns</div>
-                  </div>
-                  <div className="text-center p-4 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-lg border border-purple-200">
-                    <div className="text-2xl font-bold text-purple-700">₹{stats.totalSpent.toFixed(2)}</div>
-                    <div className="text-sm text-purple-600">Total Investment</div>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Average Success Rate</span>
-                    <span className="text-green-600 font-medium">87%</span>
-                  </div>
-                  <Progress value={87} className="h-2" />
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <Card className="card-gradient shadow-brand">
+            <CardHeader>
+              <CardTitle className="text-brand-gradient">Analytics</CardTitle>
+              <CardDescription>View detailed analytics for your Facebook campaigns</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {/* Placeholder for analytics content */}
+              <p className="text-gray-600">Analytics will be displayed here.</p>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
