@@ -250,7 +250,7 @@ export interface TempAccount {
 export interface SocialAccount {
   _id?: string
   accountNumber: number
-  platform: "instagram" | "facebook" | "twitter" | "youtube"
+  platform: "instagram" | "facebook"
   email: string
   username?: string
   profile: {
@@ -273,161 +273,6 @@ export interface SocialAccount {
   createdAt: Date
   updatedAt: Date
   lastActivity?: Date
-}
-
-// Schema for Facebook accounts
-export interface FacebookAccount {
-  _id?: string
-  accountNumber: number
-  platform: "facebook"
-  email: string
-  username?: string
-  password: string
-  profile: {
-    firstName: string
-    lastName: string
-    fullName: string
-    birthDate: string
-    gender: string
-  }
-  status: "active" | "failed" | "suspended"
-  verified: boolean
-  emailVerificationRequired?: boolean
-  challengeType?: string
-  challengeBypassed?: boolean
-  enhancedStealth: boolean
-  noProxy: boolean
-  bypassStrategies: boolean
-  otpIntegration: boolean
-  ipEvasion?: any
-  userId: string
-  createdAt: Date
-  updatedAt: Date
-}
-
-// Schema for Instagram accounts
-export interface InstagramAccount {
-  _id?: string
-  accountNumber: number
-  platform: "instagram"
-  email: string
-  username?: string
-  password: string
-  profile: {
-    firstName: string
-    lastName: string
-    fullName: string
-    birthDate: string
-    gender: string
-  }
-  status: "active" | "failed" | "suspended"
-  verified: boolean
-  emailVerified?: boolean
-  phoneVerificationRequired?: boolean
-  birthdayCompleted?: boolean
-  passwordDialogHandled?: boolean
-  indianProfile?: boolean
-  deviceProfile?: string
-  realAccount: boolean
-  browserAutomation: boolean
-  emailOnly: boolean
-  enhanced: boolean
-  maxStealth: boolean
-  noProxy: boolean
-  stealthStrategy: string
-  userId: string
-  createdAt: Date
-  updatedAt: Date
-}
-
-// Schema for Twitter accounts
-export interface TwitterAccount {
-  _id?: string
-  accountNumber: number
-  platform: "twitter"
-  email: string
-  username?: string
-  password: string
-  profile: {
-    firstName: string
-    lastName: string
-    fullName: string
-    birthDate: string
-    gender: string
-  }
-  status: "active" | "failed" | "suspended"
-  verified: boolean
-  emailVerified?: boolean
-  birthdayCompleted?: boolean
-  passwordCompleted?: boolean
-  usernameCompleted?: boolean
-  indianProfile?: boolean
-  deviceProfile?: string
-  realAccount: boolean
-  browserAutomation: boolean
-  emailOnly: boolean
-  enhanced: boolean
-  maxStealth: boolean
-  noProxy: boolean
-  stealthStrategy: string
-  userId: string
-  createdAt: Date
-  updatedAt: Date
-}
-
-// Schema for YouTube accounts (similar structure)
-export interface YouTubeAccount {
-  _id?: string
-  accountNumber: number
-  platform: "youtube"
-  email: string
-  username?: string
-  password: string
-  profile: {
-    firstName: string
-    lastName: string
-    fullName: string
-    birthDate: string
-    gender: string
-  }
-  status: "active" | "failed" | "suspended"
-  verified: boolean
-  emailVerified?: boolean
-  realAccount: boolean
-  browserAutomation: boolean
-  enhanced: boolean
-  maxStealth: boolean
-  noProxy: boolean
-  userId: string
-  createdAt: Date
-  updatedAt: Date
-}
-
-// Schema for Comment Campaigns
-export interface CommentCampaign {
-  _id?: string
-  userId: string
-  platform: "facebook" | "instagram" | "twitter" | "youtube"
-  name: string
-  targetUrl: string
-  sentiment: "positive" | "negative"
-  totalComments: number
-  completedComments: number
-  failedComments: number
-  status: "pending" | "running" | "completed" | "failed" | "paused"
-  comments: string[]
-  accountsUsed: string[] // Account IDs used for commenting
-  results: {
-    accountId: string
-    username: string
-    comment: string
-    status: "success" | "failed"
-    error?: string
-    timestamp: Date
-  }[]
-  createdAt: Date
-  updatedAt: Date
-  completedAt?: Date
 }
 
 // Database indexes for optimal performance
@@ -468,16 +313,6 @@ export const DatabaseIndexes = {
     { userId: 1, platform: 1 },
     { userId: 1, status: 1 },
     { email: 1 },
-    { platform: 1, status: 1 },
-  ],
-  facebook_accounts: [{ userId: 1, createdAt: -1 }, { userId: 1, status: 1 }, { email: 1 }, { status: 1 }],
-  instagram_accounts: [{ userId: 1, createdAt: -1 }, { userId: 1, status: 1 }, { email: 1 }, { status: 1 }],
-  twitter_accounts: [{ userId: 1, createdAt: -1 }, { userId: 1, status: 1 }, { email: 1 }, { status: 1 }],
-  youtube_accounts: [{ userId: 1, createdAt: -1 }, { userId: 1, status: 1 }, { email: 1 }, { status: 1 }],
-  comment_campaigns: [
-    { userId: 1, createdAt: -1 },
-    { userId: 1, platform: 1 },
-    { userId: 1, status: 1 },
     { platform: 1, status: 1 },
   ],
 }
