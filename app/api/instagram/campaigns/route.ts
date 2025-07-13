@@ -131,7 +131,7 @@ const STEALTH_CONFIG = {
   simulateTypos: true,
   humanMouseMovements: true,
   realTimingPatterns: true,
-  headlessMode: false // Set to true for production
+  headlessMode: true // Set to true for production
 }
 
 // Debug logging

@@ -30,7 +30,7 @@ const STEALTH_CONFIG = {
   maxDelayBetweenAccounts: 45 * 60 * 1000, // 45 minutes maximum
   
   // Session management
-  headlessMode: false, // Use headless for better performance
+  headlessMode: true, // Use headless for better performance
   maxAccountsPerSession: 10, // Increased for high volume
   maxAccountsPerDay: 50, // Daily limit
   
