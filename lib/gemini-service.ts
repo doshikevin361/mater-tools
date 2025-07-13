@@ -3,334 +3,243 @@ import { GoogleGenerativeAI } from "@google/generative-ai"
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "")
 
-export interface CommentGenerationOptions {
-  postContent: string
-  commentStyle: "engaging" | "supportive" | "question" | "compliment" | "casual"
-  platform: "instagram" | "facebook" | "twitter" | "youtube"
-  maxLength?: number
-}
-
-export interface GeneratedComment {
-  comment: string
-  confidence: number
-  style: string
-  platform: string
-}
-
-// Platform-specific comment styles and constraints
+// Platform-specific comment constraints
 const PLATFORM_CONSTRAINTS = {
   instagram: {
     maxLength: 2200,
-    allowEmojis: true,
-    allowHashtags: true,
-    tone: "casual_friendly",
+    style: "casual, emoji-friendly, hashtag-aware",
+    tone: "visual-focused, engaging, community-oriented",
   },
   facebook: {
     maxLength: 8000,
-    allowEmojis: true,
-    allowHashtags: false,
-    tone: "conversational",
+    style: "conversational, detailed, personal",
+    tone: "friendly, thoughtful, discussion-oriented",
   },
   twitter: {
     maxLength: 280,
-    allowEmojis: true,
-    allowHashtags: true,
-    tone: "concise",
+    style: "concise, witty, trending-aware",
+    tone: "quick, clever, conversation-starting",
   },
   youtube: {
     maxLength: 10000,
-    allowEmojis: true,
-    allowHashtags: false,
-    tone: "detailed",
+    style: "detailed, constructive, video-focused",
+    tone: "helpful, appreciative, content-specific",
   },
 }
 
-// Comment style prompts
-const COMMENT_PROMPTS = {
+// Comment style templates
+const COMMENT_STYLES = {
   engaging: {
-    instagram:
-      "Create an engaging Instagram comment that sparks conversation. Use 1-2 relevant emojis and keep it authentic and friendly.",
-    facebook: "Write an engaging Facebook comment that encourages discussion. Be conversational and genuine.",
-    twitter: "Create a witty, engaging Twitter reply that fits the character limit. Be concise but impactful.",
-    youtube: "Write an engaging YouTube comment that adds value to the discussion. Be thoughtful and constructive.",
+    prompt: "Create an engaging, conversation-starting comment that encourages interaction",
+    examples: [
+      "This is so inspiring! What motivated you to start this journey?",
+      "Love this perspective! Have you considered...?",
+    ],
   },
   supportive: {
-    instagram:
-      "Write a supportive and encouraging Instagram comment. Be positive and uplifting with appropriate emojis.",
-    facebook: "Create a supportive Facebook comment that shows genuine care and encouragement.",
-    twitter: "Write a brief but supportive Twitter reply that uplifts the original poster.",
-    youtube: "Create a supportive YouTube comment that encourages the creator and shows appreciation.",
+    prompt: "Write a supportive, encouraging comment that uplifts the creator",
+    examples: ["You're doing amazing work! Keep it up!", "This really resonates with me. Thank you for sharing!"],
   },
   question: {
-    instagram: "Ask a thoughtful question in an Instagram comment that encourages the poster to engage back.",
-    facebook: "Write a Facebook comment with a genuine question that sparks meaningful discussion.",
-    twitter: "Ask a concise, thought-provoking question in a Twitter reply.",
-    youtube: "Ask an insightful question in a YouTube comment that relates to the video content.",
+    prompt: "Ask a thoughtful, relevant question that shows genuine interest",
+    examples: ["What's your biggest tip for beginners?", "How long did this take you to master?"],
   },
   compliment: {
-    instagram: "Write a genuine compliment for this Instagram post. Be specific and authentic.",
-    facebook: "Give a sincere compliment in a Facebook comment. Be specific about what you appreciate.",
-    twitter: "Write a brief but genuine compliment in a Twitter reply.",
-    youtube: "Compliment the YouTube creator on their content. Be specific about what you enjoyed.",
+    prompt: "Give a genuine, specific compliment about the content",
+    examples: ["The attention to detail here is incredible!", "Your creativity never fails to amaze me!"],
   },
   casual: {
-    instagram: "Write a casual, natural Instagram comment like a friend would. Use emojis appropriately.",
-    facebook: "Create a casual, friendly Facebook comment using natural language.",
-    twitter: "Write a casual Twitter reply that sounds natural and conversational.",
-    youtube: "Leave a casual YouTube comment that feels genuine and relatable.",
+    prompt: "Write a casual, natural comment like a friend would make",
+    examples: ["This is so cool!", "Totally agree with this!", "Thanks for sharing this!"],
   },
 }
 
-// Fallback comments by platform and style
+// Fallback comments for each platform and style
 const FALLBACK_COMMENTS = {
   instagram: {
-    engaging: ["Love this! 😍", "This is amazing! ✨", "So inspiring! 🔥", "Absolutely beautiful! 💕"],
-    supportive: ["You've got this! 💪", "Keep shining! ✨", "So proud of you! ❤️", "Amazing work! 🙌"],
-    question: ["How did you do this?", "What inspired this?", "Any tips to share?", "Where was this taken?"],
-    compliment: ["Gorgeous! 😍", "Perfect shot! 📸", "Love your style! ✨", "So talented! 🎨"],
-    casual: ["Nice! 👍", "Cool! 😎", "Awesome! 🔥", "Love it! ❤️"],
+    engaging: [
+      "This is amazing! 🔥 What inspired this?",
+      "Love this content! 💯 More please!",
+      "So good! 😍 How did you do this?",
+    ],
+    supportive: ["You're crushing it! 💪", "Keep shining! ✨", "This made my day! 🌟"],
+    question: ["What's your secret? 🤔", "Any tips for beginners? 💭", "How long did this take? ⏰"],
+    compliment: ["Absolutely stunning! 😍", "Pure talent! 🎨", "This is perfection! 👌"],
+    casual: ["So cool! 😎", "Love it! ❤️", "Amazing work! 🙌"],
   },
   facebook: {
     engaging: [
-      "This is fantastic! Thanks for sharing.",
-      "Really interesting perspective!",
-      "Love seeing content like this!",
-      "This made my day!",
+      "This really got me thinking! What's your take on this?",
+      "Great post! I'd love to hear more about your experience with this.",
+      "This is so relevant right now. Thanks for sharing your perspective!",
     ],
-    supportive: ["You're doing amazing!", "Keep up the great work!", "So inspiring to see this!", "Proud of you!"],
-    question: ["What's your take on this?", "How did you get started?", "Any advice for beginners?", "What's next?"],
-    compliment: ["Excellent work!", "Really well done!", "You have great taste!", "This is beautiful!"],
-    casual: ["Nice post!", "Thanks for sharing!", "Good stuff!", "Appreciate this!"],
+    supportive: [
+      "Thank you for sharing this! It's exactly what I needed to hear today.",
+      "Your posts always inspire me to be better. Keep up the amazing work!",
+      "This is so encouraging! I appreciate you taking the time to share this.",
+    ],
+    question: [
+      "I'm curious about your process - how do you approach this?",
+      "What would you recommend for someone just starting out?",
+      "Have you always felt this way, or did something change your perspective?",
+    ],
+    compliment: [
+      "The way you explain things is so clear and helpful!",
+      "I always learn something new from your posts.",
+      "Your insights are always so thoughtful and well-articulated.",
+    ],
+    casual: [
+      "This is great! Thanks for sharing.",
+      "Totally agree with this!",
+      "Love seeing posts like this on my feed!",
+    ],
   },
   twitter: {
-    engaging: ["This! 🔥", "💯", "So true! ✨", "Love this! 👏"],
-    supportive: ["You've got this! 💪", "Keep going! 🚀", "Proud of you! ❤️", "Amazing! 🙌"],
-    question: ["Thoughts?", "How so?", "What's your take?", "Any tips?"],
-    compliment: ["Well said! 👏", "Great point! 💯", "Love this! ✨", "Brilliant! 🔥"],
-    casual: ["Nice! 👍", "Cool! 😎", "True! ✅", "Same! 🤝"],
+    engaging: ["This! 🔥 What's your take?", "So true! Anyone else relate?", "This hits different 💯"],
+    supportive: ["You got this! 💪", "Keep going! 🚀", "Proud of you! ✨"],
+    question: ["How do you do it? 🤔", "What's the secret? 👀", "Tips? 💭"],
+    compliment: ["Pure genius! 🧠", "This is it! 👏", "Nailed it! 🎯"],
+    casual: ["Facts! 💯", "This! 🙌", "So good! 🔥"],
   },
   youtube: {
     engaging: [
-      "Great video! Really enjoyed watching this.",
-      "This was so helpful, thank you!",
-      "Amazing content as always!",
-      "Love your videos!",
+      "This video really opened my eyes! What other topics are you planning to cover?",
+      "Great content as always! I'd love to see a follow-up video on this topic.",
+      "This was so helpful! Have you considered doing a series on this?",
     ],
     supportive: [
-      "Keep up the amazing work!",
-      "You're doing great!",
-      "Thanks for all your hard work!",
-      "Appreciate your content!",
+      "Thank you for making such high-quality content! Your hard work really shows.",
+      "I always look forward to your videos. Keep up the fantastic work!",
+      "This channel has become one of my favorites. Thank you for all you do!",
     ],
     question: [
-      "Could you make a video about...?",
-      "What equipment do you use?",
-      "How long did this take?",
-      "Any tutorials coming?",
+      "What software do you use for editing? The quality is amazing!",
+      "How long did it take you to research and create this video?",
+      "Do you have any book recommendations on this topic?",
     ],
     compliment: [
-      "Excellent video quality!",
-      "Great editing!",
-      "Love your presentation style!",
-      "Really well explained!",
+      "The production quality of your videos keeps getting better and better!",
+      "Your explanation style is so clear and easy to follow.",
+      "The way you break down complex topics is really impressive.",
     ],
-    casual: ["Nice video!", "Thanks for sharing!", "Good stuff!", "Enjoyed this!"],
+    casual: [
+      "Great video! Thanks for sharing this.",
+      "This was really interesting to watch!",
+      "Love the content! Keep it coming!",
+    ],
   },
 }
 
-export class GeminiCommentService {
-  private model: any
+// Generate AI comment using Gemini
+export async function generateComment(postContent: string, platform: string, style = "engaging"): Promise<string> {
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" })
 
-  constructor() {
-    this.model = genAI.getGenerativeModel({ model: "gemini-pro" })
-  }
+    const constraints = PLATFORM_CONSTRAINTS[platform as keyof typeof PLATFORM_CONSTRAINTS]
+    const styleConfig = COMMENT_STYLES[style as keyof typeof COMMENT_STYLES]
 
-  async generateComment(options: CommentGenerationOptions): Promise<GeneratedComment> {
-    try {
-      const { postContent, commentStyle, platform, maxLength } = options
-      const constraints = PLATFORM_CONSTRAINTS[platform]
-      const effectiveMaxLength = maxLength || constraints.maxLength
+    if (!constraints || !styleConfig) {
+      throw new Error("Invalid platform or style")
+    }
 
-      // Get platform and style specific prompt
-      const basePrompt = COMMENT_PROMPTS[commentStyle][platform]
+    const prompt = `
+You are an AI assistant that generates natural, human-like social media comments.
 
-      // Create comprehensive prompt
-      const prompt = `
-${basePrompt}
+PLATFORM: ${platform.toUpperCase()}
+STYLE: ${style}
+MAX LENGTH: ${constraints.maxLength} characters
+PLATFORM STYLE: ${constraints.style}
+TONE: ${constraints.tone}
 
-Post content: "${postContent}"
+TASK: ${styleConfig.prompt}
 
-Requirements:
-- Maximum ${effectiveMaxLength} characters
-- Platform: ${platform}
-- Style: ${commentStyle}
-- ${constraints.allowEmojis ? "Use appropriate emojis" : "No emojis"}
-- ${constraints.allowHashtags ? "Hashtags allowed if relevant" : "No hashtags"}
-- Tone: ${constraints.tone}
-- Be authentic and natural
-- Avoid spam-like language
-- Don't be overly promotional
-- Make it feel human-written
+POST CONTENT TO COMMENT ON:
+"${postContent}"
 
-Generate only the comment text, nothing else.
+REQUIREMENTS:
+1. Write a ${style} comment that feels natural and human
+2. Keep it under ${constraints.maxLength} characters
+3. Match the ${platform} platform style: ${constraints.style}
+4. Use a ${constraints.tone} tone
+5. Be relevant to the post content
+6. Avoid generic responses
+7. ${platform === "instagram" ? "Include 1-2 relevant emojis" : ""}
+8. ${platform === "twitter" ? "Be concise and impactful" : ""}
+9. ${platform === "youtube" ? "Reference the video content specifically" : ""}
+10. ${platform === "facebook" ? "Encourage discussion" : ""}
+
+EXAMPLES OF GOOD ${style.toUpperCase()} COMMENTS:
+${styleConfig.examples.join("\n")}
+
+Generate ONE comment only. Do not include quotes or explanations.
 `
 
-      console.log(`Generating ${commentStyle} comment for ${platform}...`)
+    const result = await model.generateContent(prompt)
+    const response = await result.response
+    let comment = response.text().trim()
 
-      const result = await this.model.generateContent(prompt)
-      const response = await result.response
-      let comment = response.text().trim()
-
-      // Clean up the comment
-      comment = this.cleanComment(comment, platform, effectiveMaxLength)
-
-      // Validate comment quality
-      const confidence = this.calculateConfidence(comment, postContent, commentStyle)
-
-      console.log(`Generated comment: "${comment}" (confidence: ${confidence})`)
-
-      return {
-        comment,
-        confidence,
-        style: commentStyle,
-        platform,
-      }
-    } catch (error) {
-      console.error(`Gemini comment generation failed: ${error.message}`)
-
-      // Return fallback comment
-      const fallbackComment = this.getFallbackComment(options.platform, options.commentStyle)
-
-      return {
-        comment: fallbackComment,
-        confidence: 0.5, // Lower confidence for fallback
-        style: options.commentStyle,
-        platform: options.platform,
-      }
-    }
-  }
-
-  private cleanComment(comment: string, platform: string, maxLength: number): string {
     // Remove quotes if present
     comment = comment.replace(/^["']|["']$/g, "")
 
-    // Remove line breaks and extra spaces
-    comment = comment.replace(/\n+/g, " ").replace(/\s+/g, " ").trim()
-
-    // Ensure it's not too long
-    if (comment.length > maxLength) {
-      // Try to cut at a word boundary
-      const truncated = comment.substring(0, maxLength - 3)
-      const lastSpace = truncated.lastIndexOf(" ")
-
-      if (lastSpace > maxLength * 0.8) {
-        comment = truncated.substring(0, lastSpace) + "..."
-      } else {
-        comment = truncated + "..."
-      }
+    // Ensure length constraints
+    if (comment.length > constraints.maxLength) {
+      comment = comment.substring(0, constraints.maxLength - 3) + "..."
     }
 
-    // Platform-specific cleaning
-    if (platform === "twitter" && comment.length > 280) {
-      comment = comment.substring(0, 277) + "..."
+    // Validate comment quality
+    if (comment.length < 10 || comment.toLowerCase().includes("as an ai")) {
+      throw new Error("Generated comment quality too low")
     }
 
     return comment
-  }
+  } catch (error) {
+    console.error("Gemini comment generation error:", error)
 
-  private calculateConfidence(comment: string, postContent: string, style: string): number {
-    let confidence = 0.7 // Base confidence
-
-    // Check length appropriateness
-    if (comment.length > 10 && comment.length < 500) {
-      confidence += 0.1
+    // Return fallback comment
+    const fallbacks = FALLBACK_COMMENTS[platform as keyof typeof FALLBACK_COMMENTS]
+    if (fallbacks && fallbacks[style as keyof typeof fallbacks]) {
+      const styleComments = fallbacks[style as keyof typeof fallbacks]
+      return styleComments[Math.floor(Math.random() * styleComments.length)]
     }
 
-    // Check for style appropriateness
-    if (style === "question" && comment.includes("?")) {
-      confidence += 0.1
-    }
-
-    if (
-      style === "supportive" &&
-      (comment.toLowerCase().includes("great") ||
-        comment.toLowerCase().includes("amazing") ||
-        comment.toLowerCase().includes("love"))
-    ) {
-      confidence += 0.1
-    }
-
-    // Check for spam indicators (reduce confidence)
-    const spamWords = ["buy", "sale", "discount", "click here", "follow me", "check out my"]
-    if (spamWords.some((word) => comment.toLowerCase().includes(word))) {
-      confidence -= 0.3
-    }
-
-    // Ensure confidence is between 0 and 1
-    return Math.max(0, Math.min(1, confidence))
-  }
-
-  private getFallbackComment(platform: string, style: string): string {
-    const platformFallbacks = FALLBACK_COMMENTS[platform]
-    const styleFallbacks = platformFallbacks[style]
-
-    // Return random fallback comment
-    return styleFallbacks[Math.floor(Math.random() * styleFallbacks.length)]
-  }
-
-  async generateMultipleComments(options: CommentGenerationOptions, count = 3): Promise<GeneratedComment[]> {
-    const comments: GeneratedComment[] = []
-
-    for (let i = 0; i < count; i++) {
-      try {
-        const comment = await this.generateComment(options)
-        comments.push(comment)
-
-        // Small delay between generations
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-      } catch (error) {
-        console.error(`Failed to generate comment ${i + 1}:`, error)
-      }
-    }
-
-    return comments
-  }
-
-  // Analyze post content to suggest best comment style
-  async suggestCommentStyle(postContent: string, platform: string): Promise<string> {
-    try {
-      const prompt = `
-Analyze this social media post and suggest the best comment style from these options:
-- engaging: For posts that need conversation starters
-- supportive: For personal achievements, struggles, or milestones  
-- question: For posts that could benefit from thoughtful questions
-- compliment: For creative work, photos, or accomplishments
-- casual: For everyday posts that need simple, friendly responses
-
-Post content: "${postContent}"
-Platform: ${platform}
-
-Respond with only one word: the best style option.
-`
-
-      const result = await this.model.generateContent(prompt)
-      const response = await result.response
-      const suggestion = response.text().trim().toLowerCase()
-
-      // Validate suggestion
-      const validStyles = ["engaging", "supportive", "question", "compliment", "casual"]
-      if (validStyles.includes(suggestion)) {
-        return suggestion
-      }
-
-      // Default fallback
-      return "engaging"
-    } catch (error) {
-      console.error("Failed to suggest comment style:", error)
-      return "engaging" // Default fallback
-    }
+    // Ultimate fallback
+    return "Great content! 👍"
   }
 }
 
-// Export singleton instance
-export const geminiCommentService = new GeminiCommentService()
+// Validate and score comment quality
+export function scoreComment(comment: string, platform: string): number {
+  let score = 0
+
+  // Length check
+  const constraints = PLATFORM_CONSTRAINTS[platform as keyof typeof PLATFORM_CONSTRAINTS]
+  if (comment.length >= 10 && comment.length <= constraints.maxLength) {
+    score += 30
+  }
+
+  // Engagement indicators
+  if (comment.includes("?")) score += 20 // Questions encourage engagement
+  if (comment.match(/[!]{1,2}/)) score += 10 // Enthusiasm
+  if (
+    platform === "instagram" &&
+    comment.match(/[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]/u)
+  ) {
+    score += 15 // Emojis for Instagram
+  }
+
+  // Avoid generic responses
+  const genericPhrases = ["nice", "good", "great post", "awesome", "cool"]
+  const isGeneric = genericPhrases.some((phrase) => comment.toLowerCase().includes(phrase))
+  if (!isGeneric) score += 25
+
+  return Math.min(score, 100)
+}
+
+// Get platform-specific comment suggestions
+export function getCommentSuggestions(platform: string, style: string): string[] {
+  const fallbacks = FALLBACK_COMMENTS[platform as keyof typeof FALLBACK_COMMENTS]
+  if (fallbacks && fallbacks[style as keyof typeof fallbacks]) {
+    return fallbacks[style as keyof typeof fallbacks]
+  }
+  return ["Great content!", "Thanks for sharing!", "Love this!"]
+}
