@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai"
 
 // Initialize Gemini AI
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "")
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "AIzaSyDXYs8TsJP4g8yF62tVHzHeeGtYDiGXNX4")
 
 interface CommentRequest {
   postContent: string
@@ -556,7 +556,7 @@ class GeminiService {
   private baseUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
 
   constructor() {
-    this.apiKey = process.env.GEMINI_API_KEY || ""
+    this.apiKey = process.env.GEMINI_API_KEY || "AIzaSyDXYs8TsJP4g8yF62tVHzHeeGtYDiGXNX4"
     if (!this.apiKey) {
       console.warn("GEMINI_API_KEY not found in environment variables")
     }
