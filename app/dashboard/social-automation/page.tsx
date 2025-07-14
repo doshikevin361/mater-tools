@@ -175,6 +175,9 @@ export default function SocialAutomationPage() {
     }
   }
 
+  // Add sentiment state
+  const [sentiment, setSentiment] = useState("positive")
+
   const startCommenting = async () => {
     if (!postUrl.trim()) {
       toast.error("Please enter a post URL")
@@ -208,6 +211,7 @@ export default function SocialAutomationPage() {
           postUrl: postUrl.trim(),
           postContent: postContent.trim(),
           commentStyle,
+          sentiment, // Add this line
           accountCount,
           platforms: selectedPlatforms,
         }),
@@ -605,6 +609,45 @@ export default function SocialAutomationPage() {
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-slate-500">Choose the tone and style for AI-generated comments</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-slate-700 font-semibold text-base flex items-center gap-2">
+                        <Target className="h-4 w-4 text-purple-500" />
+                        Comment Sentiment
+                      </Label>
+                      <div className="flex gap-3">
+                        <Button
+                          type="button"
+                          variant={sentiment === "positive" ? "default" : "outline"}
+                          onClick={() => setSentiment("positive")}
+                          className={`flex-1 h-12 ${
+                            sentiment === "positive"
+                              ? "bg-green-500 hover:bg-green-600 text-white"
+                              : "border-green-300 text-green-700 hover:bg-green-50"
+                          }`}
+                        >
+                          <ThumbsUp className="h-4 w-4 mr-2" />
+                          Positive
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={sentiment === "negative" ? "default" : "outline"}
+                          onClick={() => setSentiment("negative")}
+                          className={`flex-1 h-12 ${
+                            sentiment === "negative"
+                              ? "bg-orange-500 hover:bg-orange-600 text-white"
+                              : "border-orange-300 text-orange-700 hover:bg-orange-50"
+                          }`}
+                        >
+                          <MessageSquare className="h-4 w-4 mr-2" />
+                          Constructive
+                        </Button>
+                      </div>
+                      <p className="text-xs text-slate-500">
+                        Choose whether to generate positive/supportive comments or constructive/alternative perspective
+                        comments
+                      </p>
                     </div>
                   </div>
 

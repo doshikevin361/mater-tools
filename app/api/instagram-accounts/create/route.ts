@@ -106,16 +106,20 @@ const OS_PROFILES = [
   }
 ]
 
+// Enhanced Stealth Configuration
 const STEALTH_CONFIG = {
+  // Timing Strategy
   maxAccountsPerDay: 5,
-  minDelayBetweenAccounts: 30 * 60 * 1000, 
-  maxDelayBetweenAccounts: 4 * 60 * 60 * 1000, 
+  minDelayBetweenAccounts: 30 * 60 * 1000, // 30 minutes minimum
+  maxDelayBetweenAccounts: 4 * 60 * 60 * 1000, // 4 hours maximum
   sessionVariation: true,
   
+  // Browser Strategy  
   randomizeFingerprints: true,
   simulateHumanBehavior: true,
-  preBrowsingChance: 0.7, 
+  preBrowsingChance: 0.7, // 70% chance of pre-browsing
   
+  // Anti-Detection
   removeAutomationTraces: true,
   spoofHardwareSpecs: true,
   randomizePlugins: true,
@@ -138,9 +142,9 @@ function log(level, message, data = null) {
 const humanWait = (minMs = 1500, maxMs = 4000) => {
   const patterns = [
     () => minMs + Math.random() * (maxMs - minMs), 
-    () => minMs + Math.random() * (maxMs - minMs) * 1.5, 
-    () => minMs * 0.7 + Math.random() * (maxMs - minMs) * 0.8, 
-    () => minMs + Math.random() * (maxMs - minMs) + Math.random() * 2000 
+    () => minMs + Math.random() * (maxMs - minMs) * 1.5, // Slower (thinking)
+    () => minMs * 0.7 + Math.random() * (maxMs - minMs) * 0.8, // Faster (confident)
+    () => minMs + Math.random() * (maxMs - minMs) + Math.random() * 2000 // Distracted
   ]
   
   const pattern = patterns[Math.floor(Math.random() * patterns.length)]
@@ -150,11 +154,13 @@ const humanWait = (minMs = 1500, maxMs = 4000) => {
   return new Promise(resolve => setTimeout(resolve, delay))
 }
 
+// Generate realistic device profile
 function generateDeviceProfile() {
   const screenProfile = SCREEN_PROFILES[Math.floor(Math.random() * SCREEN_PROFILES.length)]
   const osProfile = OS_PROFILES[Math.floor(Math.random() * OS_PROFILES.length)]
   const userAgent = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)]
   
+  // Hardware specs based on device type
   const hardwareSpecs = {
     cores: screenProfile.deviceType === 'mobile' ? [4, 6, 8][Math.floor(Math.random() * 3)] : [4, 6, 8, 12, 16][Math.floor(Math.random() * 5)],
     memory: screenProfile.deviceType === 'mobile' ? [4, 6, 8][Math.floor(Math.random() * 3)] : [8, 16, 32][Math.floor(Math.random() * 3)],
@@ -1763,20 +1769,23 @@ function calculateNextAccountDelay() {
   const now = new Date()
   const currentHour = now.getHours()
   
+  // Avoid peak usage hours (9-11 AM, 2-4 PM, 7-9 PM)
   const peakHours = [9, 10, 11, 14, 15, 16, 19, 20, 21]
   const isPeakHour = peakHours.includes(currentHour)
   
   let baseDelay = STEALTH_CONFIG.minDelayBetweenAccounts
   let maxDelay = STEALTH_CONFIG.maxDelayBetweenAccounts
   
+  // Longer delays during peak hours
   if (isPeakHour) {
     baseDelay *= 1.5
     maxDelay *= 2
   }
   
+  // Weekend vs weekday variation
   const isWeekend = now.getDay() === 0 || now.getDay() === 6
   if (isWeekend) {
-    baseDelay *= 0.8 
+    baseDelay *= 0.8 // Slightly shorter on weekends
     maxDelay *= 0.9
   }
   
@@ -1787,11 +1796,13 @@ function calculateNextAccountDelay() {
   return delay
 }
 
+// API endpoints
 export async function POST(request) {
   try {
     const body = await request.json()
     const { count = 1, platform = "instagram", userId } = body
 
+    log('info', `🚀 API Request: Creating ${count} ${platform} accounts with NO PROXY + MAXIMUM STEALTH`)
 
     if (!userId) {
       return NextResponse.json({ success: false, message: "User ID is required" }, { status: 400 })
