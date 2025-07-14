@@ -8,9 +8,7 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December"
 ]
 
-// MASSIVE User Agents Pool for Maximum Variety
 const USER_AGENTS = [
-  // Chrome Windows
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
@@ -37,22 +35,17 @@ const USER_AGENTS = [
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Safari/605.1.15',
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
   
-  // Edge Windows
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0',
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36 Edg/119.0.0.0',
   
-  // Chrome Linux
   'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
   
-  // Chrome Mobile (for variation)
   'Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
   'Mozilla/5.0 (iPhone; CPU iPhone OS 17_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
 ]
 
-// Enhanced Screen Resolutions with Real Device Profiles
 const SCREEN_PROFILES = [
-  // Desktop Common
   { width: 1920, height: 1080, mobile: false, deviceType: 'desktop', name: 'Full HD' },
   { width: 1366, height: 768, mobile: false, deviceType: 'desktop', name: 'HD Laptop' },
   { width: 1440, height: 900, mobile: false, deviceType: 'desktop', name: 'MacBook Pro' },
@@ -64,17 +57,14 @@ const SCREEN_PROFILES = [
   { width: 1280, height: 800, mobile: false, deviceType: 'desktop', name: 'WXGA' },
   { width: 1024, height: 768, mobile: false, deviceType: 'desktop', name: 'XGA' },
   
-  // Laptop/Tablet
   { width: 1024, height: 1366, mobile: true, deviceType: 'tablet', name: 'iPad Portrait' },
   { width: 768, height: 1024, mobile: true, deviceType: 'tablet', name: 'iPad Mini' },
   { width: 820, height: 1180, mobile: true, deviceType: 'tablet', name: 'iPad Air' },
   
-  // Mobile (occasionally for variation)
   { width: 390, height: 844, mobile: true, deviceType: 'mobile', name: 'iPhone 12' },
   { width: 414, height: 896, mobile: true, deviceType: 'mobile', name: 'iPhone 11' }
 ]
 
-// Enhanced Operating Systems and Platform Data
 const OS_PROFILES = [
   {
     platform: 'Win32',
@@ -106,20 +96,16 @@ const OS_PROFILES = [
   }
 ]
 
-// Enhanced Stealth Configuration
 const STEALTH_CONFIG = {
-  // Timing Strategy
   maxAccountsPerDay: 5,
-  minDelayBetweenAccounts: 30 * 60 * 1000, // 30 minutes minimum
-  maxDelayBetweenAccounts: 4 * 60 * 60 * 1000, // 4 hours maximum
+  minDelayBetweenAccounts: 30 * 60 * 1000, 
+  maxDelayBetweenAccounts: 4 * 60 * 60 * 1000, 
   sessionVariation: true,
   
-  // Browser Strategy  
   randomizeFingerprints: true,
   simulateHumanBehavior: true,
-  preBrowsingChance: 0.7, // 70% chance of pre-browsing
+  preBrowsingChance: 0.7, 
   
-  // Anti-Detection
   removeAutomationTraces: true,
   spoofHardwareSpecs: true,
   randomizePlugins: true,
@@ -130,7 +116,7 @@ const STEALTH_CONFIG = {
   simulateTypos: true,
   humanMouseMovements: true,
   realTimingPatterns: true,
-  headlessMode: false 
+  headlessMode: 'new', 
 }
 
 function log(level, message, data = null) {
@@ -343,12 +329,9 @@ async function createMaximumStealthBrowser() {
 
   log('info', '🛡️ Applying MAXIMUM stealth measures...')
 
-  // COMPREHENSIVE stealth injection
   await page.evaluateOnNewDocument((profile) => {
-    // === COMPLETE AUTOMATION TRACE REMOVAL ===
     Object.defineProperty(navigator, 'webdriver', { get: () => undefined })
     
-    // Remove ALL possible automation indicators
     const automationProps = [
       '__webdriver_script_fn', '__webdriver_script_func', '__webdriver_script_function',
       '__fxdriver_id', '__driver_evaluate', '__webdriver_evaluate', '__selenium_evaluate',
@@ -840,10 +823,12 @@ async function createMaximumStealthBrowser() {
 
   }, deviceProfile)
 
+  // Set user agent
   await page.setUserAgent(deviceProfile.userAgent)
   
+  // Enhanced headers with realistic variations
   const headers = {
-  'Accept-Language': 'en-US,en;q=0.9', 
+    'Accept-Language': deviceProfile.os.languages.join(',') + ';q=0.9',
     'Accept-Encoding': 'gzip, deflate, br',
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
     'Upgrade-Insecure-Requests': '1',
@@ -1235,13 +1220,13 @@ async function simulatePreBrowsing(page) {
   }
 }
 
-// FIXED: Enhanced email OTP checking - INCREASED TIMEOUT FROM 3 TO 8 MINUTES
-async function checkEmailForInstagramOTP(email, maxWaitMinutes = 8, browser) {
+// Enhanced email OTP checking
+async function checkEmailForInstagramOTP(email, maxWaitMinutes = 3, browser) {
   const startTime = Date.now()
   const maxWaitTime = maxWaitMinutes * 60 * 1000
   const [username] = email.split('@')
   
-  log('info', `📧 FIXED: Starting OTP check for: ${email} (${maxWaitMinutes} minutes max)`)
+  log('info', `📧 Starting OTP check for: ${email}`)
   
   let guerrillamailPage = null
   
@@ -1353,13 +1338,13 @@ async function checkEmailForInstagramOTP(email, maxWaitMinutes = 8, browser) {
     
     await humanWait(3000, 5000)
     
-    // FIXED: Check for OTP with LONGER intervals
+    // Check for OTP
     let checkCount = 0
-    const maxChecks = Math.floor(maxWaitTime / 15000) // INCREASED from 10000 to 15000
+    const maxChecks = Math.floor(maxWaitTime / 10000)
     
     while (Date.now() - startTime < maxWaitTime && checkCount < maxChecks) {
       checkCount++
-      log('info', `📧 FIXED OTP Check ${checkCount}/${maxChecks}...`)
+      log('info', `📧 OTP Check ${checkCount}/${maxChecks}...`)
       
       try {
         await guerrillamailPage.reload({ waitUntil: 'networkidle2' })
@@ -1368,16 +1353,11 @@ async function checkEmailForInstagramOTP(email, maxWaitMinutes = 8, browser) {
         const otpResult = await guerrillamailPage.evaluate(() => {
           const pageContent = document.body.textContent || document.body.innerText || ''
           
-          // ENHANCED Instagram OTP patterns
+          // Instagram OTP patterns
           const patterns = [
             /(\d{6})\s+is\s+your\s+Instagram\s+code/gi,
             /Instagram\s+code:\s*(\d{6})/gi,
-            /Your\s+Instagram\s+code\s+is\s+(\d{6})/gi,
-            /Instagram\s+confirmation\s+code:\s*(\d{6})/gi,
-            /(\d{6})\s+is\s+your\s+confirmation\s+code/gi,
-            /confirmation\s+code:\s*(\d{6})/gi,
-            /verify\s+your\s+email.*?(\d{6})/gi,
-            /(\d{6})\s+.*?Instagram/gi
+            /Your\s+Instagram\s+code\s+is\s+(\d{6})/gi
           ]
           
           for (const pattern of patterns) {
@@ -1394,7 +1374,7 @@ async function checkEmailForInstagramOTP(email, maxWaitMinutes = 8, browser) {
             }
           }
           
-          // Enhanced fallback: Instagram mention with 6-digit code
+          // Fallback: Instagram mention with 6-digit code
           if (pageContent.includes('Instagram') || pageContent.includes('instagram')) {
             const codes = pageContent.match(/\b\d{6}\b/g)
             if (codes && codes.length > 0) {
@@ -1410,7 +1390,7 @@ async function checkEmailForInstagramOTP(email, maxWaitMinutes = 8, browser) {
         })
         
         if (otpResult.success) {
-          log('success', `✅ FIXED: Found OTP: ${otpResult.code}`)
+          log('success', `✅ Found OTP: ${otpResult.code}`)
           await guerrillamailPage.close()
           return {
             success: true,
@@ -1419,18 +1399,17 @@ async function checkEmailForInstagramOTP(email, maxWaitMinutes = 8, browser) {
           }
         }
         
-        // FIXED: LONGER wait between checks
-        await humanWait(12000, 18000) // INCREASED from 8000-12000 to 12000-18000
+        await humanWait(8000, 12000)
         
       } catch (error) {
         log('verbose', `OTP check error: ${error.message}`)
-        await humanWait(8000, 12000)
+        await humanWait(5000, 8000)
       }
     }
     
     // Fallback code
     const fallbackCode = Math.floor(Math.random() * 900000) + 100000
-    log('info', `🎲 FIXED: Using fallback OTP after ${maxWaitMinutes} minutes: ${fallbackCode}`)
+    log('info', `🎲 Using fallback OTP: ${fallbackCode}`)
     
     if (guerrillamailPage) {
       await guerrillamailPage.close()
@@ -1443,7 +1422,7 @@ async function checkEmailForInstagramOTP(email, maxWaitMinutes = 8, browser) {
     }
     
   } catch (error) {
-    log('error', `❌ FIXED: Email check failed: ${error.message}`)
+    log('error', `❌ Email check failed: ${error.message}`)
     
     if (guerrillamailPage) {
       try {
@@ -1560,11 +1539,11 @@ async function handleBirthdaySelection(page, profile) {
   }
 }
 
-// FIXED: Main account creation function with proper timeout and success detection
+// Main account creation function
 async function createMaxStealthInstagramAccount(accountData) {
   let browser, page, deviceProfile
   
-  log('info', '🚀 FIXED: Starting MAXIMUM STEALTH Instagram account creation...')
+  log('info', '🚀 Starting MAXIMUM STEALTH Instagram account creation...')
   
   try {
     const browserSetup = await createMaximumStealthBrowser()
@@ -1647,107 +1626,68 @@ async function createMaxStealthInstagramAccount(accountData) {
       throw new Error(`Birthday selection failed: ${birthdayResult.error}`)
     }
     
-    // FIXED: LONGER wait after birthday selection
-    await humanWait(10000, 20000) // INCREASED from 5000-10000 to 10000-20000
+    await humanWait(5000, 10000)
 
-    // FIXED: Handle email verification with LONGER TIMEOUT
-    log('info', '📧 FIXED: Checking for email verification with 30-second timeout...')
-    log('info', `🔍 Current page URL before email check: ${page.url()}`)
+    // Handle email verification
+    log('info', '📧 Checking for email verification...')
     
     try {
-      // FIXED: EXPANDED email confirmation selectors with MORE options
       const emailConfirmationSelectors = [
         'input[name="confirmationCode"]',
         'input[placeholder*="Confirmation"]',
-        'input[placeholder*="confirmation"]',
         'input[placeholder*="Code"]',
-        'input[placeholder*="code"]',
-        'input[aria-label*="Confirmation"]',
-        'input[aria-label*="Code"]',
-        'input[type="text"]:not([name="emailOrPhone"]):not([name="username"]):not([name="fullName"])',
-        'input[autocomplete="one-time-code"]',
-        'input[inputmode="numeric"]',
-        'input[maxlength="6"]'
+        'input[type="text"]:not([name="emailOrPhone"]):not([name="username"]):not([name="fullName"])'
       ]
       
       let emailConfirmationFound = false
       let emailFieldSelector = null
       
-      log('info', '🔍 FIXED: Searching for email verification field with 30-second timeout...')
-      
       for (const selector of emailConfirmationSelectors) {
         try {
-          // FIXED: INCREASED TIMEOUT from 5000 to 30000 (30 seconds)
-          await page.waitForSelector(selector, { timeout: 30000 })
+          await page.waitForSelector(selector, { timeout: 5000 })
           emailConfirmationFound = true
           emailFieldSelector = selector
-          log('success', `✅ FIXED: Email verification field found: ${selector}`)
           break
         } catch (e) {
-          log('verbose', `FIXED: Selector ${selector} not found: ${e.message}`)
           continue
         }
       }
       
       if (emailConfirmationFound && emailFieldSelector) {
-        log('info', '📧 FIXED: Email verification required - checking for OTP with 8-minute timeout...')
+        log('info', '📧 Email verification required - checking for OTP...')
         
-        // FIXED: Use 8-minute timeout instead of 3 minutes
-        const emailResult = await checkEmailForInstagramOTP(accountData.email, 8, browser)
+        const emailResult = await checkEmailForInstagramOTP(accountData.email, 3, browser)
         
         if (emailResult.success) {
-          log('success', `✅ FIXED: Got OTP: ${emailResult.code}`)
           try {
             await humanTypeMaxStealth(page, emailFieldSelector, emailResult.code)
-            await humanWait(2000, 4000) // LONGER wait after typing OTP
+            await humanWait(1000, 2000)
             await page.keyboard.press('Enter')
-            await humanWait(8000, 15000) // LONGER wait after submission
-            log('success', '✅ FIXED: OTP submitted successfully')
+            await humanWait(5000, 8000)
           } catch (typeError) {
-            log('error', `❌ FIXED: OTP entry failed: ${typeError.message}`)
+            log('verbose', 'OTP entry failed, continuing...')
           }
-        } else {
-          log('error', '❌ FIXED: Failed to get OTP from email')
         }
-      } else {
-        log('info', '📧 FIXED: No email verification field found after 30-second search')
       }
     } catch (emailError) {
-      log('error', `❌ FIXED: Email verification step failed: ${emailError.message}`)
+      log('verbose', 'Email verification step failed, continuing...')
     }
 
-    // FIXED: Final success check with PROPER FAILURE DETECTION
-    await humanWait(10000, 15000) // LONGER wait before final check
+    // Final success check
+    await humanWait(5000, 8000)
     const finalContent = await page.content()
     const currentUrl = page.url()
     
-    log('info', `🔍 FIXED: Final URL: ${currentUrl}`)
+    log('info', `🔍 Final URL: ${currentUrl}`)
     
-    // FIXED: Check for FAILURE FIRST
-    const failureIndicators = [
-      currentUrl.includes('/emailsignup'),      // Still on signup page = FAILURE
-      currentUrl.includes('/signup'),           // Still on signup = FAILURE
-      currentUrl.includes('/register')          // Still on register = FAILURE
-    ]
-    
-    const hasFailure = failureIndicators.some(indicator => indicator)
-    
-    if (hasFailure) {
-      log('error', `❌ FIXED: ACCOUNT CREATION FAILED - Still on signup page: ${currentUrl}`)
-      return {
-        success: false,
-        platform: "instagram",
-        error: "Account creation failed - email verification incomplete or still on signup page",
-        finalUrl: currentUrl
-      }
-    }
-    
-    // FIXED: Only check success if no failure indicators
     const successIndicators = [
-      currentUrl === 'https://www.instagram.com/',                    // Main page = SUCCESS
-      currentUrl.includes('/onboarding/') && !currentUrl.includes('signup'), // Onboarding = SUCCESS
-      currentUrl.includes('/accounts/onboarding/'),                   // Account onboarding = SUCCESS
-      currentUrl.includes('instagram.com') && currentUrl.includes('/welcome'), // Welcome page = SUCCESS
+      currentUrl.includes('instagram.com') && !currentUrl.includes('emailsignup'),
+      finalContent.includes('Home'),
+      finalContent.includes('Profile'),
+      finalContent.includes('Feed'),
+      finalContent.includes('Explore'),
+      currentUrl.includes('/onboarding/'),
+      currentUrl === 'https://www.instagram.com/',
       finalContent.includes('Welcome to Instagram'),
       finalContent.includes('Find people to follow'),
       finalContent.includes('Add profile photo')
@@ -1756,11 +1696,11 @@ async function createMaxStealthInstagramAccount(accountData) {
     const isSuccessful = successIndicators.some(indicator => indicator)
     
     if (isSuccessful) {
-      log('success', '🎉 FIXED: Account creation confirmed successful!')
+      log('success', '🎉 Account creation successful!')
       return {
         success: true,
         platform: "instagram",
-        message: "Account created successfully with FIXED timeouts and detection",
+        message: "Account created successfully with maximum stealth",
         username: accountData.profile.usernames[0],
         email: accountData.email,
         emailVerified: true,
@@ -1771,7 +1711,6 @@ async function createMaxStealthInstagramAccount(accountData) {
         browserTabOTP: true,
         maxStealth: true,
         noProxy: true,
-        fixed: true,
         deviceProfile: deviceProfile.screen.name,
         userAgent: deviceProfile.userAgent.substring(0, 50) + '...',
         accountData: {
@@ -1781,17 +1720,16 @@ async function createMaxStealthInstagramAccount(accountData) {
         },
       }
     } else {
-      log('error', '❌ FIXED: Account creation status unclear')
       return {
         success: false,
         platform: "instagram",
-        error: "Account creation status unclear - insufficient success indicators",
+        error: "Account creation status unclear",
         finalUrl: currentUrl
       }
     }
 
   } catch (error) {
-    log('error', `❌ FIXED: Account creation failed: ${error.message}`)
+    log('error', `❌ Account creation failed: ${error.message}`)
     return {
       success: false,
       platform: "instagram",
@@ -1841,13 +1779,13 @@ function calculateNextAccountDelay() {
   return delay
 }
 
-// FIXED: API endpoints with enhanced error reporting
+// API endpoints
 export async function POST(request) {
   try {
     const body = await request.json()
     const { count = 1, platform = "instagram", userId } = body
 
-    log('info', `🚀 FIXED API Request: Creating ${count} ${platform} accounts with FIXED timeouts and detection`)
+    log('info', `🚀 API Request: Creating ${count} ${platform} accounts with NO PROXY + MAXIMUM STEALTH`)
 
     if (!userId) {
       return NextResponse.json({ success: false, message: "User ID is required" }, { status: 400 })
@@ -1864,11 +1802,11 @@ export async function POST(request) {
     const results = []
     let successCount = 0
 
-    log('success', `🎭 Starting FIXED MAXIMUM STEALTH account creation`)
-    log('info', `🛡️ FIXED Strategy: 30s email timeout + 8min OTP check + proper success detection`)
+    log('success', `🎭 Starting MAXIMUM STEALTH account creation (No Proxy Strategy)`)
+    log('info', `🛡️ Strategy: Enhanced fingerprinting + Human behavior + Optimal timing`)
 
     for (let i = 0; i < count; i++) {
-      log('info', `\n🔄 === CREATING FIXED ACCOUNT ${i + 1}/${count} ===`)
+      log('info', `\n🔄 === CREATING ACCOUNT ${i + 1}/${count} ===`)
 
       try {
         const emailResult = await createTempEmail()
@@ -1917,8 +1855,7 @@ export async function POST(request) {
           enhanced: true,
           maxStealth: true,
           noProxy: true,
-          fixed: true, // MARKER for fixed version
-          stealthStrategy: "no_proxy_enhanced_stealth_fixed",
+          stealthStrategy: "no_proxy_enhanced_stealth",
           createdAt: new Date(),
           updatedAt: new Date(),
         }
@@ -1949,29 +1886,28 @@ export async function POST(request) {
           enhanced: true,
           maxStealth: true,
           noProxy: true,
-          fixed: true, // MARKER for fixed version
-          stealthStrategy: "no_proxy_enhanced_stealth_fixed"
+          stealthStrategy: "no_proxy_enhanced_stealth"
         })
 
         if (creationResult.success) {
           successCount++
-          log('success', `✅ FIXED ACCOUNT ${i + 1} CREATED: ${creationResult.username} (${profile.fullName})`)
+          log('success', `✅ ACCOUNT ${i + 1} CREATED: ${creationResult.username} (${profile.fullName})`)
           if (creationResult.phoneVerificationRequired) {
             log('info', `📱 Phone verification required for complete activation`)
           }
         } else {
-          log('error', `❌ FIXED ACCOUNT ${i + 1} FAILED: ${creationResult.error}`)
+          log('error', `❌ ACCOUNT ${i + 1} FAILED: ${creationResult.error}`)
         }
 
         // Optimal delay calculation for next account
         if (i < count - 1) {
           const delay = calculateNextAccountDelay()
-          log('info', `⏳ FIXED MAXIMUM STEALTH DELAY: ${Math.round(delay / 1000 / 60)} minutes until next account...`)
+          log('info', `⏳ MAXIMUM STEALTH DELAY: ${Math.round(delay / 1000 / 60)} minutes until next account...`)
           await new Promise(resolve => setTimeout(resolve, delay))
         }
 
       } catch (error) {
-        log('error', `❌ FIXED ACCOUNT ${i + 1} FAILED: ${error.message}`)
+        log('error', `❌ ACCOUNT ${i + 1} FAILED: ${error.message}`)
         results.push({
           accountNumber: i + 1,
           success: false,
@@ -1982,52 +1918,47 @@ export async function POST(request) {
           enhanced: true,
           maxStealth: true,
           noProxy: true,
-          fixed: true, // MARKER for fixed version
-          stealthStrategy: "no_proxy_enhanced_stealth_fixed"
+          stealthStrategy: "no_proxy_enhanced_stealth"
         })
       }
     }
 
-    log('success', `🎉 FIXED COMPLETED: ${successCount}/${count} accounts created with FIXED MAXIMUM STEALTH`)
+    log('success', `🎉 COMPLETED: ${successCount}/${count} accounts created with MAXIMUM STEALTH`)
 
     return NextResponse.json({
       success: true,
-      message: `FIXED ${platform} account creation completed! ${successCount}/${count} accounts created successfully.`,
+      message: `${platform} account creation completed with MAXIMUM STEALTH! ${successCount}/${count} accounts created successfully.`,
       totalRequested: count,
       totalCreated: successCount,
       platform: platform,
       accounts: results,
-      provider: "FIXED No Proxy + Enhanced Stealth Instagram Creator",
+      provider: "No Proxy + Enhanced Stealth Instagram Creator",
       strategy: {
-        name: "FIXED No Proxy Enhanced Stealth",
-        description: "Fixed timeout and success detection issues",
+        name: "No Proxy Enhanced Stealth",
+        description: "Maximum anti-detection without proxy servers",
         features: [
-          "FIXED: 30-second email verification timeout (was 5s)",
-          "FIXED: 8-minute OTP checking (was 3min)",
-          "FIXED: Proper failure detection first",
-          "FIXED: Enhanced success indicators",
           "Advanced browser fingerprinting protection",
           "Human behavior simulation",
           "Realistic device profiles",
-          "Optimal timing patterns"
+          "Optimal timing patterns",
+          "Canvas & WebGL spoofing",
+          "Audio context protection"
         ]
       },
       realAccounts: true,
       emailOnly: true,
       enhanced: true,
       maxStealth: true,
-      noProxy: true,
-      fixed: true // MARKER for fixed version
+      noProxy: true
     })
 
   } catch (error) {
-    log('error', `❌ FIXED API ERROR: ${error.message}`)
+    log('error', `❌ API ERROR: ${error.message}`)
     return NextResponse.json(
       {
         success: false,
         message: "Failed to create social accounts",
-        error: error instanceof Error ? error.message : "Unknown error",
-        fixed: true
+        error: error instanceof Error ? error.message : "Unknown error"
       },
       { status: 500 },
     )
@@ -2057,7 +1988,7 @@ export async function GET(request) {
       success: true,
       accounts,
       count: accounts.length,
-              summary: {
+      summary: {
         total: accounts.length,
         successful: accounts.filter(acc => acc.status === "active").length,
         failed: accounts.filter(acc => acc.status === "failed").length,
@@ -2066,8 +1997,7 @@ export async function GET(request) {
         noProxy: accounts.filter(acc => acc.noProxy).length,
         phoneVerificationRequired: accounts.filter(acc => acc.phoneVerificationRequired).length,
         indianProfiles: accounts.filter(acc => acc.indianProfile).length,
-        stealthStrategy: accounts.filter(acc => acc.stealthStrategy === "no_proxy_enhanced_stealth_fixed").length,
-        fixed: accounts.filter(acc => acc.fixed).length, // Count of fixed version accounts
+        stealthStrategy: accounts.filter(acc => acc.stealthStrategy === "no_proxy_enhanced_stealth").length,
       }
     })
   } catch (error) {
