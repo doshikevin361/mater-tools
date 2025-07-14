@@ -130,7 +130,7 @@ const STEALTH_CONFIG = {
   simulateTypos: true,
   humanMouseMovements: true,
   realTimingPatterns: true,
-  headlessMode: true 
+  headlessMode: false 
 }
 
 function log(level, message, data = null) {

@@ -88,6 +88,8 @@ export default function SocialAutomationPage() {
     },
   })
 
+  const [commentSentiment, setCommentSentiment] = useState<"positive" | "negative" | "neutral">("positive")
+
   // Platform-specific examples
   const platformExamples = {
     instagram: {
@@ -208,6 +210,7 @@ export default function SocialAutomationPage() {
           postUrl: postUrl.trim(),
           postContent: postContent.trim(),
           commentStyle,
+          commentSentiment,
           accountCount,
           platforms: selectedPlatforms,
         }),
@@ -562,49 +565,106 @@ export default function SocialAutomationPage() {
                       </p>
                     </div>
 
-                    <div className="space-y-2">
+                    <div className="space-y-4">
                       <Label className="text-slate-700 font-semibold text-base flex items-center gap-2">
                         <Bot className="h-4 w-4 text-purple-500" />
-                        Comment Style
+                        Comment Sentiment & Style
                       </Label>
-                      <Select value={commentStyle} onValueChange={setCommentStyle}>
-                        <SelectTrigger className="h-12 bg-white border-purple-300 hover:border-purple-400 focus:border-purple-500">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="engaging">
-                            <div className="flex items-center gap-2">
-                              <Sparkles className="h-4 w-4 text-purple-500" />
-                              Engaging & Friendly
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="supportive">
-                            <div className="flex items-center gap-2">
-                              <Heart className="h-4 w-4 text-pink-500" />
-                              Supportive & Encouraging
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="question">
-                            <div className="flex items-center gap-2">
-                              <Lightbulb className="h-4 w-4 text-yellow-500" />
-                              Thoughtful Questions
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="compliment">
-                            <div className="flex items-center gap-2">
-                              <ThumbsUp className="h-4 w-4 text-green-500" />
-                              Genuine Compliments
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="casual">
-                            <div className="flex items-center gap-2">
-                              <MessageSquare className="h-4 w-4 text-blue-500" />
-                              Casual & Natural
-                            </div>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-slate-500">Choose the tone and style for AI-generated comments</p>
+
+                      {/* Sentiment Selection */}
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium text-slate-600">Choose Comment Sentiment</Label>
+                        <div className="flex gap-3">
+                          <Button
+                            type="button"
+                            variant={commentSentiment === "positive" ? "default" : "outline"}
+                            onClick={() => setCommentSentiment("positive")}
+                            className={`flex-1 h-12 ${
+                              commentSentiment === "positive"
+                                ? "bg-green-500 hover:bg-green-600 text-white"
+                                : "border-green-300 text-green-700 hover:bg-green-50"
+                            }`}
+                          >
+                            <ThumbsUp className="h-4 w-4 mr-2" />
+                            Positive
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={commentSentiment === "negative" ? "default" : "outline"}
+                            onClick={() => setCommentSentiment("negative")}
+                            className={`flex-1 h-12 ${
+                              commentSentiment === "negative"
+                                ? "bg-red-500 hover:bg-red-600 text-white"
+                                : "border-red-300 text-red-700 hover:bg-red-50"
+                            }`}
+                          >
+                            <XCircle className="h-4 w-4 mr-2" />
+                            Negative
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={commentSentiment === "neutral" ? "default" : "outline"}
+                            onClick={() => setCommentSentiment("neutral")}
+                            className={`flex-1 h-12 ${
+                              commentSentiment === "neutral"
+                                ? "bg-gray-500 hover:bg-gray-600 text-white"
+                                : "border-gray-300 text-gray-700 hover:bg-gray-50"
+                            }`}
+                          >
+                            <MessageSquare className="h-4 w-4 mr-2" />
+                            Neutral
+                          </Button>
+                        </div>
+                        <p className="text-xs text-slate-500">
+                          {commentSentiment === "positive" && "Generate supportive, encouraging, and positive comments"}
+                          {commentSentiment === "negative" &&
+                            "Generate critical, questioning, or constructive criticism comments"}
+                          {commentSentiment === "neutral" && "Generate balanced, informative, and objective comments"}
+                        </p>
+                      </div>
+
+                      {/* Style Selection */}
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium text-slate-600">Comment Style</Label>
+                        <Select value={commentStyle} onValueChange={setCommentStyle}>
+                          <SelectTrigger className="h-12 bg-white border-purple-300 hover:border-purple-400 focus:border-purple-500">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="engaging">
+                              <div className="flex items-center gap-2">
+                                <Sparkles className="h-4 w-4 text-purple-500" />
+                                Engaging & Friendly
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="supportive">
+                              <div className="flex items-center gap-2">
+                                <Heart className="h-4 w-4 text-pink-500" />
+                                Supportive & Encouraging
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="question">
+                              <div className="flex items-center gap-2">
+                                <Lightbulb className="h-4 w-4 text-yellow-500" />
+                                Thoughtful Questions
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="compliment">
+                              <div className="flex items-center gap-2">
+                                <ThumbsUp className="h-4 w-4 text-green-500" />
+                                Genuine Compliments
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="casual">
+                              <div className="flex items-center gap-2">
+                                <MessageSquare className="h-4 w-4 text-blue-500" />
+                                Casual & Natural
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-slate-500">Choose the tone and approach for AI-generated comments</p>
+                      </div>
                     </div>
                   </div>
 

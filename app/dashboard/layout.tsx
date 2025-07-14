@@ -454,40 +454,6 @@ export default function DashboardLayout({
           </div>
 
           <div className="px-4 pb-2 pt-4">
-            <h2 className="mb-2 px-2 text-xs font-semibold uppercase tracking-wider text-white/70">AI Automation</h2>
-            <div className="space-y-1">
-              <a
-                href="/dashboard/social-automation"
-                className={cn(
-                  "flex items-center rounded-md px-2 py-2 text-sm font-medium",
-                  isActive("/dashboard/social-automation")
-                    ? "bg-white/20 text-white"
-                    : "text-white/90 hover:bg-white/10 hover:text-white",
-                )}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="mr-2 h-4 w-4"
-                >
-                  <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                  <path d="M2 17l10 5 10-5" />
-                  <path d="M2 12l10 5 10-5" />
-                </svg>
-                Social Automation
-                <span className="ml-auto rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 px-2 py-0.5 text-xs font-semibold">
-                  AI
-                </span>
-              </a>
-            </div>
-          </div>
-
-          <div className="px-4 pb-2 pt-4">
             <h2 className="mb-2 px-2 text-xs font-semibold uppercase tracking-wider text-white/70">Management</h2>
             <div className="space-y-1">
               <a
