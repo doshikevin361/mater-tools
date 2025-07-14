@@ -3,64 +3,235 @@ import { connectToDatabase } from "@/lib/mongodb"
 import { generateComment } from "@/lib/gemini-service"
 import puppeteer from "puppeteer"
 
-// Platform URL patterns
-const PLATFORM_PATTERNS = {
-  instagram: /(?:instagram\.com\/p\/|instagram\.com\/reel\/)/,
-  facebook: /(?:facebook\.com\/.*\/posts\/|facebook\.com\/.*\/videos\/|fb\.watch\/)/,
-  twitter: /(?:twitter\.com\/.*\/status\/|x\.com\/.*\/status\/)/,
-  youtube: /(?:youtube\.com\/watch\?v=|youtu\.be\/)/,
+// User agents for different platforms
+const USER_AGENTS = [
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0",
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15",
+]
+
+// Random delay function
+const randomDelay = (min: number, max: number) => {
+  return Math.floor(Math.random() * (max - min + 1)) + min
+}
+
+// Human-like typing function
+const humanType = async (page: any, selector: string, text: string) => {
+  await page.click(selector)
+  await page.evaluate((sel) => {
+    const element = document.querySelector(sel) as HTMLInputElement
+    if (element) element.value = ""
+  }, selector)
+
+  for (const char of text) {
+    await page.type(selector, char, { delay: randomDelay(50, 150) })
+  }
 }
 
 // Detect platform from URL
-function detectPlatform(url: string): string | null {
-  for (const [platform, pattern] of Object.entries(PLATFORM_PATTERNS)) {
-    if (pattern.test(url)) {
-      return platform
-    }
-  }
-  return null
-}
-
-// Generate random delay between min and max seconds
-function randomDelay(min: number, max: number): Promise<void> {
-  const delay = Math.floor(Math.random() * (max - min + 1) + min) * 1000
-  return new Promise((resolve) => setTimeout(resolve, delay))
-}
-
-// Create notification
-async function createNotification(db: any, userId: string, title: string, message: string, type: string) {
-  try {
-    await db.collection("notifications").insertOne({
-      userId,
-      title,
-      message,
-      type,
-      read: false,
-      time: new Date().toLocaleTimeString(),
-      createdAt: new Date(),
-    })
-  } catch (error) {
-    console.error("Failed to create notification:", error)
-  }
-}
-
-// Get random accounts from platform collection
-async function getRandomAccounts(db: any, platform: string, count: number) {
-  const collectionName = `${platform}_accounts`
-  try {
-    const accounts = await db
-      .collection(collectionName)
-      .aggregate([{ $sample: { size: count } }])
-      .toArray()
-    return accounts
-  } catch (error) {
-    console.error(`Failed to get ${platform} accounts:`, error)
-    return []
-  }
+const detectPlatform = (url: string): string => {
+  if (url.includes("instagram.com")) return "instagram"
+  if (url.includes("facebook.com")) return "facebook"
+  if (url.includes("twitter.com") || url.includes("x.com")) return "twitter"
+  if (url.includes("youtube.com")) return "youtube"
+  return "unknown"
 }
 
 // Instagram comment automation
-async function commentOnInstagram(account: any, postUrl: string, comment: string) {
+const commentOnInstagram = async (page: any, account: any, postUrl: string, comment: string) => {
+  try {
+    // Navigate to Instagram login
+    await page.goto("https://www.instagram.com/accounts/login/", { waitUntil: "networkidle2" })
+    await page.waitForTimeout(randomDelay(2000, 4000))
+
+    // Login
+    await humanType(page, 'input[name="username"]', account.email)
+    await page.waitForTimeout(randomDelay(1000, 2000))
+    await humanType(page, 'input[name="password"]', account.password)
+    await page.waitForTimeout(randomDelay(1000, 2000))
+
+    await page.click('button[type="submit"]')
+    await page.waitForTimeout(randomDelay(3000, 5000))
+
+    // Check for security challenges
+    const currentUrl = page.url()
+    if (currentUrl.includes("challenge") || currentUrl.includes("checkpoint")) {
+      throw new Error("Account requires security verification")
+    }
+
+    // Navigate to post
+    await page.goto(postUrl, { waitUntil: "networkidle2" })
+    await page.waitForTimeout(randomDelay(3000, 5000))
+
+    // Find and click comment box
+    const commentSelector = 'textarea[placeholder*="comment" i], textarea[aria-label*="comment" i]'
+    await page.waitForSelector(commentSelector, { timeout: 10000 })
+    await page.click(commentSelector)
+    await page.waitForTimeout(randomDelay(1000, 2000))
+
+    // Type comment
+    await humanType(page, commentSelector, comment)
+    await page.waitForTimeout(randomDelay(2000, 3000))
+
+    // Submit comment
+    const submitSelector = 'button[type="submit"], button:contains("Post")'
+    await page.click(submitSelector)
+    await page.waitForTimeout(randomDelay(2000, 4000))
+
+    return { success: true, comment }
+  } catch (error) {
+    console.error("Instagram comment error:", error)
+    return { success: false, error: error.message }
+  }
+}
+
+// Facebook comment automation
+const commentOnFacebook = async (page: any, account: any, postUrl: string, comment: string) => {
+  try {
+    // Navigate to Facebook login
+    await page.goto("https://www.facebook.com/login", { waitUntil: "networkidle2" })
+    await page.waitForTimeout(randomDelay(2000, 4000))
+
+    // Login
+    await humanType(page, 'input[name="email"]', account.email)
+    await page.waitForTimeout(randomDelay(1000, 2000))
+    await humanType(page, 'input[name="pass"]', account.password)
+    await page.waitForTimeout(randomDelay(1000, 2000))
+
+    await page.click('button[name="login"]')
+    await page.waitForTimeout(randomDelay(3000, 5000))
+
+    // Check for security challenges
+    const currentUrl = page.url()
+    if (currentUrl.includes("checkpoint") || currentUrl.includes("confirm")) {
+      throw new Error("Account requires security verification")
+    }
+
+    // Navigate to post
+    await page.goto(postUrl, { waitUntil: "networkidle2" })
+    await page.waitForTimeout(randomDelay(3000, 5000))
+
+    // Find and click comment box
+    const commentSelector = '[data-testid="fb-composer-text-area"], [contenteditable="true"][data-text*="comment" i]'
+    await page.waitForSelector(commentSelector, { timeout: 10000 })
+    await page.click(commentSelector)
+    await page.waitForTimeout(randomDelay(1000, 2000))
+
+    // Type comment
+    await page.type(commentSelector, comment, { delay: randomDelay(50, 150) })
+    await page.waitForTimeout(randomDelay(2000, 3000))
+
+    // Submit comment
+    await page.keyboard.press("Enter")
+    await page.waitForTimeout(randomDelay(2000, 4000))
+
+    return { success: true, comment }
+  } catch (error) {
+    console.error("Facebook comment error:", error)
+    return { success: false, error: error.message }
+  }
+}
+
+// Twitter reply automation
+const replyOnTwitter = async (page: any, account: any, postUrl: string, comment: string) => {
+  try {
+    // Navigate to Twitter login
+    await page.goto("https://twitter.com/i/flow/login", { waitUntil: "networkidle2" })
+    await page.waitForTimeout(randomDelay(2000, 4000))
+
+    // Login
+    await humanType(page, 'input[name="text"]', account.email)
+    await page.waitForTimeout(randomDelay(1000, 2000))
+    await page.click('[role="button"]:contains("Next")')
+    await page.waitForTimeout(randomDelay(2000, 3000))
+
+    await humanType(page, 'input[name="password"]', account.password)
+    await page.waitForTimeout(randomDelay(1000, 2000))
+    await page.click('[data-testid="LoginForm_Login_Button"]')
+    await page.waitForTimeout(randomDelay(3000, 5000))
+
+    // Navigate to tweet
+    await page.goto(postUrl, { waitUntil: "networkidle2" })
+    await page.waitForTimeout(randomDelay(3000, 5000))
+
+    // Find and click reply button
+    const replySelector = '[data-testid="reply"]'
+    await page.waitForSelector(replySelector, { timeout: 10000 })
+    await page.click(replySelector)
+    await page.waitForTimeout(randomDelay(2000, 3000))
+
+    // Type reply
+    const textAreaSelector = '[data-testid="tweetTextarea_0"]'
+    await page.waitForSelector(textAreaSelector, { timeout: 10000 })
+    await humanType(page, textAreaSelector, comment)
+    await page.waitForTimeout(randomDelay(2000, 3000))
+
+    // Submit reply
+    const submitSelector = '[data-testid="tweetButtonInline"]'
+    await page.click(submitSelector)
+    await page.waitForTimeout(randomDelay(2000, 4000))
+
+    return { success: true, comment }
+  } catch (error) {
+    console.error("Twitter reply error:", error)
+    return { success: false, error: error.message }
+  }
+}
+
+// YouTube comment automation
+const commentOnYouTube = async (page: any, account: any, postUrl: string, comment: string) => {
+  try {
+    // Navigate to YouTube
+    await page.goto("https://accounts.google.com/signin", { waitUntil: "networkidle2" })
+    await page.waitForTimeout(randomDelay(2000, 4000))
+
+    // Login
+    await humanType(page, 'input[type="email"]', account.email)
+    await page.waitForTimeout(randomDelay(1000, 2000))
+    await page.click("#identifierNext")
+    await page.waitForTimeout(randomDelay(2000, 3000))
+
+    await page.waitForSelector('input[type="password"]', { timeout: 10000 })
+    await humanType(page, 'input[type="password"]', account.password)
+    await page.waitForTimeout(randomDelay(1000, 2000))
+    await page.click("#passwordNext")
+    await page.waitForTimeout(randomDelay(3000, 5000))
+
+    // Navigate to YouTube video
+    await page.goto(postUrl, { waitUntil: "networkidle2" })
+    await page.waitForTimeout(randomDelay(5000, 8000))
+
+    // Scroll to comments section
+    await page.evaluate(() => {
+      window.scrollTo(0, 1000)
+    })
+    await page.waitForTimeout(randomDelay(3000, 5000))
+
+    // Find and click comment box
+    const commentSelector = "#placeholder-area, #contenteditable-root"
+    await page.waitForSelector(commentSelector, { timeout: 15000 })
+    await page.click(commentSelector)
+    await page.waitForTimeout(randomDelay(2000, 3000))
+
+    // Type comment
+    await page.type(commentSelector, comment, { delay: randomDelay(50, 150) })
+    await page.waitForTimeout(randomDelay(2000, 3000))
+
+    // Submit comment
+    const submitSelector = "#submit-button button"
+    await page.click(submitSelector)
+    await page.waitForTimeout(randomDelay(2000, 4000))
+
+    return { success: true, comment }
+  } catch (error) {
+    console.error("YouTube comment error:", error)
+    return { success: false, error: error.message }
+  }
+}
+
+// Main comment function
+const performComment = async (platform: string, account: any, postUrl: string, comment: string) => {
   const browser = await puppeteer.launch({
     headless: true,
     args: [
@@ -79,457 +250,200 @@ async function commentOnInstagram(account: any, postUrl: string, comment: string
   try {
     const page = await browser.newPage()
 
-    // Set user agent and viewport
-    await page.setUserAgent(
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    )
-    await page.setViewport({ width: 1366, height: 768 })
+    // Set random user agent
+    const userAgent = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)]
+    await page.setUserAgent(userAgent)
 
-    // Navigate to Instagram login
-    await page.goto("https://www.instagram.com/accounts/login/", { waitUntil: "networkidle2" })
-    await randomDelay(2, 4)
-
-    // Login
-    await page.type('input[name="username"]', account.email, { delay: 100 })
-    await randomDelay(1, 2)
-    await page.type('input[name="password"]', account.password, { delay: 100 })
-    await randomDelay(1, 2)
-
-    await page.click('button[type="submit"]')
-    await page.waitForNavigation({ waitUntil: "networkidle2", timeout: 30000 })
-
-    // Check for login success
-    const currentUrl = page.url()
-    if (currentUrl.includes("login") || currentUrl.includes("challenge")) {
-      throw new Error("Login failed or requires verification")
-    }
-
-    // Navigate to post
-    await page.goto(postUrl, { waitUntil: "networkidle2" })
-    await randomDelay(2, 4)
-
-    // Find and click comment button
-    const commentButton = await page.$('svg[aria-label="Comment"]')
-    if (commentButton) {
-      await commentButton.click()
-      await randomDelay(1, 2)
-    }
-
-    // Type comment
-    const commentBox = await page.$('textarea[placeholder*="comment" i]')
-    if (!commentBox) {
-      throw new Error("Comment box not found")
-    }
-
-    await commentBox.click()
-    await randomDelay(1, 2)
-    await commentBox.type(comment, { delay: 150 })
-    await randomDelay(2, 3)
-
-    // Submit comment
-    const postButton = await page.$('button:has-text("Post")')
-    if (postButton) {
-      await postButton.click()
-      await randomDelay(2, 3)
-    }
-
-    return true
-  } catch (error) {
-    console.error("Instagram comment error:", error)
-    throw error
-  } finally {
-    await browser.close()
-  }
-}
-
-// Facebook comment automation
-async function commentOnFacebook(account: any, postUrl: string, comment: string) {
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-accelerated-2d-canvas",
-      "--no-first-run",
-      "--no-zygote",
-      "--disable-gpu",
-    ],
-  })
-
-  try {
-    const page = await browser.newPage()
-    await page.setUserAgent(
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    )
-
-    // Navigate to Facebook login
-    await page.goto("https://www.facebook.com/login", { waitUntil: "networkidle2" })
-    await randomDelay(2, 4)
-
-    // Login
-    await page.type("#email", account.email, { delay: 100 })
-    await randomDelay(1, 2)
-    await page.type("#pass", account.password, { delay: 100 })
-    await randomDelay(1, 2)
-
-    await page.click('button[name="login"]')
-    await page.waitForNavigation({ waitUntil: "networkidle2", timeout: 30000 })
-
-    // Navigate to post
-    await page.goto(postUrl, { waitUntil: "networkidle2" })
-    await randomDelay(3, 5)
-
-    // Find comment box
-    const commentBox = await page.$('div[contenteditable="true"][data-testid*="comment"]')
-    if (!commentBox) {
-      throw new Error("Comment box not found")
-    }
-
-    await commentBox.click()
-    await randomDelay(1, 2)
-    await commentBox.type(comment, { delay: 120 })
-    await randomDelay(2, 3)
-
-    // Submit comment
-    await page.keyboard.press("Enter")
-    await randomDelay(2, 3)
-
-    return true
-  } catch (error) {
-    console.error("Facebook comment error:", error)
-    throw error
-  } finally {
-    await browser.close()
-  }
-}
-
-// Twitter reply automation
-async function replyOnTwitter(account: any, postUrl: string, comment: string) {
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-accelerated-2d-canvas",
-      "--no-first-run",
-      "--no-zygote",
-      "--disable-gpu",
-    ],
-  })
-
-  try {
-    const page = await browser.newPage()
-    await page.setUserAgent(
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    )
-
-    // Navigate to Twitter login
-    await page.goto("https://twitter.com/i/flow/login", { waitUntil: "networkidle2" })
-    await randomDelay(2, 4)
-
-    // Login process
-    await page.type('input[name="text"]', account.email, { delay: 100 })
-    await randomDelay(1, 2)
-    await page.click('div[role="button"]:has-text("Next")')
-    await randomDelay(2, 3)
-
-    await page.type('input[name="password"]', account.password, { delay: 100 })
-    await randomDelay(1, 2)
-    await page.click('div[role="button"]:has-text("Log in")')
-    await page.waitForNavigation({ waitUntil: "networkidle2", timeout: 30000 })
-
-    // Navigate to tweet
-    await page.goto(postUrl, { waitUntil: "networkidle2" })
-    await randomDelay(3, 5)
-
-    // Click reply button
-    const replyButton = await page.$('div[data-testid="reply"]')
-    if (replyButton) {
-      await replyButton.click()
-      await randomDelay(2, 3)
-    }
-
-    // Type reply
-    const tweetBox = await page.$('div[data-testid="tweetTextarea_0"]')
-    if (!tweetBox) {
-      throw new Error("Reply box not found")
-    }
-
-    await tweetBox.click()
-    await randomDelay(1, 2)
-    await tweetBox.type(comment, { delay: 120 })
-    await randomDelay(2, 3)
-
-    // Submit reply
-    const replySubmitButton = await page.$('div[data-testid="tweetButton"]')
-    if (replySubmitButton) {
-      await replySubmitButton.click()
-      await randomDelay(2, 3)
-    }
-
-    return true
-  } catch (error) {
-    console.error("Twitter reply error:", error)
-    throw error
-  } finally {
-    await browser.close()
-  }
-}
-
-// YouTube comment automation
-async function commentOnYouTube(account: any, postUrl: string, comment: string) {
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-accelerated-2d-canvas",
-      "--no-first-run",
-      "--no-zygote",
-      "--disable-gpu",
-    ],
-  })
-
-  try {
-    const page = await browser.newPage()
-    await page.setUserAgent(
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    )
-
-    // Navigate to Google login
-    await page.goto("https://accounts.google.com/signin", { waitUntil: "networkidle2" })
-    await randomDelay(2, 4)
-
-    // Login
-    await page.type('input[type="email"]', account.email, { delay: 100 })
-    await randomDelay(1, 2)
-    await page.click("#identifierNext")
-    await randomDelay(3, 5)
-
-    await page.type('input[type="password"]', account.password, { delay: 100 })
-    await randomDelay(1, 2)
-    await page.click("#passwordNext")
-    await page.waitForNavigation({ waitUntil: "networkidle2", timeout: 30000 })
-
-    // Navigate to YouTube video
-    await page.goto(postUrl, { waitUntil: "networkidle2" })
-    await randomDelay(5, 8)
-
-    // Scroll to comments section
-    await page.evaluate(() => {
-      window.scrollTo(0, 1000)
+    // Set viewport
+    await page.setViewport({
+      width: 1366 + Math.floor(Math.random() * 200),
+      height: 768 + Math.floor(Math.random() * 200),
     })
-    await randomDelay(3, 5)
 
-    // Find comment box
-    const commentBox = await page.$("#placeholder-area")
-    if (commentBox) {
-      await commentBox.click()
-      await randomDelay(2, 3)
+    // Remove automation traces
+    await page.evaluateOnNewDocument(() => {
+      Object.defineProperty(navigator, "webdriver", {
+        get: () => undefined,
+      })
+    })
+
+    let result
+    switch (platform) {
+      case "instagram":
+        result = await commentOnInstagram(page, account, postUrl, comment)
+        break
+      case "facebook":
+        result = await commentOnFacebook(page, account, postUrl, comment)
+        break
+      case "twitter":
+        result = await replyOnTwitter(page, account, postUrl, comment)
+        break
+      case "youtube":
+        result = await commentOnYouTube(page, account, postUrl, comment)
+        break
+      default:
+        result = { success: false, error: "Unsupported platform" }
     }
 
-    const textArea = await page.$("#contenteditable-root")
-    if (!textArea) {
-      throw new Error("Comment box not found")
-    }
-
-    await textArea.click()
-    await randomDelay(1, 2)
-    await textArea.type(comment, { delay: 150 })
-    await randomDelay(2, 3)
-
-    // Submit comment
-    const submitButton = await page.$("#submit-button")
-    if (submitButton) {
-      await submitButton.click()
-      await randomDelay(2, 3)
-    }
-
-    return true
+    return result
   } catch (error) {
-    console.error("YouTube comment error:", error)
-    throw error
+    console.error("Comment automation error:", error)
+    return { success: false, error: error.message }
   } finally {
     await browser.close()
-  }
-}
-
-// Main comment automation function
-async function automateComment(account: any, platform: string, postUrl: string, comment: string) {
-  switch (platform) {
-    case "instagram":
-      return await commentOnInstagram(account, postUrl, comment)
-    case "facebook":
-      return await commentOnFacebook(account, postUrl, comment)
-    case "twitter":
-      return await replyOnTwitter(account, postUrl, comment)
-    case "youtube":
-      return await commentOnYouTube(account, postUrl, comment)
-    default:
-      throw new Error(`Unsupported platform: ${platform}`)
   }
 }
 
 // POST - Start comment automation
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { userId, postUrl, postContent, commentStyle, sentiment, accountCount, platforms } = body
+    const { userId, postUrl, postContent, commentStyle, accountCount, platforms } = await request.json()
 
-    // Validate input
     if (!postUrl || !platforms || platforms.length === 0) {
       return NextResponse.json({ success: false, message: "Missing required fields" }, { status: 400 })
     }
 
-    // Detect platform from URL
-    const detectedPlatform = detectPlatform(postUrl)
-    if (!detectedPlatform) {
-      return NextResponse.json({ success: false, message: "Unsupported post URL format" }, { status: 400 })
+    const platform = detectPlatform(postUrl)
+    if (platform === "unknown") {
+      return NextResponse.json({ success: false, message: "Unsupported platform URL" }, { status: 400 })
     }
 
-    // Check if detected platform is in selected platforms
-    if (!platforms.includes(detectedPlatform)) {
+    if (!platforms.includes(platform)) {
       return NextResponse.json(
-        { success: false, message: `Post is from ${detectedPlatform} but it's not selected in platforms` },
+        { success: false, message: `Platform ${platform} not selected for automation` },
         { status: 400 },
       )
     }
 
     const { db } = await connectToDatabase()
 
-    // Create initial notification
-    await createNotification(
-      db,
-      userId,
-      "Comment Automation Started",
-      `Starting AI comment automation for ${detectedPlatform} post with ${accountCount} accounts`,
-      "info",
-    )
+    // Get available accounts for the platform
+    const collectionName = `${platform}_accounts`
+    const accounts = await db
+      .collection(collectionName)
+      .find({ userId, status: "active" })
+      .limit(accountCount)
+      .toArray()
 
-    // Process each selected platform (but focus on detected platform)
-    const results = []
-    const platformsToProcess = platforms.includes(detectedPlatform) ? [detectedPlatform] : platforms
-
-    for (const platform of platformsToProcess) {
-      try {
-        // Get random accounts for this platform
-        const accounts = await getRandomAccounts(db, platform, accountCount)
-
-        if (accounts.length === 0) {
-          await createNotification(
-            db,
-            userId,
-            "No Accounts Available",
-            `No ${platform} accounts found in database`,
-            "warning",
-          )
-          continue
-        }
-
-        // Process each account
-        for (let i = 0; i < Math.min(accounts.length, accountCount); i++) {
-          const account = accounts[i]
-
-          try {
-            // Generate AI comment with sentiment
-            const comment = await generateComment(postContent || "Social media post", platform, commentStyle, sentiment)
-
-            // Add random delay between accounts (30-90 seconds)
-            if (i > 0) {
-              await randomDelay(30, 90)
-            }
-
-            // Attempt to post comment
-            const success = await automateComment(account, platform, postUrl, comment)
-
-            // Store activity in database
-            const activity = {
-              userId,
-              platform,
-              email: account.email,
-              postUrl,
-              comment,
-              success,
-              sentiment,
-              commentStyle,
-              createdAt: new Date(),
-            }
-
-            await db.collection("comment_activities").insertOne(activity)
-            results.push(activity)
-
-            // Create success notification
-            if (success) {
-              await createNotification(
-                db,
-                userId,
-                "Comment Posted Successfully",
-                `${sentiment} comment posted on ${platform} using ${account.email}`,
-                "success",
-              )
-            }
-          } catch (error) {
-            console.error(`Comment failed for ${account.email}:`, error)
-
-            // Store failed activity
-            const activity = {
-              userId,
-              platform,
-              email: account.email,
-              postUrl,
-              comment: "",
-              success: false,
-              error: error.message,
-              sentiment,
-              commentStyle,
-              createdAt: new Date(),
-            }
-
-            await db.collection("comment_activities").insertOne(activity)
-            results.push(activity)
-
-            // Create error notification
-            await createNotification(
-              db,
-              userId,
-              "Comment Failed",
-              `Failed to post comment using ${account.email}: ${error.message}`,
-              "error",
-            )
-          }
-        }
-      } catch (error) {
-        console.error(`Platform ${platform} processing failed:`, error)
-        await createNotification(
-          db,
-          userId,
-          "Platform Error",
-          `Failed to process ${platform}: ${error.message}`,
-          "error",
-        )
-      }
+    if (accounts.length === 0) {
+      return NextResponse.json({ success: false, message: `No active ${platform} accounts found` }, { status: 400 })
     }
 
-    // Final summary notification
-    const successful = results.filter((r) => r.success).length
-    const failed = results.filter((r) => !r.success).length
-
-    await createNotification(
-      db,
+    // Create notification for start
+    await db.collection("notifications").insertOne({
       userId,
-      "Comment Automation Completed",
-      `Completed: ${successful} successful, ${failed} failed comments`,
-      successful > failed ? "success" : "warning",
-    )
+      title: "Comment Automation Started",
+      message: `Starting automated commenting on ${platform} with ${accounts.length} accounts`,
+      type: "info",
+      read: false,
+      time: new Date().toLocaleTimeString(),
+      createdAt: new Date(),
+    })
+
+    // Process comments asynchronously
+    setImmediate(async () => {
+      let successCount = 0
+      let failCount = 0
+
+      for (let i = 0; i < accounts.length; i++) {
+        const account = accounts[i]
+
+        try {
+          // Generate AI comment
+          const aiComment = await generateComment(postContent || postUrl, platform, commentStyle)
+
+          // Add delay between accounts (30-90 seconds)
+          if (i > 0) {
+            const delay = randomDelay(30000, 90000)
+            await new Promise((resolve) => setTimeout(resolve, delay))
+          }
+
+          // Perform comment
+          const result = await performComment(platform, account, postUrl, aiComment)
+
+          // Save activity
+          await db.collection("comment_activities").insertOne({
+            userId,
+            platform,
+            email: account.email,
+            postUrl,
+            comment: result.success ? aiComment : "",
+            success: result.success,
+            error: result.error || null,
+            createdAt: new Date(),
+          })
+
+          if (result.success) {
+            successCount++
+            // Success notification
+            await db.collection("notifications").insertOne({
+              userId,
+              title: "Comment Posted Successfully",
+              message: `Comment posted on ${platform} using ${account.email}`,
+              type: "success",
+              read: false,
+              time: new Date().toLocaleTimeString(),
+              createdAt: new Date(),
+            })
+          } else {
+            failCount++
+            // Error notification
+            await db.collection("notifications").insertOne({
+              userId,
+              title: "Comment Failed",
+              message: `Failed to comment on ${platform} using ${account.email}: ${result.error}`,
+              type: "error",
+              read: false,
+              time: new Date().toLocaleTimeString(),
+              createdAt: new Date(),
+            })
+          }
+        } catch (error) {
+          failCount++
+          console.error(`Error with account ${account.email}:`, error)
+
+          // Save failed activity
+          await db.collection("comment_activities").insertOne({
+            userId,
+            platform,
+            email: account.email,
+            postUrl,
+            comment: "",
+            success: false,
+            error: error.message,
+            createdAt: new Date(),
+          })
+
+          // Error notification
+          await db.collection("notifications").insertOne({
+            userId,
+            title: "Comment Error",
+            message: `Error commenting with ${account.email}: ${error.message}`,
+            type: "error",
+            read: false,
+            time: new Date().toLocaleTimeString(),
+            createdAt: new Date(),
+          })
+        }
+      }
+
+      // Final completion notification
+      await db.collection("notifications").insertOne({
+        userId,
+        title: "Comment Automation Completed",
+        message: `Completed: ${successCount} successful, ${failCount} failed comments on ${platform}`,
+        type: successCount > failCount ? "success" : "warning",
+        read: false,
+        time: new Date().toLocaleTimeString(),
+        createdAt: new Date(),
+      })
+    })
 
     return NextResponse.json({
       success: true,
-      message: `Comment automation completed: ${successful} successful, ${failed} failed`,
-      results,
-      summary: { successful, failed, total: results.length },
+      message: `Comment automation started for ${accounts.length} ${platform} accounts`,
+      accountsUsed: accounts.length,
+      platform,
     })
   } catch (error) {
     console.error("Comment automation error:", error)
@@ -550,7 +464,7 @@ export async function GET(request: NextRequest) {
 
     const { db } = await connectToDatabase()
 
-    // Fetch recent activities
+    // Get comment activities
     const activities = await db
       .collection("comment_activities")
       .find({ userId })
@@ -558,31 +472,42 @@ export async function GET(request: NextRequest) {
       .limit(limit)
       .toArray()
 
-    // Calculate summary stats
-    const total = activities.length
-    const successful = activities.filter((a) => a.success).length
-    const failed = total - successful
+    // Get summary stats
+    const totalActivities = await db.collection("comment_activities").countDocuments({ userId })
+    const successfulActivities = await db.collection("comment_activities").countDocuments({ userId, success: true })
+    const failedActivities = await db.collection("comment_activities").countDocuments({ userId, success: false })
 
-    // Platform breakdown
+    // Get platform-specific stats
+    const platformStats = await db
+      .collection("comment_activities")
+      .aggregate([{ $match: { userId, success: true } }, { $group: { _id: "$platform", count: { $sum: 1 } } }])
+      .toArray()
+
     const platforms = {
-      instagram: activities.filter((a) => a.platform === "instagram").length,
-      facebook: activities.filter((a) => a.platform === "facebook").length,
-      twitter: activities.filter((a) => a.platform === "twitter").length,
-      youtube: activities.filter((a) => a.platform === "youtube").length,
+      instagram: 0,
+      facebook: 0,
+      twitter: 0,
+      youtube: 0,
     }
+
+    platformStats.forEach((stat) => {
+      if (platforms.hasOwnProperty(stat._id)) {
+        platforms[stat._id] = stat.count
+      }
+    })
 
     return NextResponse.json({
       success: true,
       activities,
       summary: {
-        total,
-        successful,
-        failed,
+        total: totalActivities,
+        successful: successfulActivities,
+        failed: failedActivities,
         platforms,
       },
     })
   } catch (error) {
-    console.error("Fetch activities error:", error)
+    console.error("Error fetching comment activities:", error)
     return NextResponse.json({ success: false, message: "Internal server error" }, { status: 500 })
   }
 }
