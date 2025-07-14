@@ -3,6 +3,18 @@ import { GoogleGenerativeAI } from "@google/generative-ai"
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "")
 
+interface CommentRequest {
+  postContent: string
+  platform: string
+  style: string
+  sentiment: "positive" | "negative" | "neutral"
+}
+
+interface CommentResponse {
+  comment: string
+  confidence: number
+}
+
 export interface CommentGenerationOptions {
   postContent: string
   commentStyle: "engaging" | "supportive" | "question" | "compliment" | "casual"
@@ -111,61 +123,102 @@ const SENTIMENT_MODIFIERS = {
 // Fallback comments by platform and style
 const FALLBACK_COMMENTS = {
   instagram: {
-    engaging: ["Love this! 😍", "This is amazing! ✨", "So inspiring! 🔥", "Absolutely beautiful! 💕"],
-    supportive: ["You've got this! 💪", "Keep shining! ✨", "So proud of you! ❤️", "Amazing work! 🙌"],
-    question: ["How did you do this?", "What inspired this?", "Any tips to share?", "Where was this taken?"],
-    compliment: ["Gorgeous! 😍", "Perfect shot! 📸", "Love your style! ✨", "So talented! 🎨"],
-    casual: ["Nice! 👍", "Cool! 😎", "Awesome! 🔥", "Love it! ❤️"],
+    positive: {
+      engaging: "Love this! 😍 What inspired you to create this?",
+      supportive: "This is amazing! Keep up the great work! 💪",
+      question: "This looks incredible! How long did this take? 🤔",
+      compliment: "Absolutely beautiful! You're so talented! ✨",
+      casual: "This is so cool! 😊",
+    },
+    negative: {
+      engaging: "Interesting perspective. Have you considered this angle? 🤔",
+      supportive: "Good effort! Maybe try this approach next time?",
+      question: "What made you choose this particular method?",
+      compliment: "I appreciate the effort, though I'd love to see more of X",
+      casual: "Not bad, but could use some work 😅",
+    },
+    neutral: {
+      engaging: "Thanks for sharing this. What's your take on it?",
+      supportive: "Informative post. Thanks for the insights.",
+      question: "Can you elaborate on this point?",
+      compliment: "Well-presented information.",
+      casual: "Interesting stuff 👍",
+    },
   },
   facebook: {
-    engaging: [
-      "This is fantastic! Thanks for sharing.",
-      "Really interesting perspective!",
-      "Love seeing content like this!",
-      "This made my day!",
-    ],
-    supportive: ["You're doing amazing!", "Keep up the great work!", "So inspiring to see this!", "Proud of you!"],
-    question: ["What's your take on this?", "How did you get started?", "Any advice for beginners?", "What's next?"],
-    compliment: ["Excellent work!", "Really well done!", "You have great taste!", "This is beautiful!"],
-    casual: ["Nice post!", "Thanks for sharing!", "Good stuff!", "Appreciate this!"],
+    positive: {
+      engaging: "This is fantastic! I'd love to hear more about your experience with this.",
+      supportive: "You're doing amazing work! This really resonates with me.",
+      question: "This is really interesting! What got you started with this?",
+      compliment: "Incredible post! Your insights are always so valuable.",
+      casual: "Love this! Thanks for sharing your thoughts.",
+    },
+    negative: {
+      engaging: "I see your point, but have you considered the other side of this?",
+      supportive: "Good attempt, though I think there might be room for improvement here.",
+      question: "What evidence supports this particular viewpoint?",
+      compliment: "I see the effort, though I'd suggest looking into X as well.",
+      casual: "Hmm, not sure I agree with this one.",
+    },
+    neutral: {
+      engaging: "Thanks for sharing. Thoughts on the broader implications?",
+      supportive: "Informative post. Appreciate you taking the time to share this.",
+      question: "Can you provide more context on this topic?",
+      compliment: "Well-researched and clearly presented.",
+      casual: "Interesting perspective 👍",
+    },
   },
   twitter: {
-    engaging: ["This! 🔥", "💯", "So true! ✨", "Love this! 👏"],
-    supportive: ["You've got this! 💪", "Keep going! 🚀", "Proud of you! ❤️", "Amazing! 🙌"],
-    question: ["Thoughts?", "How so?", "What's your take?", "Any tips?"],
-    compliment: ["Well said! 👏", "Great point! 💯", "Love this! ✨", "Brilliant! 🔥"],
-    casual: ["Nice! 👍", "Cool! 😎", "True! ✅", "Same! 🤝"],
+    positive: {
+      engaging: "This is gold! 🔥 What's your next move?",
+      supportive: "Absolutely love this! You're crushing it! 💪",
+      question: "This is brilliant! How did you figure this out? 🤔",
+      compliment: "Pure genius! Your content is always top-tier! ⭐",
+      casual: "This hits different! 😎",
+    },
+    negative: {
+      engaging: "Interesting take, but what about this counterpoint? 🤔",
+      supportive: "Good effort, though I'd suggest considering X as well.",
+      question: "What data backs up this claim?",
+      compliment: "I see the effort, but maybe explore Y angle too?",
+      casual: "Eh, not convinced on this one 🤷‍♂️",
+    },
+    neutral: {
+      engaging: "Thanks for sharing. Thoughts on the broader implications?",
+      supportive: "Informative thread. Appreciate you taking the time to share this.",
+      question: "Can you elaborate on this point?",
+      compliment: "Well-presented information.",
+      casual: "Interesting perspective 👍",
+    },
   },
   youtube: {
-    engaging: [
-      "Great video! Really enjoyed watching this.",
-      "This was so helpful, thank you!",
-      "Amazing content as always!",
-      "Love your videos!",
-    ],
-    supportive: [
-      "Keep up the amazing work!",
-      "You're doing great!",
-      "Thanks for all your hard work!",
-      "Appreciate your content!",
-    ],
-    question: [
-      "Could you make a video about...?",
-      "What equipment do you use?",
-      "How long did this take?",
-      "Any tutorials coming?",
-    ],
-    compliment: [
-      "Excellent video quality!",
-      "Great editing!",
-      "Love your presentation style!",
-      "Really well explained!",
-    ],
-    casual: ["Nice video!", "Thanks for sharing!", "Good stuff!", "Enjoyed this!"],
+    positive: {
+      engaging: "Fantastic video! This really opened my eyes. What's your take on the future of this topic?",
+      supportive: "Amazing content as always! Your explanations make complex topics so easy to understand. Keep it up!",
+      question: "Great video! I'm curious about one thing - how did you first get interested in this subject?",
+      compliment:
+        "Incredible work! The production quality and content depth are both outstanding. You're truly talented!",
+      casual: "Love this video! Really enjoyed watching it. Thanks for the great content!",
+    },
+    negative: {
+      engaging:
+        "Interesting video, though I think there might be some missing context. Have you considered addressing X?",
+      supportive: "Good effort on this video! I'd suggest maybe exploring the counterarguments as well for balance.",
+      question: "What sources did you use for this information? I'd love to fact-check some of these claims.",
+      compliment: "I appreciate the work that went into this, though I feel like some important points were missed.",
+      casual: "Not bad, but I think you could have gone deeper on some topics.",
+    },
+    neutral: {
+      engaging: "Thanks for the video. What are your thoughts on how this applies to different contexts?",
+      supportive: "Informative content. Appreciate you taking the time to research and present this.",
+      question: "Can you provide more details on the methodology you mentioned?",
+      compliment: "Well-structured video with clear explanations.",
+      casual: "Interesting topic. Thanks for covering it.",
+    },
   },
 }
 
-export class GeminiCommentService {
+class GeminiCommentService {
   private model: any
 
   constructor() {
@@ -498,5 +551,310 @@ Respond with only one word: the best style option.
   }
 }
 
-// Export singleton instance
+class GeminiService {
+  private apiKey: string
+  private baseUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"
+
+  constructor() {
+    this.apiKey = process.env.GEMINI_API_KEY || ""
+    if (!this.apiKey) {
+      console.warn("GEMINI_API_KEY not found in environment variables")
+    }
+  }
+
+  private getPlatformPrompt(platform: string, sentiment: string): string {
+    const sentimentContext = {
+      positive: "supportive, encouraging, and uplifting",
+      negative: "constructively critical, questioning, or providing respectful feedback",
+      neutral: "balanced, informative, and objective",
+    }
+
+    const basePrompts = {
+      instagram: `Generate a ${sentimentContext[sentiment as keyof typeof sentimentContext]} Instagram comment that is casual, engaging, and uses appropriate emojis. Keep it under 150 characters and make it feel natural and authentic.`,
+
+      facebook: `Create a ${sentimentContext[sentiment as keyof typeof sentimentContext]} Facebook comment that is conversational and thoughtful. It can be longer than other platforms (up to 200 characters) and should encourage discussion.`,
+
+      twitter: `Write a ${sentimentContext[sentiment as keyof typeof sentimentContext]} Twitter reply that is concise, witty, and under 280 characters. Make it engaging and shareable.`,
+
+      youtube: `Compose a ${sentimentContext[sentiment as keyof typeof sentimentContext]} YouTube comment that is detailed and constructive. It can be longer (up to 300 characters) and should add value to the video discussion.`,
+    }
+
+    return basePrompts[platform as keyof typeof basePrompts] || basePrompts.instagram
+  }
+
+  private getStyleModifier(style: string): string {
+    const styleModifiers = {
+      engaging: "Make it conversation-starting and interactive, encouraging responses.",
+      supportive: "Make it encouraging, positive, and uplifting to boost the creator's morale.",
+      question: "Frame it as a thoughtful question that sparks discussion and engagement.",
+      compliment: "Focus on genuine praise and appreciation for the content or creator.",
+      casual: "Keep it natural and friendly, like a comment from a close friend.",
+    }
+
+    return styleModifiers[style as keyof typeof styleModifiers] || styleModifiers.engaging
+  }
+
+  private getFallbackComment(platform: string, style: string, sentiment: string): string {
+    const fallbacks = {
+      instagram: {
+        positive: {
+          engaging: "Love this! 😍 What inspired you to create this?",
+          supportive: "This is amazing! Keep up the great work! 💪",
+          question: "This looks incredible! How long did this take? 🤔",
+          compliment: "Absolutely beautiful! You're so talented! ✨",
+          casual: "This is so cool! 😊",
+        },
+        negative: {
+          engaging: "Interesting perspective. Have you considered this angle? 🤔",
+          supportive: "Good effort! Maybe try this approach next time?",
+          question: "What made you choose this particular method?",
+          compliment: "I appreciate the effort, though I'd love to see more of X",
+          casual: "Not bad, but could use some work 😅",
+        },
+        neutral: {
+          engaging: "Thanks for sharing this. What's your take on it?",
+          supportive: "Informative post. Thanks for the insights.",
+          question: "Can you elaborate on this point?",
+          compliment: "Well-presented information.",
+          casual: "Interesting stuff 👍",
+        },
+      },
+      facebook: {
+        positive: {
+          engaging: "This is fantastic! I'd love to hear more about your experience with this.",
+          supportive: "You're doing amazing work! This really resonates with me.",
+          question: "This is really interesting! What got you started with this?",
+          compliment: "Incredible post! Your insights are always so valuable.",
+          casual: "Love this! Thanks for sharing your thoughts.",
+        },
+        negative: {
+          engaging: "I see your point, but have you considered the other side of this?",
+          supportive: "Good attempt, though I think there might be room for improvement here.",
+          question: "What evidence supports this particular viewpoint?",
+          compliment: "I see the effort, though I'd suggest looking into X as well.",
+          casual: "Hmm, not sure I agree with this one.",
+        },
+        neutral: {
+          engaging: "Thanks for sharing. Thoughts on the broader implications?",
+          supportive: "Informative post. Appreciate you taking the time to share this.",
+          question: "Can you provide more context on this topic?",
+          compliment: "Well-researched and clearly presented.",
+          casual: "Interesting perspective 👍",
+        },
+      },
+      twitter: {
+        positive: {
+          engaging: "This is gold! 🔥 What's your next move?",
+          supportive: "Absolutely love this! You're crushing it! 💪",
+          question: "This is brilliant! How did you figure this out? 🤔",
+          compliment: "Pure genius! Your content is always top-tier! ⭐",
+          casual: "This hits different! 😎",
+        },
+        negative: {
+          engaging: "Interesting take, but what about this counterpoint? 🤔",
+          supportive: "Good effort, though I'd suggest considering X as well.",
+          question: "What data backs up this claim?",
+          compliment: "I see the effort, but maybe explore Y angle too?",
+          casual: "Eh, not convinced on this one 🤷‍♂️",
+        },
+        neutral: {
+          engaging: "Thanks for sharing. Thoughts on the broader implications?",
+          supportive: "Informative thread. Appreciate you taking the time to share this.",
+          question: "Can you elaborate on this point?",
+          compliment: "Well-presented information.",
+          casual: "Interesting perspective 👍",
+        },
+      },
+      youtube: {
+        positive: {
+          engaging: "Fantastic video! This really opened my eyes. What's your take on the future of this topic?",
+          supportive:
+            "Amazing content as always! Your explanations make complex topics so easy to understand. Keep it up!",
+          question: "Great video! I'm curious about one thing - how did you first get interested in this subject?",
+          compliment:
+            "Incredible work! The production quality and content depth are both outstanding. You're truly talented!",
+          casual: "Love this video! Really enjoyed watching it. Thanks for the great content!",
+        },
+        negative: {
+          engaging:
+            "Interesting video, though I think there might be some missing context. Have you considered addressing X?",
+          supportive:
+            "Good effort on this video! I'd suggest maybe exploring the counterarguments as well for balance.",
+          question: "What sources did you use for this information? I'd love to fact-check some of these claims.",
+          compliment:
+            "I appreciate the work that went into this, though I feel like some important points were missed.",
+          casual: "Not bad, but I think you could have gone deeper on some topics.",
+        },
+        neutral: {
+          engaging: "Thanks for the video. What are your thoughts on how this applies to different contexts?",
+          supportive: "Informative content. Appreciate you taking the time to research and present this.",
+          question: "Can you provide more details on the methodology you mentioned?",
+          compliment: "Well-structured video with clear explanations.",
+          casual: "Interesting topic. Thanks for covering it.",
+        },
+      },
+    }
+
+    return (
+      fallbacks[platform as keyof typeof fallbacks]?.[sentiment as keyof typeof fallbacks.instagram]?.[
+        style as keyof typeof fallbacks.instagram.positive
+      ] || "Thanks for sharing! 👍"
+    )
+  }
+
+  async generateComment(request: CommentRequest): Promise<CommentResponse> {
+    try {
+      if (!this.apiKey) {
+        // Return fallback comment if no API key
+        return {
+          comment: this.getFallbackComment(request.platform, request.style, request.sentiment),
+          confidence: 0.7,
+        }
+      }
+
+      const platformPrompt = this.getPlatformPrompt(request.platform, request.sentiment)
+      const styleModifier = this.getStyleModifier(request.style)
+
+      const prompt = `${platformPrompt} ${styleModifier}
+
+Post content: "${request.postContent}"
+
+Requirements:
+- Be authentic and natural
+- Match the ${request.sentiment} sentiment
+- Use appropriate tone for ${request.platform}
+- ${request.style} style
+- No hashtags unless specifically for Instagram
+- Keep it concise and engaging
+- Avoid generic responses
+
+Generate only the comment text, nothing else.`
+
+      const response = await fetch(`${this.baseUrl}?key=${this.apiKey}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                {
+                  text: prompt,
+                },
+              ],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.8,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 200,
+          },
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`Gemini API error: ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      if (data.candidates && data.candidates[0] && data.candidates[0].content) {
+        const generatedComment = data.candidates[0].content.parts[0].text.trim()
+
+        // Validate comment quality
+        const confidence = this.calculateConfidence(generatedComment, request)
+
+        return {
+          comment: generatedComment,
+          confidence,
+        }
+      } else {
+        throw new Error("Invalid response from Gemini API")
+      }
+    } catch (error) {
+      console.error("Error generating comment with Gemini:", error)
+
+      // Return fallback comment on error
+      return {
+        comment: this.getFallbackComment(request.platform, request.style, request.sentiment),
+        confidence: 0.6,
+      }
+    }
+  }
+
+  private calculateConfidence(comment: string, request: CommentRequest): number {
+    let confidence = 0.8 // Base confidence
+
+    // Check length appropriateness
+    const lengthLimits = {
+      instagram: 150,
+      facebook: 200,
+      twitter: 280,
+      youtube: 300,
+    }
+
+    const maxLength = lengthLimits[request.platform as keyof typeof lengthLimits] || 150
+    if (comment.length > maxLength) {
+      confidence -= 0.2
+    }
+
+    // Check for platform-appropriate elements
+    if (
+      request.platform === "instagram" &&
+      !comment.includes("😊") &&
+      !comment.includes("❤️") &&
+      !comment.includes("🔥")
+    ) {
+      // Instagram comments often have emojis
+      confidence -= 0.1
+    }
+
+    // Check sentiment alignment
+    const positiveWords = ["love", "amazing", "great", "awesome", "fantastic", "incredible"]
+    const negativeWords = ["but", "however", "though", "consider", "maybe", "could"]
+    const neutralWords = ["thanks", "interesting", "informative", "appreciate"]
+
+    const commentLower = comment.toLowerCase()
+
+    if (request.sentiment === "positive" && positiveWords.some((word) => commentLower.includes(word))) {
+      confidence += 0.1
+    } else if (request.sentiment === "negative" && negativeWords.some((word) => commentLower.includes(word))) {
+      confidence += 0.1
+    } else if (request.sentiment === "neutral" && neutralWords.some((word) => commentLower.includes(word))) {
+      confidence += 0.1
+    }
+
+    return Math.min(confidence, 1.0)
+  }
+
+  async generateMultipleComments(request: CommentRequest, count = 3): Promise<CommentResponse[]> {
+    const comments: CommentResponse[] = []
+
+    for (let i = 0; i < count; i++) {
+      try {
+        const comment = await this.generateComment(request)
+        comments.push(comment)
+
+        // Add small delay between requests to avoid rate limiting
+        if (i < count - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 1000))
+        }
+      } catch (error) {
+        console.error(`Error generating comment ${i + 1}:`, error)
+        // Add fallback comment
+        comments.push({
+          comment: this.getFallbackComment(request.platform, request.style, request.sentiment),
+          confidence: 0.5,
+        })
+      }
+    }
+
+    return comments
+  }
+}
+
 export const geminiCommentService = new GeminiCommentService()
+export const geminiService = new GeminiService()
+export default geminiService

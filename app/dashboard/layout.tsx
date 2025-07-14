@@ -370,6 +370,35 @@ export default function DashboardLayout({
                 YouTube
                 <span className="ml-auto rounded-full bg-white/20 px-2 py-0.5 text-xs font-semibold">Growth</span>
               </a>
+              <a
+                href="/dashboard/social-automation"
+                className={cn(
+                  "flex items-center rounded-md px-2 py-2 text-sm font-medium",
+                  isActive("/dashboard/social-automation")
+                    ? "bg-white/20 text-white"
+                    : "text-white/90 hover:bg-white/10 hover:text-white",
+                )}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="mr-2 h-4 w-4"
+                >
+                  <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 3 3 3 3 0 0 0 3-3V5a3 3 0 0 0-3-3z" />
+                  <path d="M19 11v4a7 7 0 0 1-14 0v-4" />
+                  <line x1="12" y1="19" x2="12" y2="23" />
+                  <line x1="8" y1="23" x2="16" y2="23" />
+                </svg>
+                AI Automation
+                <span className="ml-auto rounded-full bg-gradient-to-r from-purple-500/20 to-pink-500/20 px-2 py-0.5 text-xs font-semibold">
+                  AI
+                </span>
+              </a>
             </div>
           </div>
 
