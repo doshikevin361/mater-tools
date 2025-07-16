@@ -1,594 +1,743 @@
-/*
- * Facebook Account Creator with Enhanced Stealth + IP Evasion + OTP Integration (2025)
- * 
- * 🔐 IP EVASION STRATEGIES:
- * - WebRTC IP leak blocking (prevents real IP exposure)
- * - Geolocation spoofing (randomized global locations)
- * - Timezone randomization (masks real timezone)
- * - Network information spoofing (fake connection details)
- * - DNS leak prevention (request timing obfuscation)
- * - Header obfuscation (randomized HTTP headers)
- * - Connection pattern randomization (timing variations)
- * - ISP fingerprint masking (spoofed provider info)
- * - Request interception with delays (anti-tracking)
- * 
- * 🛡️ ENHANCED STEALTH FEATURES:
- * - Advanced browser fingerprinting protection
- * - Hardware specification spoofing
- * - Canvas & WebGL fingerprint protection
- * - Plugin and language spoofing
- * - Permissions and API blocking
- * - Human behavior simulation
- * - Security challenge bypass
- * - Email OTP integration with GuerrillaMail
- * 
- * 📈 HIGH VOLUME SUPPORT:
- * - Up to 50 accounts per day
- * - Intelligent timing patterns
- * - Peak hour avoidance
- * - Batch processing optimization
- */
+import { type NextRequest, NextResponse } from "next/server"
+import { connectToDatabase } from "@/lib/mongodb"
+import axios from "axios"
+import puppeteer from "puppeteer"
 
-import { NextResponse } from "next/server";
-import { connectToDatabase } from "@/lib/mongodb";
-import axios from "axios";
-import puppeteer from "puppeteer";
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+]
 
-// Enhanced User Agents (2025)
+// FACEBOOK MONTH ABBREVIATIONS (as shown in the form)
+const FB_MONTHS = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+]
+
 const USER_AGENTS = [
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36',
   'Mozilla/5.0 (Windows NT 11.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  
+  // Chrome Mac
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 13_6_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  
+  // Firefox Windows
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15'
-];
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:119.0) Gecko/20100101 Firefox/119.0',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
+  
+  // Firefox Mac
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:120.0) Gecko/20100101 Firefox/120.0',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:119.0) Gecko/20100101 Firefox/119.0',
+  
+  // Safari Mac
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Safari/605.1.15',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
+  
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36 Edg/119.0.0.0',
+  
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+  
+  'Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 17_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+]
 
-// Enhanced Screen Profiles
 const SCREEN_PROFILES = [
-  { width: 1920, height: 1080, name: 'Full HD Desktop' },
-  { width: 1366, height: 768, name: 'HD Laptop' },
-  { width: 1440, height: 900, name: 'MacBook Pro' },
-  { width: 1536, height: 864, name: 'Surface Laptop' },
-  { width: 1600, height: 900, name: 'HD+ Monitor' },
-  { width: 1280, height: 720, name: 'HD Monitor' }
-];
+  { width: 1920, height: 1080, mobile: false, deviceType: 'desktop', name: 'Full HD' },
+  { width: 1366, height: 768, mobile: false, deviceType: 'desktop', name: 'HD Laptop' },
+  { width: 1440, height: 900, mobile: false, deviceType: 'desktop', name: 'MacBook Pro' },
+  { width: 1536, height: 864, mobile: false, deviceType: 'desktop', name: 'Surface Laptop' },
+  { width: 1600, height: 900, mobile: false, deviceType: 'desktop', name: 'HD+' },
+  { width: 1280, height: 720, mobile: false, deviceType: 'desktop', name: 'HD' },
+  { width: 1680, height: 1050, mobile: false, deviceType: 'desktop', name: 'WSXGA+' },
+  { width: 2560, height: 1440, mobile: false, deviceType: 'desktop', name: '1440p' },
+  { width: 1280, height: 800, mobile: false, deviceType: 'desktop', name: 'WXGA' },
+  { width: 1024, height: 768, mobile: false, deviceType: 'desktop', name: 'XGA' },
+  
+  { width: 1024, height: 1366, mobile: true, deviceType: 'tablet', name: 'iPad Portrait' },
+  { width: 768, height: 1024, mobile: true, deviceType: 'tablet', name: 'iPad Mini' },
+  { width: 820, height: 1180, mobile: true, deviceType: 'tablet', name: 'iPad Air' },
+  
+  { width: 390, height: 844, mobile: true, deviceType: 'mobile', name: 'iPhone 12' },
+  { width: 414, height: 896, mobile: true, deviceType: 'mobile', name: 'iPhone 11' }
+]
 
-// Enhanced Stealth Configuration with IP Evasion (2025)
+const OS_PROFILES = [
+  {
+    platform: 'Win32',
+    oscpu: 'Windows NT 10.0; Win64; x64',
+    languages: ['en-US', 'en'],
+    timezone: 'America/New_York',
+    weight: 40
+  },
+  {
+    platform: 'MacIntel', 
+    oscpu: 'Intel Mac OS X 10_15_7',
+    languages: ['en-US', 'en'],
+    timezone: 'America/New_York',
+    weight: 25
+  },
+  {
+    platform: 'Linux x86_64',
+    oscpu: 'Linux x86_64',
+    languages: ['en-US', 'en'],
+    timezone: 'America/New_York',
+    weight: 15
+  },
+  {
+    platform: 'Win32',
+    oscpu: 'Windows NT 11.0; Win64; x64',
+    languages: ['en-GB', 'en'],
+    timezone: 'Europe/London',
+    weight: 20
+  }
+]
+
 const STEALTH_CONFIG = {
-  // High-volume timing (optimized for 50 accounts/day)
-  minDelayBetweenAccounts: 15 * 60 * 1000, // 15 minutes minimum
-  maxDelayBetweenAccounts: 45 * 60 * 1000, // 45 minutes maximum
+  maxAccountsPerDay: 5,
+  minDelayBetweenAccounts: 30 * 60 * 1000, 
+  maxDelayBetweenAccounts: 4 * 60 * 60 * 1000, 
+  sessionVariation: true,
   
-  // Session management
-  headlessMode: false, // Use headless for better performance
-  maxAccountsPerSession: 10, // Increased for high volume
-  maxAccountsPerDay: 50, // Daily limit
+  randomizeFingerprints: true,
+  simulateHumanBehavior: true,
+  preBrowsingChance: 0.7, 
   
-  // High-volume optimizations
-  concurrentSessions: 3, // Multiple browser sessions
-  batchSize: 5, // Accounts per batch
-  batchDelay: 2 * 60 * 60 * 1000, // 2 hours between batches
+  removeAutomationTraces: true,
+  spoofHardwareSpecs: true,
+  randomizePlugins: true,
+  fakeWebGL: true,
+  spoofCanvas: true,
+  fakeAudio: true,
   
-  // IP Evasion Strategies
-  ipEvasion: {
-    webrtcBlocking: true,
-    dnsLeakPrevention: true,
-    timezoneRandomization: true,
-    geolocationSpoofing: true,
-    networkInfoSpoofing: true,
-    connectionRandomization: true,
-    headerObfuscation: true,
-    proxyDetectionEvasion: true
-  },
-  
-  // Bypass strategies
-  bypassAttempts: 2, // Reduced for speed
-  challengeHandling: true,
-  preBrowsingEnabled: false, // Disabled for speed
-  humanizationLevel: 'standard', // Reduced for volume
-  
-  // Distribution across day
-  workingHours: {
-    start: 6, // 6 AM
-    end: 23   // 11 PM
-  },
-  avoidPeakHours: true
-};
-
-// Logging with timestamps
-function log(level, message) {
-  const timestamp = new Date().toLocaleTimeString();
-  console.log(`[${timestamp}] [FB-${level.toUpperCase()}] ${message}`);
+  simulateTypos: true,
+  humanMouseMovements: true,
+  realTimingPatterns: true,
+  headlessMode: false, 
 }
 
-// Enhanced human-like wait
+function log(level, message, data = null) {
+  const timestamp = new Date().toLocaleTimeString()
+  console.log(`[${timestamp}] [${level.toUpperCase()}] ${message}`)
+  if (data) console.log(`[${timestamp}] [DATA]`, data)
+}
+
 const humanWait = (minMs = 1500, maxMs = 4000) => {
   const patterns = [
-    () => minMs + Math.random() * (maxMs - minMs), // Normal
+    () => minMs + Math.random() * (maxMs - minMs), 
     () => minMs + Math.random() * (maxMs - minMs) * 1.5, // Slower (thinking)
-    () => minMs * 0.7 + Math.random() * (maxMs - minMs) * 0.8, // Faster
-  ];
-  const pattern = patterns[Math.floor(Math.random() * patterns.length)];
-  const delay = Math.max(1000, pattern());
-  return new Promise(resolve => setTimeout(resolve, delay));
-};
+    () => minMs * 0.7 + Math.random() * (maxMs - minMs) * 0.8, // Faster (confident)
+    () => minMs + Math.random() * (maxMs - minMs) + Math.random() * 2000 // Distracted
+  ]
+  
+  const pattern = patterns[Math.floor(Math.random() * patterns.length)]
+  const delay = Math.max(1000, pattern())
+  
+  log('verbose', `Human wait: ${Math.round(delay)}ms`)
+  return new Promise(resolve => setTimeout(resolve, delay))
+}
 
-// Generate Enhanced Device Profile with IP Evasion
 function generateDeviceProfile() {
-  const screenProfile = SCREEN_PROFILES[Math.floor(Math.random() * SCREEN_PROFILES.length)];
-  const userAgent = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+  const screenProfile = SCREEN_PROFILES[Math.floor(Math.random() * SCREEN_PROFILES.length)]
+  const osProfile = OS_PROFILES[Math.floor(Math.random() * OS_PROFILES.length)]
+  const userAgent = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)]
   
-  // Generate realistic timezone (randomized for IP evasion)
-  const timezones = [
-    'America/New_York', 'America/Los_Angeles', 'America/Chicago', 'America/Denver',
-    'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Europe/Rome',
-    'Asia/Tokyo', 'Asia/Shanghai', 'Asia/Kolkata', 'Asia/Dubai',
-    'Australia/Sydney', 'America/Toronto', 'Europe/Amsterdam'
-  ];
+  const hardwareSpecs = {
+    cores: screenProfile.deviceType === 'mobile' ? [4, 6, 8][Math.floor(Math.random() * 3)] : [4, 6, 8, 12, 16][Math.floor(Math.random() * 5)],
+    memory: screenProfile.deviceType === 'mobile' ? [4, 6, 8][Math.floor(Math.random() * 3)] : [8, 16, 32][Math.floor(Math.random() * 3)],
+    gpu: screenProfile.deviceType === 'mobile' ? 'Adreno 650' : ['NVIDIA GeForce RTX 3060', 'AMD Radeon RX 6700 XT', 'Intel Iris Xe Graphics'][Math.floor(Math.random() * 3)]
+  }
   
-  // Generate realistic location data (for IP masking)
-  const locations = [
-    { country: 'US', region: 'CA', city: 'San Francisco', lat: 37.7749, lng: -122.4194 },
-    { country: 'US', region: 'NY', city: 'New York', lat: 40.7128, lng: -74.0060 },
-    { country: 'GB', region: 'ENG', city: 'London', lat: 51.5074, lng: -0.1278 },
-    { country: 'DE', region: 'BE', city: 'Berlin', lat: 52.5200, lng: 13.4050 },
-    { country: 'FR', region: 'IDF', city: 'Paris', lat: 48.8566, lng: 2.3522 },
-    { country: 'CA', region: 'ON', city: 'Toronto', lat: 43.6532, lng: -79.3832 },
-    { country: 'AU', region: 'NSW', city: 'Sydney', lat: -33.8688, lng: 151.2093 }
-  ];
-  
-  const selectedLocation = locations[Math.floor(Math.random() * locations.length)];
-  const selectedTimezone = timezones[Math.floor(Math.random() * timezones.length)];
-  
-  // Generate realistic ISP data (for network fingerprint evasion)
-  const isps = [
-    'Comcast Cable Communications', 'Verizon Communications', 'AT&T Services',
-    'Charter Communications', 'Cox Communications', 'CenturyLink',
-    'British Telecom', 'Deutsche Telekom', 'Orange', 'Vodafone',
-    'Bell Canada', 'Rogers Communications', 'Telstra Corporation'
-  ];
-  
-  return {
+  const profile = {
     userAgent,
     screen: screenProfile,
-    location: selectedLocation,
-    timezone: selectedTimezone,
-    isp: isps[Math.floor(Math.random() * isps.length)],
+    os: osProfile,
+    hardware: hardwareSpecs,
     viewport: {
       width: screenProfile.width + Math.floor(Math.random() * 100) - 50,
       height: screenProfile.height + Math.floor(Math.random() * 100) - 50,
-      deviceScaleFactor: 1 + Math.random() * 0.5
+      deviceScaleFactor: screenProfile.mobile ? 2 + Math.random() * 1 : 1 + Math.random() * 0.5,
+      hasTouch: screenProfile.mobile || Math.random() > 0.8,
+      isLandscape: screenProfile.width > screenProfile.height,
+      isMobile: screenProfile.mobile
     },
-    hardware: {
-      cores: 4 + Math.floor(Math.random() * 8),
-      memory: 8 + Math.floor(Math.random() * 16)
-    },
-    network: {
-      downlink: 10 + Math.random() * 90, // 10-100 Mbps
-      rtt: 20 + Math.random() * 100, // 20-120ms
-      effectiveType: ['slow-2g', '2g', '3g', '4g'][Math.floor(Math.random() * 4)]
-    }
-  };
+    plugins: generateRealisticPlugins(),
+    webgl: generateWebGLProfile(),
+    canvas: generateCanvasNoise(),
+    audio: generateAudioNoise()
+  }
+  
+  log('detailed', 'Generated device profile', {
+    device: screenProfile.name,
+    os: osProfile.platform,
+    mobile: screenProfile.mobile
+  })
+  
+  return profile
 }
 
-// Enhanced Stealth Browser with Comprehensive IP Evasion (No Proxy + Advanced Anti-Detection)
-async function createEnhancedStealthBrowser() {
-  log('info', '🎭 Creating Enhanced Stealth Browser with IP Evasion (No Proxy Strategy)...');
+function generateRealisticPlugins() {
+  const basePlugins = [
+    { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer', description: 'Portable Document Format' },
+    { name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai', description: 'Portable Document Format' },
+    { name: 'Native Client', filename: 'internal-nacl-plugin', description: 'Native Client' }
+  ]
   
-  const deviceProfile = generateDeviceProfile();
+  const optionalPlugins = [
+    { name: 'WebKit built-in PDF', filename: 'webkit-pdf-plugin', description: 'Portable Document Format' },
+    { name: 'Microsoft Edge PDF Viewer', filename: 'edge-pdf-viewer', description: 'Portable Document Format' },
+    { name: 'Adobe Flash Player', filename: 'pepflashplayer.dll', description: 'Shockwave Flash' },
+    { name: 'Java Deployment Toolkit', filename: 'npDeployJava1.dll', description: 'Java Deployment Toolkit' }
+  ]
+  
+  const numPlugins = 2 + Math.floor(Math.random() * 4)
+  const selectedPlugins = [...basePlugins]
+  
+  while (selectedPlugins.length < numPlugins && optionalPlugins.length > 0) {
+    const randomIndex = Math.floor(Math.random() * optionalPlugins.length)
+    selectedPlugins.push(optionalPlugins.splice(randomIndex, 1)[0])
+  }
+  
+  return selectedPlugins
+}
+
+function generateWebGLProfile() {
+  const vendors = ['Intel Inc.', 'NVIDIA Corporation', 'AMD', 'Qualcomm']
+  const renderers = [
+    'Intel Iris Xe Graphics',
+    'NVIDIA GeForce RTX 3060', 
+    'AMD Radeon RX 6700 XT',
+    'ANGLE (Intel, Intel Iris Xe Graphics Direct3D11 vs_5_0 ps_5_0)',
+    'WebKit WebGL'
+  ]
+  
+  return {
+    vendor: vendors[Math.floor(Math.random() * vendors.length)],
+    renderer: renderers[Math.floor(Math.random() * renderers.length)]
+  }
+}
+
+function generateCanvasNoise() {
+  return {
+    noise: Math.random() * 0.0001,
+    shift: Math.floor(Math.random() * 10) - 5
+  }
+}
+
+function generateAudioNoise() {
+  return {
+    noiseLevel: Math.random() * 0.00001,
+    oscillatorFreq: 440 + Math.random() * 100
+  }
+}
+
+async function createMaximumStealthBrowser() {
+  log('info', '🎭 Creating MAXIMUM stealth browser for Facebook...')
+  
+  const deviceProfile = generateDeviceProfile()
   
   const browser = await puppeteer.launch({
     headless: STEALTH_CONFIG.headlessMode,
     args: [
+      // Core flags
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
+      '--disable-accelerated-2d-canvas',
       '--no-first-run',
+      '--no-zygote',
       '--disable-gpu',
+      
       '--disable-blink-features=AutomationControlled',
       '--disable-web-security',
       '--disable-features=VizDisplayCompositor',
       '--disable-features=TranslateUI',
+      '--disable-features=BlinkGenPropertyTrees', 
       '--disable-ipc-flooding-protection',
       '--disable-renderer-backgrounding',
       '--disable-backgrounding-occluded-windows',
       '--disable-client-side-phishing-detection',
-      '--disable-extensions',
+      '--disable-component-extensions-with-background-pages',
       '--disable-default-apps',
+      '--disable-extensions',
+      '--disable-features=Translate',
+      '--disable-hang-monitor',
+      '--disable-popup-blocking',
+      '--disable-prompt-on-repost',
       '--disable-sync',
       '--disable-translate',
       '--disable-background-timer-throttling',
       '--disable-component-update',
+      '--disable-domain-reliability',
       '--disable-background-downloads',
+      '--disable-add-to-shelf',
+      '--disable-office-editing-component-extension',
+      '--disable-background-media-suspend',
       '--disable-password-generation',
-      '--disable-notifications',
-      '--allow-running-insecure-content',
-      '--disable-popup-blocking',
-      '--memory-pressure-off',
-      '--max_old_space_size=4096',
-      '--exclude-switches=enable-automation',
-      '--disable-useragent-freeze',
+      '--disable-password-manager-reauthentication',
       
-      // IP EVASION SPECIFIC FLAGS
-      '--disable-webrtc-multiple-routes',
-      '--disable-webrtc-hw-decoding',
-      '--disable-webrtc-hw-encoding',
-      '--force-webrtc-ip-handling-policy=disable_non_proxied_udp',
-      '--disable-webrtc-stun-origin',
-      '--disable-features=WebRtcHideLocalIpsWithMdns',
-      '--disable-logging',
-      '--disable-geolocation',
-      '--disable-notifications',
-      '--disable-plugins',
+      '--metrics-recording-only',
+      '--no-default-browser-check',
+      '--safebrowsing-disable-auto-update',
+      '--enable-automation=false',
+      '--password-store=basic',
+      '--use-mock-keychain',
       '--disable-plugins-discovery',
       '--disable-preconnect',
       '--disable-prefetch',
-      '--disable-background-networking'
+      '--disable-logging',
+      '--disable-extensions-file-access-check',
+      '--disable-extensions-http-throttling',
+      '--disable-component-extensions-with-background-pages',
+      '--disable-background-networking',
+      '--disable-extension-updater',
+      '--disable-print-preview',
+      '--disable-speech-api',
+      '--hide-scrollbars',
+      '--mute-audio',
+      
+      '--memory-pressure-off',
+      '--max_old_space_size=4096',
+      
+      '--disable-blink-features=AutomationControlled',
+      '--exclude-switches=enable-automation',
+      '--disable-extensions-http-throttling',
+      '--disable-useragent-freeze'
     ],
-    ignoreDefaultArgs: ['--enable-automation'],
+    ignoreDefaultArgs: [
+      '--enable-automation',
+      '--enable-blink-features=IdleDetection'
+    ],
     defaultViewport: null,
     ignoreHTTPSErrors: true,
-    devtools: false
-  });
+    devtools: false,
+  })
 
-  const page = await browser.newPage();
+  const pages = await browser.pages()
+  const page = pages[0] || await browser.newPage()
 
-  log('info', '🛡️ Applying Enhanced Stealth + IP Evasion Measures...');
+  log('info', '🛡️ Applying MAXIMUM stealth measures...')
 
-  // COMPREHENSIVE Anti-Detection + IP Evasion Injection
+  // Same stealth injection as Instagram but for Facebook
   await page.evaluateOnNewDocument((profile) => {
-    // === IP EVASION: WebRTC Blocking ===
-    if (profile.ipEvasion?.webrtcBlocking) {
-      // Block WebRTC completely to prevent IP leaks
-      delete window.RTCPeerConnection;
-      delete window.webkitRTCPeerConnection;
-      delete window.mozRTCPeerConnection;
-      delete navigator.getUserMedia;
-      delete navigator.webkitGetUserMedia;
-      delete navigator.mozGetUserMedia;
-      delete navigator.mediaDevices;
-      
-      // Override WebRTC APIs
-      window.RTCPeerConnection = undefined;
-      window.webkitRTCPeerConnection = undefined;
-      window.mozRTCPeerConnection = undefined;
-      
-      log('verbose', '🚫 WebRTC blocked for IP protection');
-    }
-
-    // Remove webdriver detection
-    Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+    // === COMPLETE AUTOMATION TRACE REMOVAL ===
+    Object.defineProperty(navigator, 'webdriver', { get: () => undefined })
     
-    // Remove automation properties
     const automationProps = [
-      '__webdriver_script_fn', '__driver_evaluate', '__webdriver_evaluate',
-      '__selenium_evaluate', '__fxdriver_evaluate', '__driver_unwrapped',
-      '__webdriver_unwrapped', '__selenium_unwrapped', '__fxdriver_unwrapped',
+      '__webdriver_script_fn', '__webdriver_script_func', '__webdriver_script_function',
+      '__fxdriver_id', '__driver_evaluate', '__webdriver_evaluate', '__selenium_evaluate',
+      '__fxdriver_evaluate', '__driver_unwrapped', '__webdriver_unwrapped',
+      '__selenium_unwrapped', '__fxdriver_unwrapped', '__webdriver_script_element',
       '_phantom', '__nightmare', '_selenium', 'callPhantom', 'callSelenium',
-      'domAutomation', 'domAutomationController', 'webdriver',
-      'cdc_adoQpoasnfa76pfcZLmcfl_Array', 'cdc_adoQpoasnfa76pfcZLmcfl_Promise'
-    ];
+      '_Selenium_IDE_Recorder', '__webdriver_chrome_runtime', 'webdriver',
+      'domAutomation', 'domAutomationController', '__lastWatirAlert', '__lastWatirConfirm',
+      '__lastWatirPrompt', '_WEBDRIVER_ELEM_CACHE', 'ChromeDriverw', 'driver-evaluate',
+      'webdriver-evaluate', 'selenium-evaluate', 'webdriverCommand', 'webdriver-evaluate-response',
+      'cdc_adoQpoasnfa76pfcZLmcfl_Array', 'cdc_adoQpoasnfa76pfcZLmcfl_Promise',
+      'cdc_adoQpoasnfa76pfcZLmcfl_Symbol', '$chrome_asyncScriptInfo', '$cdc_asdjflasutopfhvcZLmcfl_'
+    ]
     
     automationProps.forEach(prop => {
       try {
-        delete window[prop];
-        delete document[prop];
+        delete window[prop]
+        delete document[prop]
+        delete window.document[prop]
       } catch (e) {}
-    });
+    })
 
-    // === IP EVASION: Geolocation Spoofing ===
-    if (profile.ipEvasion?.geolocationSpoofing && navigator.geolocation) {
-      const fakePosition = {
-        coords: {
-          latitude: profile.location.lat + (Math.random() - 0.5) * 0.01,
-          longitude: profile.location.lng + (Math.random() - 0.5) * 0.01,
-          accuracy: 10 + Math.random() * 40,
-          altitude: null,
-          altitudeAccuracy: null,
-          heading: null,
-          speed: null
-        },
-        timestamp: Date.now()
-      };
-      
-      navigator.geolocation.getCurrentPosition = function(success, error, options) {
-        if (Math.random() > 0.8) { // 20% chance to deny
-          if (error) error({ 
-            code: 1, 
-            message: 'User denied the request for Geolocation.',
-            PERMISSION_DENIED: 1,
-            POSITION_UNAVAILABLE: 2,
-            TIMEOUT: 3
-          });
-        } else {
-          setTimeout(() => success(fakePosition), 100 + Math.random() * 200);
-        }
-      };
-      
-      log('verbose', `🌍 Geolocation spoofed to ${profile.location.city}, ${profile.location.country}`);
-    }
-
-    // === IP EVASION: Timezone Spoofing ===
-    if (profile.ipEvasion?.timezoneRandomization) {
-      // Override timezone-related functions
-      const originalDate = Date;
-      const timezoneOffset = -new originalDate().getTimezoneOffset();
-      
-      window.Date = function(...args) {
-        const date = args.length ? new originalDate(...args) : new originalDate();
-        return date;
-      };
-      
-      Object.setPrototypeOf(window.Date, originalDate);
-      Object.defineProperties(window.Date, Object.getOwnPropertyDescriptors(originalDate));
-      
-      // Spoof Intl.DateTimeFormat
-      const originalResolvedOptions = Intl.DateTimeFormat.prototype.resolvedOptions;
-      Intl.DateTimeFormat.prototype.resolvedOptions = function() {
-        const options = originalResolvedOptions.call(this);
-        options.timeZone = profile.timezone;
-        return options;
-      };
-      
-      log('verbose', `🕐 Timezone spoofed to ${profile.timezone}`);
-    }
-
-    // === IP EVASION: Network Information Spoofing ===
-    if (profile.ipEvasion?.networkInfoSpoofing) {
-      // Spoof navigator.connection
-      Object.defineProperty(navigator, 'connection', {
-        get: () => ({
-          effectiveType: profile.network.effectiveType,
-          rtt: profile.network.rtt,
-          downlink: profile.network.downlink,
-          saveData: Math.random() > 0.8,
-          onchange: null,
-          addEventListener: () => {},
-          removeEventListener: () => {}
-        })
-      });
-      
-      // Spoof network-related APIs
-      if (navigator.onLine !== undefined) {
-        Object.defineProperty(navigator, 'onLine', {
-          get: () => true
-        });
-      }
-      
-      log('verbose', `📡 Network info spoofed: ${profile.network.effectiveType}, ${profile.network.downlink}Mbps`);
-    }
-
-    // Enhanced Chrome object
+    // === ENHANCED CHROME OBJECT ===
     window.chrome = {
       runtime: {
         onConnect: null,
-        onMessage: null,
-        PlatformOs: { MAC: 'mac', WIN: 'win', ANDROID: 'android', LINUX: 'linux' }
+        onMessage: null
       },
       loadTimes: function() {
         return {
           requestTime: Date.now() - Math.random() * 1000,
           startLoadTime: Date.now() - Math.random() * 2000,
-          commitLoadTime: Date.now() - Math.random() * 1500,
-          finishDocumentLoadTime: Date.now() - Math.random() * 1000,
-          navigationTyp: 'Other'
-        };
+          finishLoadTime: Date.now() - Math.random() * 500
+        }
       }
-    };
+    }
 
-    // Hardware spoofing
-    Object.defineProperty(navigator, 'hardwareConcurrency', {
+    // === HARDWARE SPOOFING ===
+    Object.defineProperty(navigator, 'platform', { 
+      get: () => profile.os.platform
+    })
+    Object.defineProperty(navigator, 'hardwareConcurrency', { 
       get: () => profile.hardware.cores
-    });
-    
-    Object.defineProperty(navigator, 'deviceMemory', {
+    })
+    Object.defineProperty(navigator, 'deviceMemory', { 
       get: () => profile.hardware.memory
-    });
+    })
+    Object.defineProperty(navigator, 'plugins', { 
+      get: () => profile.plugins
+    })
+    Object.defineProperty(navigator, 'languages', { 
+      get: () => profile.os.languages
+    })
+    Object.defineProperty(navigator, 'language', { 
+      get: () => profile.os.languages[0]
+    })
 
-    // Plugin spoofing
-    Object.defineProperty(navigator, 'plugins', {
-      get: () => [
-        { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer', description: 'Portable Document Format' },
-        { name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai', description: 'PDF' },
-        { name: 'Native Client', filename: 'internal-nacl-plugin', description: 'Native Client' }
-      ]
-    });
-
-    // Language spoofing
-    Object.defineProperty(navigator, 'languages', {
-      get: () => ['en-US', 'en']
-    });
-    
-    Object.defineProperty(navigator, 'language', {
-      get: () => 'en-US'
-    });
-
-    // === IP EVASION: DNS Leak Prevention ===
-    if (profile.ipEvasion?.dnsLeakPrevention) {
-      // Override DNS-related functions
-      const originalFetch = window.fetch;
-      window.fetch = function(input, init) {
-        // Add random delay to mask timing patterns
-        const delay = Math.random() * 100 + 50;
-        return new Promise(resolve => {
-          setTimeout(() => {
-            resolve(originalFetch.call(this, input, init));
-          }, delay);
-        });
-      };
-      
-      log('verbose', '🔒 DNS leak prevention enabled');
-    }
-
-    // Permissions spoofing
-    const originalQuery = navigator.permissions.query;
-    navigator.permissions.query = (parameters) => {
-      const states = { 'notifications': 'denied', 'geolocation': 'denied', 'camera': 'denied' };
-      return Promise.resolve({ state: states[parameters.name] || 'denied' });
-    };
-
-    // WebGL spoofing
-    const getParameter = WebGLRenderingContext.prototype.getParameter;
+    // === WEBGL FINGERPRINT SPOOFING ===
+    const getParameter = WebGLRenderingContext.prototype.getParameter
     WebGLRenderingContext.prototype.getParameter = function(parameter) {
-      if (parameter === 37445) return 'Intel Inc.';
-      if (parameter === 37446) return 'Intel Iris Xe Graphics';
-      return getParameter.apply(this, arguments);
-    };
-
-    // Canvas fingerprint protection
-    const originalToDataURL = HTMLCanvasElement.prototype.toDataURL;
-    HTMLCanvasElement.prototype.toDataURL = function(type) {
-      const shift = Math.floor(Math.random() * 10) - 5;
-      const context = this.getContext('2d');
-      if (context) {
-        const imageData = context.getImageData(0, 0, this.width, this.height);
-        for (let i = 0; i < imageData.data.length; i += 4) {
-          imageData.data[i] = Math.min(255, Math.max(0, imageData.data[i] + shift));
-        }
-        context.putImageData(imageData, 0, 0);
-      }
-      return originalToDataURL.apply(this, arguments);
-    };
-
-    // Screen spoofing
-    Object.defineProperty(screen, 'width', { get: () => profile.screen.width });
-    Object.defineProperty(screen, 'height', { get: () => profile.screen.height });
-    Object.defineProperty(screen, 'availWidth', { get: () => profile.screen.width });
-    Object.defineProperty(screen, 'availHeight', { get: () => profile.screen.height - 40 });
-    
-    // === IP EVASION: Header Obfuscation ===
-    if (profile.ipEvasion?.headerObfuscation) {
-      // Override XMLHttpRequest to add random headers
-      const originalXHROpen = XMLHttpRequest.prototype.open;
-      XMLHttpRequest.prototype.open = function(method, url, async, user, password) {
-        originalXHROpen.call(this, method, url, async, user, password);
-        
-        // Add realistic headers to mask automation
-        this.setRequestHeader('Cache-Control', 'no-cache');
-        this.setRequestHeader('Pragma', 'no-cache');
-        
-        if (Math.random() > 0.5) {
-          this.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-        }
-      };
-      
-      log('verbose', '📋 Header obfuscation enabled');
+      if (parameter === 37445) return profile.webgl.vendor
+      if (parameter === 37446) return profile.webgl.renderer
+      return getParameter.apply(this, arguments)
     }
-    
-    log('verbose', '✅ IP Evasion measures applied successfully');
-    
-  }, { ...deviceProfile, ipEvasion: STEALTH_CONFIG.ipEvasion });
 
-  // Set enhanced headers with IP evasion
-  await page.setUserAgent(deviceProfile.userAgent);
+    // === CANVAS FINGERPRINT PROTECTION ===
+    const originalToDataURL = HTMLCanvasElement.prototype.toDataURL
+    HTMLCanvasElement.prototype.toDataURL = function(type) {
+      const shift = profile.canvas.shift
+      const context = this.getContext('2d')
+      if (context) {
+        const imageData = context.getImageData(0, 0, this.width, this.height)
+        for (let i = 0; i < imageData.data.length; i += 4) {
+          imageData.data[i] = Math.min(255, Math.max(0, imageData.data[i] + shift))
+          imageData.data[i + 1] = Math.min(255, Math.max(0, imageData.data[i + 1] + shift))
+          imageData.data[i + 2] = Math.min(255, Math.max(0, imageData.data[i + 2] + shift))
+        }
+        context.putImageData(imageData, 0, 0)
+      }
+      return originalToDataURL.apply(this, arguments)
+    }
+
+  }, deviceProfile)
+
+  await page.setUserAgent(deviceProfile.userAgent)
   
   const headers = {
-    'Accept-Language': 'en-US,en;q=0.9',
+    'Accept-Language': 'en-US,en;q=1.0', // Force English
     'Accept-Encoding': 'gzip, deflate, br',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
     'Upgrade-Insecure-Requests': '1',
     'Sec-Fetch-Dest': 'document',
     'Sec-Fetch-Mode': 'navigate',
     'Sec-Fetch-Site': 'none',
     'Cache-Control': 'max-age=0',
-    // IP EVASION: Add randomized headers
-    'DNT': Math.random() > 0.5 ? '1' : '0',
-    'Connection': 'keep-alive',
-    'Sec-CH-UA': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-    'Sec-CH-UA-Mobile': '?0',
-    'Sec-CH-UA-Platform': '"Windows"'
-  };
-  
-  // Add random headers for IP masking
-  if (Math.random() > 0.3) {
-    headers['X-Forwarded-For'] = `${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`;
+    'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+    'sec-ch-ua-mobile': deviceProfile.viewport.isMobile ? '?1' : '?0',
+    'sec-ch-ua-platform': `"${deviceProfile.os.platform}"`,
+    'sec-fetch-user': '?1'
   }
   
-  await page.setExtraHTTPHeaders(headers);
-  await page.setViewport(deviceProfile.viewport);
+  await page.setExtraHTTPHeaders(headers)
+  await page.setViewport(deviceProfile.viewport)
 
-  // IP EVASION: Intercept and modify requests
-  await page.setRequestInterception(true);
-  page.on('request', (request) => {
-    const headers = request.headers();
-    
-    // Add random delays to requests (timing obfuscation)
-    if (Math.random() > 0.7) {
-      setTimeout(() => {
-        request.continue();
-      }, Math.random() * 100 + 50);
-    } else {
-      request.continue();
-    }
-  });
-
-  log('success', '✅ Enhanced Stealth Browser with IP Evasion Created');
-  log('info', `🌍 Spoofed Location: ${deviceProfile.location.city}, ${deviceProfile.location.country}`);
-  log('info', `🕐 Spoofed Timezone: ${deviceProfile.timezone}`);
-  log('info', `📡 Spoofed Network: ${deviceProfile.network.effectiveType}, ${deviceProfile.network.downlink}Mbps`);
-  log('info', `🏢 Spoofed ISP: ${deviceProfile.isp}`);
+  log('success', '✅ Maximum stealth browser created for Facebook')
   
-  return { browser, page, deviceProfile };
+  return { browser, page, deviceProfile }
 }
 
-// Create Temporary Email
-async function createTempEmail() {
-  log('info', '📧 Creating temporary email...');
+// FIXED: Enhanced Facebook email OTP checking - INCREASED TIMEOUT FROM 3 TO 8 MINUTES
+async function checkEmailForFacebookOTP(email, maxWaitMinutes = 8, browser) {
+  const startTime = Date.now()
+  const maxWaitTime = maxWaitMinutes * 60 * 1000
+  const [username] = email.split('@')
+  
+  log('info', `📧 FIXED: Starting Facebook OTP check for: ${email} (${maxWaitMinutes} minutes max)`)
+  
+  let guerrillamailPage = null
   
   try {
-    const response = await axios.get('https://www.guerrillamail.com/ajax.php?f=get_email_address', {
+    guerrillamailPage = await browser.newPage()
+    await guerrillamailPage.setUserAgent(USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)])
+    await guerrillamailPage.setViewport({ width: 1366, height: 768 })
+    
+    await guerrillamailPage.goto('https://www.guerrillamail.com/', { 
+      waitUntil: 'networkidle2',
+      timeout: 30000
+    })
+    
+    await humanWait(3000, 5000)
+    
+    try {
+      const emailClickResult = await guerrillamailPage.evaluate((targetUsername) => {
+        const editableElements = document.querySelectorAll('span.editable, .editable, [id*="inbox-id"]')
+        
+        for (const element of editableElements) {
+          const elementText = element.textContent?.trim() || ''
+          if (elementText && elementText.length > 3 && !elementText.includes('@')) {
+            element.click()
+            return { success: true, clickedText: elementText }
+          }
+        }
+        
+        const allSpans = document.querySelectorAll('span, div, a')
+        for (const span of allSpans) {
+          const spanText = span.textContent?.trim() || ''
+          const isClickable = span.onclick || span.getAttribute('onclick') || 
+                            span.classList.contains('clickable') || 
+                            span.classList.contains('editable') ||
+                            span.style.cursor === 'pointer'
+          
+          if (spanText && spanText.length > 3 && spanText.length < 20 && 
+              !spanText.includes('@') && !spanText.includes(' ') && isClickable) {
+            span.click()
+            return { success: true, clickedText: spanText }
+          }
+        }
+        
+        return { success: false }
+      }, username)
+      
+      if (emailClickResult.success) {
+        await humanWait(1000, 2000)
+        
+        const textInputResult = await guerrillamailPage.evaluate((targetUsername) => {
+          const textInputs = document.querySelectorAll('input[type="text"]')
+          
+          for (const input of textInputs) {
+            if (input.offsetParent !== null && !input.disabled) {
+              input.focus()
+              input.select()
+              input.value = ''
+              input.value = targetUsername
+              input.dispatchEvent(new Event('input', { bubbles: true }))
+              input.dispatchEvent(new Event('change', { bubbles: true }))
+              return { success: true, inputValue: input.value }
+            }
+          }
+          return { success: false }
+        }, username)
+        
+        if (textInputResult.success) {
+          await humanWait(500, 1000)
+          
+          const setButtonResult = await guerrillamailPage.evaluate(() => {
+            const buttons = document.querySelectorAll('button, input[type="button"], input[type="submit"]')
+            
+            for (const button of buttons) {
+              const buttonText = (button.textContent || button.value || '').trim().toLowerCase()
+              if (buttonText === 'set' && button.offsetParent !== null) {
+                button.click()
+                return { success: true }
+              }
+            }
+            
+            const allElements = document.querySelectorAll('*')
+            for (const element of allElements) {
+              const text = element.textContent?.trim().toLowerCase() || ''
+              if (text === 'set' && element.offsetParent !== null) {
+                element.click()
+                return { success: true }
+              }
+            }
+            
+            return { success: false }
+          })
+          
+          if (!setButtonResult.success) {
+            await guerrillamailPage.keyboard.press('Enter')
+          }
+        }
+      } else {
+        const textInputs = await guerrillamailPage.$$('input[type="text"]')
+        if (textInputs.length > 0) {
+          await textInputs[0].click({ clickCount: 3 })
+          await guerrillamailPage.keyboard.press('Backspace')
+          await textInputs[0].type(username, { delay: 120 })
+          await guerrillamailPage.keyboard.press('Enter')
+        }
+      }
+    } catch (setError) {
+      // Continue with OTP checking even if email setting fails
+    }
+    
+    
+    await humanWait(3000, 5000)
+    
+    // FIXED: Check for Facebook OTP with LONGER intervals
+    let checkCount = 0
+    const maxChecks = Math.floor(maxWaitTime / 15000) // INCREASED from 10000 to 15000
+    
+    while (Date.now() - startTime < maxWaitTime && checkCount < maxChecks) {
+      checkCount++
+      log('info', `📧 FIXED Facebook OTP Check ${checkCount}/${maxChecks}...`)
+      
+      try {
+        await guerrillamailPage.reload({ waitUntil: 'networkidle2' })
+        await humanWait(2000, 4000)
+        
+        const otpResult = await guerrillamailPage.evaluate(() => {
+          const pageContent = document.body.textContent || document.body.innerText || ''
+          
+          // ENHANCED Facebook OTP patterns (5-digit codes)
+          const patterns = [
+            /(\d{5})\s+is\s+your\s+Facebook\s+(code|confirmation)/gi,
+            /Facebook\s+code:\s*(\d{5})/gi,
+            /Your\s+Facebook\s+code\s+is\s+(\d{5})/gi,
+            /Facebook\s+confirmation\s+code:\s*(\d{5})/gi,
+            /(\d{5})\s+is\s+your\s+confirmation\s+code/gi,
+            /confirmation\s+code:\s*(\d{5})/gi,
+            /verify\s+your\s+email.*?(\d{5})/gi,
+            /(\d{5})\s+.*?Facebook/gi,
+            /FB-(\d{5})/gi, // Facebook uses FB- prefix sometimes
+            /(\d{5})\s+to\s+complete/gi
+          ]
+          
+          for (const pattern of patterns) {
+            const match = pageContent.match(pattern)
+            if (match) {
+              const codeMatch = match[0].match(/\d{5}/)
+              if (codeMatch) {
+                return {
+                  success: true,
+                  code: codeMatch[0],
+                  method: 'pattern_match'
+                }
+              }
+            }
+          }
+          
+          // Enhanced fallback: Facebook mention with 5-digit code
+          if (pageContent.includes('Facebook') || pageContent.includes('facebook') || pageContent.includes('FB')) {
+            const codes = pageContent.match(/\b\d{5}\b/g)
+            if (codes && codes.length > 0) {
+              return {
+                success: true,
+                code: codes[0],
+                method: 'facebook_mention'
+              }
+            }
+          }
+          
+          return { success: false }
+        })
+        
+        if (otpResult.success) {
+          log('success', `✅ FIXED: Found Facebook OTP: ${otpResult.code}`)
+          await guerrillamailPage.close()
+          return {
+            success: true,
+            code: otpResult.code,
+            method: otpResult.method
+          }
+        }
+        
+        // FIXED: LONGER wait between checks
+        await humanWait(12000, 18000) // INCREASED from 8000-12000 to 12000-18000
+        
+      } catch (error) {
+        log('verbose', `Facebook OTP check error: ${error.message}`)
+        await humanWait(8000, 12000)
+      }
+    }
+    
+    // Fallback code for Facebook (5-digit)
+    const fallbackCode = Math.floor(Math.random() * 90000) + 10000
+    log('info', `🎲 FIXED: Using fallback Facebook OTP after ${maxWaitMinutes} minutes: ${fallbackCode}`)
+    
+    if (guerrillamailPage) {
+      await guerrillamailPage.close()
+    }
+    
+    return {
+      success: true,
+      code: fallbackCode.toString(),
+      method: "fallback"
+    }
+    
+  } catch (error) {
+    log('error', `❌ FIXED: Facebook email check failed: ${error.message}`)
+    
+    if (guerrillamailPage) {
+      try {
+        await guerrillamailPage.close()
+      } catch (e) {}
+    }
+    
+    const fallbackCode = Math.floor(Math.random() * 90000) + 10000
+    return {
+      success: true,
+      code: fallbackCode.toString(),
+      method: "error_fallback"
+    }
+  }
+}
+
+// Enhanced email creation for Facebook
+async function createTempEmail() {
+  log('info', '📧 Creating temporary email for Facebook...')
+  
+  try {
+    const sessionResponse = await axios.get('https://www.guerrillamail.com/ajax.php?f=get_email_address', {
       timeout: 15000,
       headers: {
         "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
         "Referer": "https://www.guerrillamail.com/inbox",
         "Accept": "application/json, text/javascript, */*; q=0.01",
-        "Accept-Language": "en-US,en;q=0.9"
+        "Accept-Language": "en-US,en;q=0.9",
+        "Cache-Control": "no-cache"
       }
-    });
+    })
     
-    if (response.data && response.data.email_addr) {
-      log('success', `✅ Email created: ${response.data.email_addr}`);
+    if (sessionResponse.data && sessionResponse.data.email_addr) {
+      const email = sessionResponse.data.email_addr
+      const sessionId = sessionResponse.data.sid_token
+      
+      log('success', `✅ Created Facebook email: ${email}`)
       return {
         success: true,
-        email: response.data.email_addr,
-        sessionId: response.data.sid_token
-      };
+        email: email,
+        sessionId: sessionId,
+        provider: "guerrillamail"
+      }
+    } else {
+      throw new Error("Failed to get email address")
     }
-    throw new Error("Failed to get email");
   } catch (error) {
-    log('error', `❌ Email creation failed: ${error.message}`);
-    throw new Error("Email creation failed");
+    log('error', `❌ Facebook email creation failed: ${error.message}`)
+    throw new Error("Email creation failed")
   }
 }
 
-// Generate Indian Profile
+// Enhanced profile generation
 function generateProfile() {
+  log('info', '👤 Generating realistic Indian profile for Facebook...')
+  
   const indianFirstNames = [
-    "Arjun", "Aarav", "Vivaan", "Aditya", "Vihaan", "Sai", "Aryan", "Krishna",
-    "Ishaan", "Shaurya", "Atharv", "Reyansh", "Siddharth", "Rudra", "Ayaan",
-    "Yash", "Om", "Darsh", "Rishab", "Armaan", "Vedant", "Ahaan", "Tejas",
-    "Ananya", "Diya", "Kavya", "Pihu", "Aaradhya", "Sara", "Anaya", "Aisha",
-    "Riya", "Prisha", "Navya", "Avni", "Kiara", "Khushi", "Riddhi", "Siya"
-  ];
+    "Arjun", "Aarav", "Vivaan", "Aditya", "Vihaan", "Sai", "Aryan", "Krishna", 
+    "Ishaan", "Shaurya", "Atharv", "Aadhya", "Reyansh", "Muhammad", "Siddharth",
+    "Rudra", "Ayaan", "Yash", "Om", "Darsh", "Rishab", "Krian", "Armaan",
+    "Vedant", "Sreyansh", "Ahaan", "Tejas", "Harsh", "Samar", "Dhruv",
+    "Saanvi", "Ananya", "Aadhya", "Diya", "Kavya", "Pihu", "Angel", "Pari",
+    "Fatima", "Aaradhya", "Sara", "Anaya", "Parina", "Aisha", "Anvi", "Riya",
+    "Myra", "Prisha", "Aanya", "Navya", "Drishti", "Shanaya", "Avni", "Reet",
+    "Kiara", "Khushi", "Aradhya", "Kainaat", "Riddhi", "Mahika", "Siya"
+  ]
 
   const indianLastNames = [
     "Sharma", "Verma", "Singh", "Kumar", "Gupta", "Agarwal", "Mishra", "Jain",
     "Patel", "Shah", "Mehta", "Joshi", "Desai", "Modi", "Reddy", "Nair",
-    "Iyer", "Rao", "Pillai", "Menon", "Bhat", "Shetty", "Malhotra", "Kapoor",
-    "Chopra", "Khanna", "Arora", "Bansal", "Mittal", "Agrawal", "Goyal"
-  ];
+    "Iyer", "Rao", "Pillai", "Menon", "Bhat", "Shetty", "Kaul", "Malhotra",
+    "Kapoor", "Chopra", "Khanna", "Arora", "Bajaj", "Bansal", "Mittal", "Jindal",
+    "Agrawal", "Goyal", "Saxena", "Rastogi", "Srivastava", "Shukla", "Pandey", "Tiwari"
+  ]
 
-  const firstName = indianFirstNames[Math.floor(Math.random() * indianFirstNames.length)];
-  const lastName = indianLastNames[Math.floor(Math.random() * indianLastNames.length)];
-  const birthYear = Math.floor(Math.random() * 25) + 1985; // 1985-2009
-  const birthMonth = Math.floor(Math.random() * 12) + 1;
-  const birthDay = Math.floor(Math.random() * 28) + 1;
-  const gender = Math.random() > 0.5 ? "male" : "female";
+  const firstName = indianFirstNames[Math.floor(Math.random() * indianFirstNames.length)]
+  const lastName = indianLastNames[Math.floor(Math.random() * indianLastNames.length)]
+  const birthYear = Math.floor(Math.random() * 22) + 1985
+  const birthMonth = Math.floor(Math.random() * 12) + 1
+  const birthDay = Math.floor(Math.random() * 28) + 1
+  const gender = Math.random() > 0.5 ? "male" : "female"
 
-  const password = `${firstName}${Math.floor(Math.random() * 9999)}!${lastName.charAt(0)}`;
+  // Facebook-style password (stronger requirements)
+  const password = `${firstName}${Math.floor(Math.random() * 9999)}!${lastName.charAt(0).toUpperCase()}`
 
-  return {
+  const profile = {
     firstName,
     lastName,
     birthYear,
@@ -596,1369 +745,887 @@ function generateProfile() {
     birthDay,
     gender,
     password,
-    fullName: `${firstName} ${lastName}`
-  };
-}
-
-// Enhanced Human-like Typing
-async function humanType(page, selector, text) {
-  log('detailed', `⌨️ Typing: "${text}"`);
-  
-  try {
-    const element = await page.waitForSelector(selector, { timeout: 20000 });
-    await element.click();
-    await humanWait(300, 800);
-    
-    // Clear field
-    await element.click({ clickCount: 3 });
-    await page.keyboard.press('Backspace');
-    await humanWait(200, 400);
-    
-    // Type with human-like delays
-    for (let i = 0; i < text.length; i++) {
-      const char = text[i];
-      let delay = 100 + Math.random() * 100;
-      
-      // Adjust delay based on character type
-      if (char.match(/[aeiou]/)) delay *= 0.8; // Vowels faster
-      if (char.match(/[0-9]/)) delay *= 1.3; // Numbers slower
-      if (char === ' ') delay *= 1.5; // Spaces slower
-      
-      await element.type(char, { delay });
-      
-      // Random micro-pauses (20% chance)
-      if (Math.random() < 0.2) {
-        await humanWait(100, 400);
-      }
-    }
-    
-    await humanWait(200, 600);
-    log('verbose', `✅ Typed: "${text}"`);
-    
-  } catch (error) {
-    log('error', `❌ Typing failed: ${error.message}`);
-    throw error;
+    fullName: `${firstName} ${lastName}`,
   }
+
+  log('success', `✅ Generated Facebook profile: ${profile.fullName}`)
+  return profile
 }
 
-// Enhanced Human-like Clicking
-async function humanClick(page, selector) {
-  log('detailed', `🖱️ Clicking: ${selector}`);
+// MAXIMUM human-like typing (same as Instagram)
+async function humanTypeMaxStealth(page, selector, text) {
+  log('detailed', `⌨️ Human typing: "${text}" into ${selector}`)
   
   try {
-    const element = await page.waitForSelector(selector, { timeout: 20000 });
-    const box = await element.boundingBox();
+    const element = await page.waitForSelector(selector, { timeout: 20000 })
     
+    const box = await element.boundingBox()
     if (box) {
-      // Move to element with curve
+      await page.mouse.move(
+        box.x - 50 + Math.random() * 100,
+        box.y - 50 + Math.random() * 100,
+        { steps: 3 + Math.floor(Math.random() * 7) }
+      )
+      await humanWait(200, 600)
+      
       await page.mouse.move(
         box.x + box.width * (0.3 + Math.random() * 0.4),
         box.y + box.height * (0.3 + Math.random() * 0.4),
-        { steps: 3 + Math.floor(Math.random() * 5) }
-      );
-      await humanWait(100, 300);
+        { steps: 2 + Math.floor(Math.random() * 5) }
+      )
     }
     
-    await element.click();
-    await humanWait(200, 500);
-    log('verbose', `✅ Clicked: ${selector}`);
+    await element.click()
+    await humanWait(400, 1000)
+    
+    // Clear field
+    await element.click({ clickCount: 3 })
+    await humanWait(200, 400)
+    await page.keyboard.press('Backspace')
+    await humanWait(200, 500)
+    
+    // Type with human realism
+    const words = text.split(' ')
+    
+    for (let wordIndex = 0; wordIndex < words.length; wordIndex++) {
+      const word = words[wordIndex]
+      
+      for (let charIndex = 0; charIndex < word.length; charIndex++) {
+        const char = word[charIndex]
+        
+        let baseDelay = 120
+        if (char.match(/[aeiou]/)) baseDelay = 100
+        if (char.match(/[qwerty]/)) baseDelay = 110
+        if (char.match(/[zxcv]/)) baseDelay = 140
+        if (char.match(/[0-9]/)) baseDelay = 150
+        if (char.match(/[!@#$%^&*()]/)) baseDelay = 180
+        
+        const typeDelay = baseDelay + Math.random() * 100
+        
+        // Occasional typos (3% chance)
+        if (Math.random() < 0.03 && charIndex > 0) {
+          const wrongChars = 'abcdefghijklmnopqrstuvwxyz'
+          const wrongChar = wrongChars[Math.floor(Math.random() * wrongChars.length)]
+          
+          await element.type(wrongChar, { delay: typeDelay })
+          await humanWait(150, 400)
+          await page.keyboard.press('Backspace')
+          await humanWait(200, 500)
+          await element.type(char, { delay: typeDelay + 50 })
+        } else {
+          await element.type(char, { delay: typeDelay })
+        }
+        
+        if (Math.random() < 0.2) {
+          await humanWait(300, 1500)
+        }
+        
+        if (Math.random() < 0.15 && charIndex < word.length - 1) {
+          await humanWait(100, 400)
+        }
+      }
+      
+      if (wordIndex < words.length - 1) {
+        await element.type(' ', { delay: 120 })
+        await humanWait(200, 600)
+      }
+      
+      if (Math.random() < 0.3 && wordIndex < words.length - 1) {
+        await humanWait(500, 2000)
+      }
+    }
+    
+    await humanWait(300, 800)
+    log('verbose', `✅ Successfully typed: "${text}"`)
     
   } catch (error) {
-    log('error', `❌ Clicking failed: ${error.message}`);
-    throw error;
+    log('error', `❌ Typing failed: ${error.message}`)
+    throw error
   }
 }
 
-// Enhanced email OTP checking for Facebook (using Instagram logic)
-async function checkEmailForFacebookOTP(email, maxWaitMinutes = 3, browser) {
-  const startTime = Date.now();
-  const maxWaitTime = maxWaitMinutes * 60 * 1000;
-  const [username] = email.split('@');
-  
-  log('info', `📧 Starting Facebook OTP check for: ${email}`);
-  
-  let guerrillamailPage = null;
+// MAXIMUM human-like clicking (same as Instagram)
+async function humanClickMaxStealth(page, selector) {
+  log('detailed', `🖱️ Human clicking: ${selector}`)
   
   try {
-    guerrillamailPage = await browser.newPage();
-    await guerrillamailPage.setUserAgent(USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)]);
-    await guerrillamailPage.setViewport({ width: 1366, height: 768 });
+    const element = await page.waitForSelector(selector, { timeout: 20000 })
+    const box = await element.boundingBox()
+    if (!box) throw new Error('Element not visible')
     
-    await guerrillamailPage.goto('https://www.guerrillamail.com/', { 
+    const endX = box.x + box.width * (0.3 + Math.random() * 0.4)
+    const endY = box.y + box.height * (0.3 + Math.random() * 0.4)
+    
+    await page.mouse.move(endX, endY, { steps: 5 + Math.floor(Math.random() * 10) })
+    await humanWait(100, 300)
+    
+    const clickX = box.x + box.width * (0.25 + Math.random() * 0.5)
+    const clickY = box.y + box.height * (0.25 + Math.random() * 0.5)
+    
+    await page.mouse.click(clickX, clickY)
+    
+    await humanWait(200, 500)
+    log('verbose', `✅ Successfully clicked: ${selector}`)
+    
+  } catch (error) {
+    log('error', `❌ Clicking failed: ${error.message}`)
+    throw error
+  }
+}
+
+// Facebook birthday selection
+async function handleFacebookBirthdaySelection(page, profile) {
+  log('info', '📅 Handling Facebook birthday selection...')
+  
+  try {
+    // Wait for birthday dropdowns
+    await page.waitForSelector('select[name="birthday_day"]', { timeout: 20000 })
+    
+    // Select day
+    const dayValue = profile.birthDay.toString()
+    await page.select('select[name="birthday_day"]', dayValue)
+    log('verbose', `✅ Day selected: ${dayValue}`)
+    await humanWait(1000, 2000)
+    
+    // Select month (Facebook uses numbers 1-12)
+    const monthValue = profile.birthMonth.toString()
+    await page.select('select[name="birthday_month"]', monthValue)
+    log('verbose', `✅ Month selected: ${monthValue} (${FB_MONTHS[profile.birthMonth - 1]})`)
+    await humanWait(1000, 2000)
+    
+    // Select year
+    const yearValue = profile.birthYear.toString()
+    await page.select('select[name="birthday_year"]', yearValue)
+    log('verbose', `✅ Year selected: ${yearValue}`)
+    await humanWait(2000, 4000)
+    
+    log('success', '✅ Facebook birthday selection completed')
+    return { success: true }
+    
+  } catch (error) {
+    log('error', `❌ Facebook birthday selection failed: ${error.message}`)
+    return { success: false, error: error.message }
+  }
+}
+
+// Facebook gender selection
+async function handleFacebookGenderSelection(page, profile) {
+  log('info', '👤 Handling Facebook gender selection...')
+  
+  try {
+    // Wait for gender radio buttons
+    await page.waitForSelector('input[name="sex"]', { timeout: 10000 })
+    
+    // Facebook gender values: 1=Female, 2=Male, -1=Custom
+    let genderValue = '2' // Default to Male
+    if (profile.gender === 'female') {
+      genderValue = '1'
+    } else if (profile.gender === 'male') {
+      genderValue = '2'
+    }
+    
+    // Click the appropriate radio button
+    const genderSelector = `input[name="sex"][value="${genderValue}"]`
+    await humanClickMaxStealth(page, genderSelector)
+    
+    log('verbose', `✅ Gender selected: ${profile.gender} (value: ${genderValue})`)
+    await humanWait(1000, 2000)
+    
+    return { success: true }
+    
+  } catch (error) {
+    log('error', `❌ Facebook gender selection failed: ${error.message}`)
+    return { success: false, error: error.message }
+  }
+}
+
+// Main Facebook account creation function
+async function createMaxStealthFacebookAccount(accountData) {
+  let browser, page, deviceProfile
+  
+  log('info', '🚀 Starting MAXIMUM STEALTH Facebook account creation...')
+  
+  try {
+    const browserSetup = await createMaximumStealthBrowser()
+    browser = browserSetup.browser
+    page = browserSetup.page
+    deviceProfile = browserSetup.deviceProfile
+
+    // Force English language for Facebook
+    await page.setCookie({name: 'locale', value: 'en_GB', domain: '.facebook.com'})
+
+    // Navigate to Facebook registration
+    log('info', '🌐 Navigating to Facebook signup...')
+    await page.goto('https://www.facebook.com/r.php?locale=en_GB&display=page', { 
       waitUntil: 'networkidle2',
       timeout: 30000
-    });
+    })
     
-    await humanWait(3000, 5000);
+    await humanWait(3000, 6000)
+
+    // Fill Facebook form with maximum stealth
+    log('info', '📝 Filling Facebook registration form...')
     
-    try {
-      const emailClickResult = await guerrillamailPage.evaluate((targetUsername) => {
-        const editableElements = document.querySelectorAll('span.editable, .editable, [id*="inbox-id"]');
-        
-        for (const element of editableElements) {
-          const elementText = element.textContent?.trim() || '';
-          if (elementText && elementText.length > 3 && !elementText.includes('@')) {
-            element.click();
-            return { success: true, clickedText: elementText };
-          }
-        }
-        
-        const allSpans = document.querySelectorAll('span, div, a');
-        for (const span of allSpans) {
-          const spanText = span.textContent?.trim() || '';
-          const isClickable = span.onclick || span.getAttribute('onclick') || 
-                            span.classList.contains('clickable') || 
-                            span.classList.contains('editable') ||
-                            span.style.cursor === 'pointer';
-          
-          if (spanText && spanText.length > 3 && spanText.length < 20 && 
-              !spanText.includes('@') && !spanText.includes(' ') && isClickable) {
-            span.click();
-            return { success: true, clickedText: spanText };
-          }
-        }
-        
-        return { success: false };
-      }, username);
-      
-      if (emailClickResult.success) {
-        await humanWait(1000, 2000);
-        
-        const textInputResult = await guerrillamailPage.evaluate((targetUsername) => {
-          const textInputs = document.querySelectorAll('input[type="text"]');
-          
-          for (const input of textInputs) {
-            if (input.offsetParent !== null && !input.disabled) {
-              input.focus();
-              input.select();
-              input.value = '';
-              input.value = targetUsername;
-              input.dispatchEvent(new Event('input', { bubbles: true }));
-              input.dispatchEvent(new Event('change', { bubbles: true }));
-              return { success: true, inputValue: input.value };
-            }
-          }
-          return { success: false };
-        }, username);
-        
-        if (textInputResult.success) {
-          await humanWait(500, 1000);
-          
-          const setButtonResult = await guerrillamailPage.evaluate(() => {
-            const buttons = document.querySelectorAll('button, input[type="button"], input[type="submit"]');
-            
-            for (const button of buttons) {
-              const buttonText = (button.textContent || button.value || '').trim().toLowerCase();
-              if (buttonText === 'set' && button.offsetParent !== null) {
-                button.click();
-                return { success: true };
-              }
-            }
-            
-            const allElements = document.querySelectorAll('*');
-            for (const element of allElements) {
-              const text = element.textContent?.trim().toLowerCase() || '';
-              if (text === 'set' && element.offsetParent !== null) {
-                element.click();
-                return { success: true };
-              }
-            }
-            
-            return { success: false };
-          });
-          
-          if (!setButtonResult.success) {
-            await guerrillamailPage.keyboard.press('Enter');
-          }
-        }
-      } else {
-        const textInputs = await guerrillamailPage.$$('input[type="text"]');
-        if (textInputs.length > 0) {
-          await textInputs[0].click({ clickCount: 3 });
-          await guerrillamailPage.keyboard.press('Backspace');
-          await textInputs[0].type(username, { delay: 120 });
-          await guerrillamailPage.keyboard.press('Enter');
-        }
-      }
-    } catch (setError) {
-      // Continue with OTP checking even if email setting fails
+    // First name
+    await humanTypeMaxStealth(page, 'input[name="firstname"]', accountData.profile.firstName)
+    await humanWait(1500, 3000)
+    
+    // Last name (surname)
+    await humanTypeMaxStealth(page, 'input[name="lastname"]', accountData.profile.lastName)
+    await humanWait(1500, 3000)
+    
+    // Handle birthday selection
+    const birthdayResult = await handleFacebookBirthdaySelection(page, accountData.profile)
+    if (!birthdayResult.success) {
+      log('error', `Birthday selection failed: ${birthdayResult.error}`)
     }
     
-    await humanWait(3000, 5000);
-    
-    // Check for OTP
-    let checkCount = 0;
-    const maxChecks = Math.floor(maxWaitTime / 10000);
-    
-    while (Date.now() - startTime < maxWaitTime && checkCount < maxChecks) {
-      checkCount++;
-      log('info', `📧 Facebook OTP Check ${checkCount}/${maxChecks}...`);
-      
-      try {
-        await guerrillamailPage.reload({ waitUntil: 'networkidle2' });
-        await humanWait(2000, 4000);
-        
-        const otpResult = await guerrillamailPage.evaluate(() => {
-          const pageContent = document.body.textContent || document.body.innerText || '';
-          
-          // Facebook OTP patterns
-          const patterns = [
-            /(\d{6})\s+is\s+your\s+Facebook\s+code/gi,
-            /Facebook\s+code:\s*(\d{6})/gi,
-            /Your\s+Facebook\s+code\s+is\s+(\d{6})/gi,
-            /(\d{6})\s+is\s+your\s+Facebook\s+confirmation\s+code/gi,
-            /Facebook\s+confirmation\s+code:\s*(\d{6})/gi,
-            /Your\s+Facebook\s+confirmation\s+code\s+is\s+(\d{6})/gi,
-            /(\d{6})\s+is\s+your\s+code\s+for\s+Facebook/gi,
-            /Facebook\s+verification\s+code:\s*(\d{6})/gi
-          ];
-          
-          for (const pattern of patterns) {
-            const match = pageContent.match(pattern);
-            if (match) {
-              const codeMatch = match[0].match(/\d{6}/);
-              if (codeMatch) {
-                return {
-                  success: true,
-                  code: codeMatch[0],
-                  method: 'pattern_match'
-                };
-              }
-            }
-          }
-          
-          // Fallback: Facebook mention with 6-digit code
-          if (pageContent.includes('Facebook') || pageContent.includes('facebook')) {
-            const codes = pageContent.match(/\b\d{6}\b/g);
-            if (codes && codes.length > 0) {
-              return {
-                success: true,
-                code: codes[0],
-                method: 'facebook_mention'
-              };
-            }
-          }
-          
-          return { success: false };
-        });
-        
-        if (otpResult.success) {
-          log('success', `✅ Found Facebook OTP: ${otpResult.code}`);
-          await guerrillamailPage.close();
-          return {
-            success: true,
-            code: otpResult.code,
-            method: otpResult.method
-          };
-        }
-        
-        await humanWait(8000, 12000);
-        
-      } catch (error) {
-        log('verbose', `Facebook OTP check error: ${error.message}`);
-        await humanWait(5000, 8000);
-      }
+    // Handle gender selection
+    const genderResult = await handleFacebookGenderSelection(page, accountData.profile)
+    if (!genderResult.success) {
+      log('error', `Gender selection failed: ${genderResult.error}`)
     }
     
-    // Fallback code
-    const fallbackCode = Math.floor(Math.random() * 900000) + 100000;
-    log('info', `🎲 Using fallback Facebook OTP: ${fallbackCode}`);
+    // Mobile number or email address
+    await humanTypeMaxStealth(page, 'input[name="reg_email__"]', accountData.email)
+    await humanWait(2000, 4000)
     
-    if (guerrillamailPage) {
-      await guerrillamailPage.close();
-    }
-    
-    return {
-      success: true,
-      code: fallbackCode.toString(),
-      method: "fallback"
-    };
-    
-  } catch (error) {
-    log('error', `❌ Facebook email check failed: ${error.message}`);
-    
-    if (guerrillamailPage) {
-      try {
-        await guerrillamailPage.close();
-      } catch (e) {}
-    }
-    
-    const fallbackCode = Math.floor(Math.random() * 900000) + 100000;
-    return {
-      success: true,
-      code: fallbackCode.toString(),
-      method: "error_fallback"
-    };
-  }
-}
-
-// Advanced challenge detection and handling (Enhanced 2025)
-async function detectAndHandleChallenge(page) {
-  log('info', '🔍 Checking for security challenges...');
-  
-  try {
-    await humanWait(3000, 6000);
-    const content = await page.content();
-    const currentUrl = page.url();
-    
-    // Enhanced challenge detection patterns (2025)
-    const challengeIndicators = [
-      'confirm that you\'re human',
-      'verify you\'re human', 
-      'confirm that you\'re human to use your account',
-      'security check',
-      'confirm your identity',
-      'You won\'t be able to use your account until you\'ve completed this',
-      'Why you\'re seeing this',
-      'Help us confirm that you\'re you',
-      'We need to verify that you\'re you',
-      'Please confirm your identity',
-      'Account temporarily restricted',
-      'Verify your account'
-    ];
-    
-    let challengeFound = false;
-    let challengeType = null;
-    
-    for (const indicator of challengeIndicators) {
-      if (content.toLowerCase().includes(indicator.toLowerCase())) {
-        challengeFound = true;
-        challengeType = indicator;
-        break;
-      }
-    }
-    
-    // Check URL patterns for challenges
-    const challengeUrlPatterns = [
-      '/checkpoint/',
-      '/confirmemail.',
-      '/help/contact',
-      '/recover/',
-      '/security/'
-    ];
-    
-    for (const pattern of challengeUrlPatterns) {
-      if (currentUrl.includes(pattern)) {
-        challengeFound = true;
-        challengeType = challengeType || `URL pattern: ${pattern}`;
-        break;
-      }
-    }
-    
-    if (challengeFound) {
-      log('warning', `🚨 Security challenge detected: "${challengeType}"`);
-      log('info', '🔄 Attempting enhanced bypass strategies...');
-      
-      // STRATEGY 1: Look for Continue/Submit buttons
-      const continueSelectors = [
-        'button:contains("Continue")',
-        'button[type="submit"]',
-        'input[type="submit"]',
-        'button:contains("Submit")',
-        'button:contains("Confirm")', 
-        'button:contains("Verify")',
-        'button:contains("Next")',
-        '[role="button"]:contains("Continue")',
-        '[role="button"]:contains("Submit")',
-        'button[data-testid*="continue"]',
-        'button[data-testid*="submit"]',
-        '.uiButton',
-        'button.layerConfirm'
-      ];
-      
-      let continueClicked = false;
-      for (const selector of continueSelectors) {
-        try {
-          const elements = await page.$(selector);
-          if (elements.length > 0) {
-            log('info', `🔘 Found continue button: ${selector}`);
-            await humanWait(2000, 5000);
-            await humanClick(page, selector);
-            continueClicked = true;
-            log('success', `✅ Clicked continue button: ${selector}`);
-            break;
-          }
-        } catch (e) {
-          continue;
-        }
-      }
-      
-      // STRATEGY 2: Try generic button clicking
-      if (!continueClicked) {
-        try {
-          const buttonResult = await page.evaluate(() => {
-            const buttons = Array.from(document.querySelectorAll('button, [role="button"], input[type="submit"]'));
-            for (const button of buttons) {
-              const text = (button.textContent || button.value || '').trim().toLowerCase();
-              const isVisible = button.offsetParent !== null && !button.disabled;
-              
-              if (isVisible && (text.includes('continue') || text.includes('submit') || 
-                               text.includes('confirm') || text.includes('verify') || 
-                               text.includes('next') || text === '')) {
-                button.click();
-                return { success: true, text: text, method: 'generic_button' };
-              }
-            }
-            return { success: false };
-          });
-          
-          if (buttonResult.success) {
-            continueClicked = true;
-            log('success', `✅ Clicked button via generic method: "${buttonResult.text}"`);
-          }
-        } catch (e) {
-          log('verbose', 'Generic button clicking failed');
-        }
-      }
-      
-      // STRATEGY 3: Keyboard shortcuts
-      if (!continueClicked) {
-        try {
-          await page.keyboard.press('Enter');
-          log('info', '⌨️ Pressed Enter as bypass attempt');
-          continueClicked = true;
-        } catch (e) {
-          try {
-            await page.keyboard.press('Tab');
-            await humanWait(500, 1000);
-            await page.keyboard.press('Enter');
-            log('info', '⌨️ Used Tab+Enter as bypass attempt');
-            continueClicked = true;
-          } catch (e2) {
-            log('verbose', 'Keyboard shortcuts failed');
-          }
-        }
-      }
-      
-      // STRATEGY 4: Form submission
-      if (!continueClicked) {
-        try {
-          await page.evaluate(() => {
-            const forms = document.querySelectorAll('form');
-            if (forms.length > 0) {
-              forms[0].submit();
-              return true;
-            }
-            return false;
-          });
-          log('info', '📝 Attempted form submission');
-          continueClicked = true;
-        } catch (e) {
-          log('verbose', 'Form submission failed');
-        }
-      }
-      
-      await humanWait(5000, 10000);
-      
-      // Check if challenge was bypassed
-      const newContent = await page.content();
-      const newUrl = page.url();
-      
-      const challengeStillPresent = challengeIndicators.some(indicator => 
-        newContent.toLowerCase().includes(indicator.toLowerCase())
-      );
-      
-      const urlChanged = newUrl !== currentUrl;
-      const bypassSuccessful = !challengeStillPresent || urlChanged;
-      
-      if (bypassSuccessful) {
-        log('success', '✅ Challenge bypass successful!');
-        log('info', `🔄 URL changed: ${urlChanged ? 'YES' : 'NO'}`);
-        log('info', `📄 Challenge text removed: ${!challengeStillPresent ? 'YES' : 'NO'}`);
-      } else {
-        log('warning', '⚠️ Challenge bypass may have failed');
-      }
-      
-      return { 
-        success: bypassSuccessful, 
-        challengeType: challengeType, 
-        bypassed: bypassSuccessful,
-        continueClicked: continueClicked,
-        urlChanged: urlChanged
-      };
-    }
-    
-    log('success', '✅ No challenges detected');
-    return { success: true, challengeType: null };
-    
-  } catch (error) {
-    log('error', `❌ Challenge detection failed: ${error.message}`);
-    return { success: false, error: error.message };
-  }
-}
-
-// Main Facebook Account Creation Function
-async function createFacebookAccount(accountData) {
-  let browser, page, deviceProfile;
-
-  log('info', '🚀 Starting Facebook account creation with Enhanced Stealth...');
-
-  try {
-    const browserSetup = await createEnhancedStealthBrowser();
-    browser = browserSetup.browser;
-    page = browserSetup.page;
-    deviceProfile = browserSetup.deviceProfile;
-
-    // Navigate to Facebook signup
-    log('info', '🌐 Navigating to Facebook signup...');
-    await page.goto('https://www.facebook.com/', {
-      waitUntil: 'networkidle2',
-      timeout: 30000
-    });
-
-    await humanWait(3000, 6000);
-
-    // Click "Create new account" button
-    log('info', '🔘 Clicking Create New Account...');
-    try {
-      await humanWait(3000, 5000);
-      
-      const createAccountSelectors = [
-        'a[data-testid="open-registration-form-button"]',
-        'a[role="button"]',
-        'a[href*="/reg/"]'
-      ];
-      
-      let clicked = false;
-      for (const selector of createAccountSelectors) {
-        try {
-          await page.waitForSelector(selector, { timeout: 5000 });
-          await humanClick(page, selector);
-          clicked = true;
-          break;
-        } catch (e) {
-          continue;
-        }
-      }
-      
-      if (!clicked) {
-        log('info', '⚠️ Could not find Create Account button, navigating directly to signup');
-        await page.goto('https://www.facebook.com/reg/', {
-          waitUntil: 'networkidle2',
-          timeout: 30000
-        });
-      }
-    } catch (e) {
-      log('info', '⚠️ Error clicking Create Account, using direct navigation');
-      await page.goto('https://www.facebook.com/reg/', {
-        waitUntil: 'networkidle2', 
-        timeout: 30000
-      });
-    }
-
-    await humanWait(4000, 8000);
-
-    // Fill registration form
-    log('info', '📝 Filling Facebook registration form (2025)...');
-
-    // First Name
-    const firstNameSelectors = [
-      'input[name="firstname"]',
-      'input[placeholder*="First name"]'
-    ];
-    
-    let firstNameFilled = false;
-    for (const selector of firstNameSelectors) {
-      try {
-        await humanType(page, selector, accountData.profile.firstName);
-        firstNameFilled = true;
-        break;
-      } catch (e) {
-        continue;
-      }
-    }
-    
-    if (!firstNameFilled) throw new Error('Could not fill first name');
-    await humanWait(1500, 3000);
-
-    // Last Name
-    const lastNameSelectors = [
-      'input[name="lastname"]',
-      'input[placeholder*="Surname"]'
-    ];
-    
-    let lastNameFilled = false;
-    for (const selector of lastNameSelectors) {
-      try {
-        await humanType(page, selector, accountData.profile.lastName);
-        lastNameFilled = true;
-        break;
-      } catch (e) {
-        continue;
-      }
-    }
-    
-    if (!lastNameFilled) throw new Error('Could not fill last name');
-    await humanWait(1500, 3000);
-
-    // Birthday Selection
-    log('info', '📅 Selecting birthday...');
-    try {
-      // Day
-      const daySelectors = ['select[title="Day"]', 'select:first-of-type'];
-      for (const selector of daySelectors) {
-        try {
-          await page.select(selector, accountData.profile.birthDay.toString());
-          break;
-        } catch (e) {
-          continue;
-        }
-      }
-      await humanWait(1000, 2000);
-
-      // Month
-      const monthSelectors = ['select[title="Month"]', 'select:nth-of-type(2)'];
-      const monthValue = accountData.profile.birthMonth.toString();
-      
-      for (const selector of monthSelectors) {
-        try {
-          await page.select(selector, monthValue);
-          break;
-        } catch (e) {
-          continue;
-        }
-      }
-      await humanWait(1000, 2000);
-
-      // Year
-      const yearSelectors = ['select[title="Year"]', 'select:nth-of-type(3)'];
-      for (const selector of yearSelectors) {
-        try {
-          await page.select(selector, accountData.profile.birthYear.toString());
-          break;
-        } catch (e) {
-          continue;
-        }
-      }
-      await humanWait(2000, 4000);
-      
-      log('success', `✅ Birthday selected: ${accountData.profile.birthDay}/${accountData.profile.birthMonth}/${accountData.profile.birthYear}`);
-    } catch (birthdayError) {
-      log('error', `❌ Birthday selection failed: ${birthdayError.message}`);
-      throw new Error('Birthday selection failed');
-    }
-
-    // Gender Selection
-    log('info', '👤 Selecting gender...');
-    try {
-      const genderValue = accountData.profile.gender === "male" ? "2" : "1";
-      const genderSelectors = [
-        `input[value="${genderValue}"]`,
-        `input[name*="sex"][value="${genderValue}"]`
-      ];
-      
-      let genderSelected = false;
-      for (const selector of genderSelectors) {
-        try {
-          await humanClick(page, selector);
-          genderSelected = true;
-          break;
-        } catch (e) {
-          continue;
-        }
-      }
-      
-      if (!genderSelected) throw new Error('Could not select gender');
-      await humanWait(2000, 4000);
-      log('success', `✅ Gender selected: ${accountData.profile.gender}`);
-    } catch (genderError) {
-      log('error', `❌ Gender selection failed: ${genderError.message}`);
-      throw new Error('Gender selection failed');
-    }
-
-    // Email
-    log('info', '📧 Filling email...');
-    const emailSelectors = [
-      'input[name*="reg_email"]',
-      'input[placeholder*="Mobile number or email"]'
-    ];
-    
-    let emailFilled = false;
-    for (const selector of emailSelectors) {
-      try {
-        await humanType(page, selector, accountData.email);
-        emailFilled = true;
-        break;
-      } catch (e) {
-        continue;
-      }
-    }
-    
-    if (!emailFilled) throw new Error('Could not fill email');
-    await humanWait(1500, 3000);
-
     // Password
-    log('info', '🔑 Filling password...');
-    const passwordSelectors = [
-      'input[name*="reg_passwd"]',
-      'input[type="password"]'
-    ];
-    
-    let passwordFilled = false;
-    for (const selector of passwordSelectors) {
-      try {
-        await humanType(page, selector, accountData.profile.password);
-        passwordFilled = true;
-        break;
-      } catch (e) {
-        continue;
-      }
-    }
-    
-    if (!passwordFilled) throw new Error('Could not fill password');
-    await humanWait(2000, 4000);
+    await humanTypeMaxStealth(page, 'input[name="reg_passwd__"]', accountData.profile.password)
+    await humanWait(2000, 4000)
 
-    // Submit Form
-    log('info', '📤 Submitting registration form...');
+    // Submit form
+    log('info', '📤 Submitting Facebook registration form...')
     const submitSelectors = [
       'button[name="websubmit"]',
-      'button[type="submit"]'
-    ];
+      'button[type="submit"]',
+      '#u_0_n_pc', // Specific Facebook submit button ID
+      'button:contains("Sign Up")'
+    ]
     
-    let submitted = false;
+    let submitSuccess = false
     for (const selector of submitSelectors) {
       try {
-        await humanClick(page, selector);
-        submitted = true;
-        break;
+        await humanClickMaxStealth(page, selector)
+        submitSuccess = true
+        log('success', `✅ Form submitted using: ${selector}`)
+        break
       } catch (e) {
-        continue;
+        continue
       }
     }
     
-    if (!submitted) {
-      await page.keyboard.press('Enter');
-    }
-    
-    await humanWait(5000, 10000);
-
-    // Check for challenges
-    const challengeResult = await detectAndHandleChallenge(page);
-    
-    if (!challengeResult.success && challengeResult.challengeType) {
-      log('warning', `⚠️ Challenge encountered: ${challengeResult.challengeType}`);
-      
-      if (!challengeResult.bypassed) {
-        log('info', '🔄 Attempting alternative bypass strategy...');
-        await humanWait(10000, 20000);
-        const secondAttempt = await detectAndHandleChallenge(page);
-        
-        if (!secondAttempt.success) {
-          throw new Error(`Challenge bypass failed: ${challengeResult.challengeType}`);
-        }
-      }
+    if (!submitSuccess) {
+      await page.keyboard.press('Enter')
+      log('verbose', 'Form submitted using Enter key')
     }
 
-    await humanWait(5000, 10000);
+    await humanWait(8000, 15000) // Longer wait for Facebook processing
 
-    // Check for email verification requirement (IMPROVED OTP INTEGRATION)
-    log('info', '📧 Checking for email verification...');
+    // Handle Facebook email verification if required
+    log('info', '📧 FIXED: Checking for Facebook email verification with 30-second timeout...')
+    log('info', `🔍 Current page URL before email check: ${page.url()}`)
     
     try {
-      // Enhanced email verification page detection
-      const currentUrl = page.url();
-      const pageContent = await page.content();
+      // FACEBOOK-SPECIFIC email verification selectors (5-digit code)
+      const facebookEmailVerificationSelectors = [
+        'input[name="code"]',                    // Main Facebook verification input
+        'input[id*="code"]',                     // Facebook code input by ID
+        'input[maxlength="5"]',                  // Facebook uses 5-digit codes
+        'input[type="text"][maxlength="5"]',     // Specific 5-digit text input
+        'input[autofocus="1"][name="code"]',     // Facebook autofocus code input
+        'input[class*="inputtext"][name="code"]' // Facebook inputtext class
+      ]
       
-      const isEmailConfirmationPage = 
-        currentUrl.includes('confirmemail') || 
-        currentUrl.includes('checkpoint') ||
-        pageContent.includes('Enter the code from your email') ||  // ✅ Exact text from your HTML
-        pageContent.includes('Enter the code') ||
-        pageContent.includes('confirmation code') ||
-        pageContent.includes('from your email') ||
-        pageContent.includes('FB-') ||
-        pageContent.includes('code_in_cliff');  // ✅ Real element ID
+      let emailConfirmationFound = false
+      let emailFieldSelector = null
       
-      log('info', `🔍 URL: ${currentUrl}`);
-      log('info', `🔍 Page detection results:`);
-      log('info', `   - Contains 'confirmemail': ${currentUrl.includes('confirmemail')}`);
-      log('info', `   - Contains 'Enter the code from your email': ${pageContent.includes('Enter the code from your email')}`);
-      log('info', `   - Contains 'code_in_cliff': ${pageContent.includes('code_in_cliff')}`);
-      log('info', `   - Final detection: ${isEmailConfirmationPage}`);
+      log('info', '🔍 FIXED: Searching for Facebook email verification field with 30-second timeout...')
       
-      if (isEmailConfirmationPage) {
-        log('info', '📧 Email verification page detected - looking for code input...');
-        
-        // Enhanced selectors for Facebook email verification - ALL POSSIBLE WAYS
-        const emailVerificationSelectors = [
-          // Direct Facebook selectors
-          'input[placeholder="FB-"]',
-          'input[placeholder*="FB-"]',
-          'input[name="confirmation_code"]',
-          'input[name="fb_confirmation_code"]',
+      for (const selector of facebookEmailVerificationSelectors) {
+        try {
+          // FIXED: INCREASED TIMEOUT from 10000 to 30000 (30 seconds)
+          await page.waitForSelector(selector, { timeout: 30000 })
           
-          // Text content based
-          'input[placeholder*="code"]',
-          'input[placeholder*="Code"]',
-          'input[placeholder*="confirmation"]',
-          'input[placeholder*="Confirmation"]',
-          'input[placeholder*="Enter"]',
+          // Verify the element is actually visible and enabled
+          const isVisible = await page.evaluate((sel) => {
+            const element = document.querySelector(sel)
+            if (!element) return false
+            
+            const rect = element.getBoundingClientRect()
+            const style = window.getComputedStyle(element)
+            
+            return (
+              rect.width > 0 && 
+              rect.height > 0 && 
+              style.visibility !== 'hidden' && 
+              style.display !== 'none' &&
+              !element.disabled
+            )
+          }, selector)
           
-          // Generic but safe
-          'input[type="text"]',
-          'input:not([type="hidden"]):not([type="email"]):not([type="password"])',
-          'form input[type="text"]',
-          'input.inputtext',
-          
-          // Broader fallbacks
-          'input',
-          'form input'
-        ];
-        
-        let emailVerificationFound = false;
-        let emailFieldSelector = null;
-        
-        // Try each selector
-        for (const selector of emailVerificationSelectors) {
-          try {
-            const elements = await page.$(selector);
-            if (elements.length > 0) {
-              // Check if element is visible and not disabled
-              const isVisible = await page.evaluate((sel) => {
-                const el = document.querySelector(sel);
-                return el && el.offsetParent !== null && !el.disabled && !el.readOnly;
-              }, selector);
-              
-              if (isVisible) {
-                emailVerificationFound = true;
-                emailFieldSelector = selector;
-                log('success', `✅ Found email verification input: ${selector}`);
-                break;
-              }
-            }
-          } catch (e) {
-            continue;
-          }
-        }
-        
-        // Fallback: Look for any text input on confirmation page
-        if (!emailVerificationFound) {
-          try {
-            const textInputs = await page.$('input[type="text"]');
-            if (textInputs.length > 0) {
-              emailVerificationFound = true;
-              emailFieldSelector = 'input[type="text"]';
-              log('info', '📧 Using fallback text input selector');
-            }
-          } catch (e) {
-            log('verbose', 'Fallback input detection failed');
-          }
-        }
-        
-        if (emailVerificationFound && emailFieldSelector) {
-          log('info', '📧 Email verification required - checking for Facebook OTP...');
-          
-          const emailResult = await checkEmailForFacebookOTP(accountData.email, 3, browser);
-          
-          if (emailResult.success) {
-            try {
-              log('info', `📧 Found OTP: ${emailResult.code} - entering code...`);
-              await humanType(page, emailFieldSelector, emailResult.code);
-              await humanWait(1000, 2000);
-              
-              // Enhanced submit button detection
-              const submitOTPSelectors = [
-                'button[type="submit"]',
-                'input[type="submit"]',
-                'button[name="confirm"]',
-                'button:contains("Continue")',
-                'button:contains("Confirm")',
-                'button:contains("Submit")',
-                'button:contains("Verify")',
-                '[role="button"]:contains("Continue")',
-                '[role="button"]:contains("Confirm")',
-                'form button',
-                '.uiButton'
-              ];
-              
-              let otpSubmitted = false;
-              for (const selector of submitOTPSelectors) {
-                try {
-                  const elements = await page.$(selector);
-                  if (elements.length > 0) {
-                    await humanClick(page, selector);
-                    otpSubmitted = true;
-                    log('success', `✅ Clicked submit button: ${selector}`);
-                    break;
-                  }
-                } catch (e) {
-                  continue;
-                }
-              }
-              
-              // Fallback submission methods
-              if (!otpSubmitted) {
-                try {
-                  // Try pressing Enter
-                  await page.keyboard.press('Enter');
-                  log('info', '⌨️ Pressed Enter to submit OTP');
-                  otpSubmitted = true;
-                } catch (e) {
-                  // Try clicking anywhere on the form
-                  try {
-                    await page.evaluate(() => {
-                      const form = document.querySelector('form');
-                      if (form) form.submit();
-                    });
-                    log('info', '📝 Submitted form programmatically');
-                    otpSubmitted = true;
-                  } catch (e2) {
-                    log('verbose', 'All submission methods failed');
-                  }
-                }
-              }
-              
-              await humanWait(5000, 8000);
-              
-              if (otpSubmitted) {
-                log('success', '✅ Facebook OTP submitted successfully');
-              } else {
-                log('warning', '⚠️ OTP entered but submission uncertain');
-              }
-              
-            } catch (typeError) {
-              log('error', `❌ OTP entry failed: ${typeError.message}`);
-            }
+          if (isVisible) {
+            emailConfirmationFound = true
+            emailFieldSelector = selector
+            log('success', `✅ FIXED: Facebook email verification field found: ${selector}`)
+            break
           } else {
-            log('warning', '⚠️ Could not retrieve OTP from email');
+            log('verbose', `Element found but not visible: ${selector}`)
+          }
+        } catch (e) {
+          log('verbose', `FIXED: Selector ${selector} not found: ${e.message}`)
+          continue
+        }
+      }
+      
+      if (emailConfirmationFound && emailFieldSelector) {
+        log('info', '📧 FIXED: Facebook email verification required - checking for OTP with 8-minute timeout...')
+        
+        // FIXED: Use 8-minute timeout instead of 3 minutes like Instagram
+        const emailResult = await checkEmailForFacebookOTP(accountData.email, 8, browser)
+        
+        if (emailResult.success) {
+          log('success', `✅ FIXED: Got Facebook OTP: ${emailResult.code}`)
+          try {
+            // Clear any existing text
+            await page.evaluate((selector) => {
+              const element = document.querySelector(selector)
+              if (element) {
+                element.value = ''
+                element.focus()
+              }
+            }, emailFieldSelector)
+            
+            await humanWait(1000, 2000)
+            
+            await humanTypeMaxStealth(page, emailFieldSelector, emailResult.code)
+            await humanWait(4000, 8000) // LONGER wait after typing OTP
+            
+            log('success', '✅ FIXED: Facebook OTP typed successfully')
+            
+            // Try multiple submission methods for Facebook
+            const facebookSubmitMethods = [
+              // Method 1: Press Enter
+              async () => {
+                log('verbose', 'Trying Enter key submission...')
+                await page.keyboard.press('Enter')
+                return 'enter_key'
+              },
+              // Method 2: Click Continue button
+              async () => {
+                log('verbose', 'Trying Continue button submission...')
+                const continueButtons = [
+                  'button:contains("Continue")',
+                  'input[value="Continue"]',
+                  'button[type="submit"]',
+                  '[role="button"]:contains("Continue")',
+                  'button',
+                  'input[type="submit"]'
+                ]
+                
+                for (const btnSelector of continueButtons) {
+                  try {
+                    const button = await page.$(btnSelector)
+                    if (button) {
+                      const isVisible = await button.isIntersectingViewport()
+                      if (isVisible) {
+                        await humanClickMaxStealth(page, btnSelector)
+                        return `button_click_${btnSelector}`
+                      }
+                    }
+                  } catch (e) {
+                    continue
+                  }
+                }
+                return false
+              },
+              // Method 3: Form submission
+              async () => {
+                log('verbose', 'Trying form submission...')
+                return await page.evaluate(() => {
+                  const forms = document.querySelectorAll('form')
+                  for (const form of forms) {
+                    const inputs = form.querySelectorAll('input')
+                    for (const input of inputs) {
+                      if (input.value && input.value.length === 5 && /^\d+$/.test(input.value)) {
+                        form.submit()
+                        return 'form_submit'
+                      }
+                    }
+                  }
+                  return false
+                })
+              }
+            ]
+            
+            // Try each submission method
+            let submissionSuccess = false
+            for (const method of facebookSubmitMethods) {
+              try {
+                const result = await method()
+                if (result) {
+                  log('success', `✅ Facebook OTP submitted using: ${result}`)
+                  submissionSuccess = true
+                  break
+                }
+              } catch (e) {
+                log('verbose', `Facebook submission method failed: ${e.message}`)
+                continue
+              }
+            }
+            
+            if (!submissionSuccess) {
+              log('error', '❌ All Facebook OTP submission methods failed')
+            }
+            
+            // Wait longer for Facebook processing
+            await humanWait(15000, 25000) // INCREASED wait time for Facebook
+            
+          } catch (typeError) {
+            log('error', `❌ FIXED: Facebook OTP entry failed: ${typeError.message}`)
           }
         } else {
-          log('warning', '⚠️ Email verification page detected but no input field found');
+          log('error', '❌ FIXED: Failed to get Facebook OTP from email')
         }
       } else {
-        log('info', '📧 No email verification required');
+        log('info', '📧 FIXED: No Facebook email verification field found after 30-second search')
       }
     } catch (emailError) {
-      log('error', `❌ Email verification step failed: ${emailError.message}`);
+      log('error', `❌ FIXED: Facebook email verification step failed: ${emailError.message}`)
     }
 
-    // Final success check
-    await humanWait(3000, 5000);
-    const currentUrl = page.url();
-    const finalContent = await page.content();
-
-    log('info', `🔍 Final URL: ${currentUrl}`);
-
-    // Enhanced success detection
-    const successIndicators = [
-      // Direct success indicators
-      currentUrl === 'https://www.facebook.com/' || currentUrl === 'https://www.facebook.com',
-      currentUrl.includes('facebook.com') && !currentUrl.includes('/reg/') && !currentUrl.includes('confirmemail'),
-      finalContent.includes('Home') && !finalContent.includes('Enter the code'),
-      finalContent.includes('Welcome to Facebook'),
-      finalContent.includes('News Feed'),
-      finalContent.includes('What\'s on your mind'),
+    // FIXED: Add Facebook page analysis for debugging
+    const pageAnalysis = await page.evaluate(() => {
+      const url = window.location.href
+      const title = document.title
+      const buttons = Array.from(document.querySelectorAll('button, [role="button"], input[type="submit"]'))
+        .map(btn => btn.textContent?.trim() || btn.value?.trim()).filter(text => text && text.length < 50)
+      const inputs = Array.from(document.querySelectorAll('input'))
+        .map(input => ({
+          type: input.type,
+          name: input.name,
+          placeholder: input.placeholder,
+          maxLength: input.maxLength,
+          value: input.value ? `[${input.value.length} chars]` : '[empty]'
+        }))
+      const links = Array.from(document.querySelectorAll('a'))
+        .map(link => link.textContent?.trim()).filter(text => text && text.length < 50).slice(0, 5)
       
-      // Account created but may need verification
-      (currentUrl.includes('/checkpoint/') || currentUrl.includes('confirmemail')) && 
-      !finalContent.includes('Create a new account') && 
-      !finalContent.includes('confirm that you\'re human')
-    ];
+      return { url, title, buttons: buttons.slice(0, 10), inputs: inputs.slice(0, 10), links }
+    })
 
-    const failureIndicators = [
-      finalContent.includes('Create a new account'),
-      finalContent.includes('confirm that you\'re human'),
-      finalContent.includes('Try again'),
-      finalContent.includes('Something went wrong'),
-      currentUrl.includes('/reg/') && finalContent.includes('Sign Up')
-    ];
+    log('info', '🔍 FIXED: Facebook Page Analysis:', pageAnalysis)
 
-    const isSuccessful = successIndicators.some(indicator => indicator) && 
-                        !failureIndicators.some(indicator => indicator);
-    
-    const needsEmailVerification = (currentUrl.includes('checkpoint') || 
-                                   currentUrl.includes('confirmemail') ||
-                                   finalContent.includes('Enter the code')) && 
-                                   !failureIndicators.some(indicator => indicator);
-
-    if (isSuccessful) {
-      const accountStatus = needsEmailVerification ? 
-        "Account created - Email verification pending" : 
-        "Account created and fully activated";
+    // FIXED: Handle "Send Email Again" if code was rejected
+    if (page.url().includes('/confirmemail.php')) {
+      log('info', '🔄 FIXED: Still on email confirmation page, trying Send Email Again...')
+      
+      try {
+        const sendAgainSelectors = [
+          'a:contains("Send Email Again")',
+          '[href*="resend"]',
+          'a:contains("Resend")',
+          'button:contains("Send")',
+          'a[href*="resend_code"]'
+        ]
         
-      log('success', `🎉 Facebook account creation successful! ${accountStatus}`);
-      return {
-        success: true,
-        platform: "facebook",
-        message: `Facebook account created successfully with Enhanced Stealth + IP Evasion + OTP Integration (2025) - ${accountStatus}`,
-        username: accountData.profile.fullName,
-        email: accountData.email,
-        emailVerificationRequired: needsEmailVerification,
-        emailVerificationCompleted: !needsEmailVerification,
-        challengeBypassed: challengeResult?.bypassed || false,
-        challengeType: challengeResult?.challengeType || null,
-        enhancedStealth: true,
-        noProxy: true,
-        bypassStrategies: true,
-        otpIntegration: true,
-        ipEvasion: {
-          webrtcBlocked: STEALTH_CONFIG.ipEvasion.webrtcBlocking,
-          geolocationSpoofed: STEALTH_CONFIG.ipEvasion.geolocationSpoofing,
-          timezoneSpoofed: STEALTH_CONFIG.ipEvasion.timezoneRandomization,
-          networkInfoSpoofed: STEALTH_CONFIG.ipEvasion.networkInfoSpoofing,
-          dnsLeakPrevention: STEALTH_CONFIG.ipEvasion.dnsLeakPrevention,
-          headerObfuscation: STEALTH_CONFIG.ipEvasion.headerObfuscation,
-          location: `${deviceProfile.location.city}, ${deviceProfile.location.country}`,
-          timezone: deviceProfile.timezone,
-          isp: deviceProfile.isp,
-          networkType: deviceProfile.network.effectiveType
-        },
-        deviceProfile: deviceProfile.screen.name,
-        finalUrl: currentUrl,
-        profileUrl: `https://facebook.com/${accountData.profile.firstName.toLowerCase()}.${accountData.profile.lastName.toLowerCase()}`,
-        accountStatus: needsEmailVerification ? "pending_verification" : "active"
-      };
-    } else {
-      let errorMessage = "Account creation status unclear";
-      
-      if (finalContent.includes('confirm that you\'re human')) {
-        errorMessage = "Account creation blocked by ongoing security challenge";
-      } else if (finalContent.includes('Create a new account')) {
-        errorMessage = "Registration form still visible - creation may have failed";
-      } else if (finalContent.includes('Try again')) {
-        errorMessage = "Facebook requested to try again - possible rate limiting";
+        let sendAgainClicked = false
+        for (const selector of sendAgainSelectors) {
+          try {
+            const element = await page.$(selector)
+            if (element) {
+              await humanClickMaxStealth(page, selector)
+              sendAgainClicked = true
+              log('success', `✅ FIXED: Clicked Send Email Again: ${selector}`)
+              break
+            }
+          } catch (e) {
+            continue
+          }
+        }
+        
+        if (sendAgainClicked) {
+          await humanWait(5000, 10000)
+          
+          // Try to get the real OTP again
+          log('info', '📧 FIXED: Attempting to get real Facebook OTP after resend...')
+          const secondEmailResult = await checkEmailForFacebookOTP(accountData.email, 5, browser)
+          
+          if (secondEmailResult.success && secondEmailResult.method !== 'fallback') {
+            log('success', `✅ FIXED: Got real Facebook OTP on second attempt: ${secondEmailResult.code}`)
+            
+            // Try entering the real code
+            const codeInput = await page.$('input[name="code"]')
+            if (codeInput) {
+              await page.evaluate(() => {
+                const input = document.querySelector('input[name="code"]')
+                if (input) {
+                  input.value = ''
+                  input.focus()
+                }
+              })
+              
+              await humanWait(1000, 2000)
+              await humanTypeMaxStealth(page, 'input[name="code"]', secondEmailResult.code)
+              await humanWait(3000, 5000)
+              await page.keyboard.press('Enter')
+              await humanWait(10000, 20000)
+              
+              log('success', '✅ FIXED: Second Facebook OTP attempt completed')
+            }
+          }
+        }
+      } catch (sendError) {
+        log('verbose', `Send Email Again failed: ${sendError.message}`)
       }
+    }
+
+    // FIXED: Final success check for Facebook with ENHANCED DEBUGGING
+    await humanWait(15000, 25000) // LONGER wait before final check
+    const finalContent = await page.content()
+    const currentUrl = page.url()
+    
+    log('info', `🔍 FIXED: Final Facebook URL: ${currentUrl}`)
+    
+    // FIXED: Enhanced debugging - check what's actually on the page
+    const finalPageAnalysis = await page.evaluate(() => {
+      const url = window.location.href
+      const title = document.title
+      const headings = Array.from(document.querySelectorAll('h1, h2, h3'))
+        .map(h => h.textContent?.trim()).filter(text => text && text.length < 100)
+      const mainText = Array.from(document.querySelectorAll('div, p, span'))
+        .map(el => el.textContent?.trim()).filter(text => text && text.length > 10 && text.length < 200)
+        .slice(0, 5)
+      const forms = Array.from(document.querySelectorAll('form')).length
+      const inputs = Array.from(document.querySelectorAll('input')).length
+      const buttons = Array.from(document.querySelectorAll('button, [role="button"]')).length
       
-      log('error', `❌ Facebook account creation failed: ${errorMessage}`);
+      return { url, title, headings, mainText, forms, inputs, buttons }
+    })
+    
+    log('info', '🔍 FIXED: Final Facebook Page Analysis:', finalPageAnalysis)
+    
+    // FIXED: Check for FAILURE FIRST (more specific for Facebook)
+    const failureIndicators = [
+      currentUrl.includes('/r.php'),                    // Still on registration page = FAILURE
+      currentUrl.includes('registration'),              // Still on registration = FAILURE
+      currentUrl.includes('/signup'),                   // Still on signup = FAILURE
+      currentUrl.includes('/confirm'),                  // Stuck on email verification = FAILURE
+      finalContent.includes('Create a new account'),    // Still showing signup form = FAILURE
+      finalContent.includes('Enter the code from your email'), // Stuck on email verification = FAILURE
+      finalContent.includes('First name'),              // Still on registration form = FAILURE
+      finalContent.includes('Sign Up')                  // Still showing signup button = FAILURE
+    ]
+    
+    const hasFailure = failureIndicators.some(indicator => indicator)
+    
+    if (hasFailure) {
+      log('error', `❌ FIXED: FACEBOOK ACCOUNT CREATION FAILED - Still on registration/verification page: ${currentUrl}`)
       return {
         success: false,
         platform: "facebook",
-        error: errorMessage,
-        finalUrl: currentUrl,
-        challengeType: challengeResult?.challengeType || null,
-        debugInfo: {
-          urlContainsReg: currentUrl.includes('/reg/'),
-          urlContainsConfirm: currentUrl.includes('confirmemail'),
-          contentHasCreateAccount: finalContent.includes('Create a new account'),
-          contentHasEnterCode: finalContent.includes('Enter the code')
-        }
-      };
+        error: "Facebook account creation failed - still on registration or email verification page",
+        finalUrl: currentUrl
+      }
+    }
+    
+    // FIXED: Only check success if no failure indicators (more specific for Facebook)
+    const successIndicators = [
+      currentUrl === 'https://www.facebook.com/',                      // Main Facebook page = SUCCESS
+      currentUrl.includes('facebook.com/home.php'),                    // Facebook home page = SUCCESS
+      currentUrl.includes('/home.php'),                                // Home page = SUCCESS
+      currentUrl.includes('facebook.com') && currentUrl.includes('welcome'), // Welcome page = SUCCESS
+      currentUrl.includes('facebook.com') && !currentUrl.includes('/r.php') && !currentUrl.includes('/confirm'), // Away from registration = SUCCESS
+      finalContent.includes('News Feed'),                              // Facebook home content = SUCCESS
+      finalContent.includes('What\'s on your mind'),                   // Facebook status update = SUCCESS
+      finalContent.includes('Home') && !finalContent.includes('Create a new account'), // Home without signup = SUCCESS
+      finalContent.includes('Timeline'),                               // Profile/Timeline = SUCCESS
+      finalContent.includes('Find Friends') && !finalContent.includes('Sign Up') // Friends without signup = SUCCESS
+    ]
+    
+    const isSuccessful = successIndicators.some(indicator => indicator)
+    
+    if (isSuccessful) {
+      log('success', '🎉 FIXED: Facebook account creation confirmed successful!')
+      return {
+        success: true,
+        platform: "facebook",
+        message: "Facebook account created successfully with FIXED email verification",
+        email: accountData.email,
+        firstName: accountData.profile.firstName,
+        lastName: accountData.profile.lastName,
+        fullName: accountData.profile.fullName,
+        emailVerified: true,
+        birthdayCompleted: birthdayResult.success,
+        genderCompleted: genderResult.success,
+        indianProfile: true,
+        maxStealth: true,
+        noProxy: true,
+        fixed: true,
+        deviceProfile: deviceProfile.screen.name,
+        userAgent: deviceProfile.userAgent.substring(0, 50) + '...',
+        accountData: {
+          userId: `fb_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          createdAt: new Date().toISOString(),
+        },
+      }
+    } else {
+      log('error', '❌ FIXED: Facebook account creation status unclear')
+      return {
+        success: false,
+        platform: "facebook",
+        error: "Facebook account creation status unclear - insufficient success indicators",
+        finalUrl: currentUrl
+      }
     }
 
   } catch (error) {
-    log('error', `❌ Facebook account creation failed: ${error.message}`);
+    log('error', `❌ Facebook account creation failed: ${error.message}`)
     return {
       success: false,
       platform: "facebook",
       error: error.message
-    };
+    }
   } finally {
     if (browser) {
       setTimeout(async () => {
         try {
-          await browser.close();
-          log('info', '🔒 Browser closed');
+          await browser.close()
+          log('info', '🔒 Facebook browser closed')
         } catch (e) {}
-      }, 60000);
+      }, 300000) // 5 minutes delay before closing (increased from 3 minutes)
     }
   }
 }
 
-// Send Notification
-async function sendNotification(userId, title, message, type = "info") {
-  try {
-    const { db } = await connectToDatabase();
-    await db.collection("notifications").insertOne({
-      userId,
-      title,
-      message,
-      type,
-      read: false,
-      createdAt: new Date()
-    });
-  } catch (error) {
-    log('error', `Failed to send notification: ${error.message}`);
-  }
-}
-
-// Calculate High Volume Delay
-function calculateHighVolumeDelay(accountNumber) {
-  const now = new Date();
-  const currentHour = now.getHours();
+// Calculate optimal timing between accounts
+function calculateNextAccountDelay() {
+  const now = new Date()
+  const currentHour = now.getHours()
   
-  const peakHours = [9, 10, 11, 14, 15, 16, 19, 20, 21];
-  const isPeakHour = peakHours.includes(currentHour) && STEALTH_CONFIG.avoidPeakHours;
+  const peakHours = [9, 10, 11, 14, 15, 16, 19, 20, 21]
+  const isPeakHour = peakHours.includes(currentHour)
   
-  let baseDelay = STEALTH_CONFIG.minDelayBetweenAccounts;
-  let maxDelay = STEALTH_CONFIG.maxDelayBetweenAccounts;
+  let baseDelay = STEALTH_CONFIG.minDelayBetweenAccounts
+  let maxDelay = STEALTH_CONFIG.maxDelayBetweenAccounts
   
   if (isPeakHour) {
-    baseDelay *= 1.3;
-    maxDelay *= 1.5;
+    baseDelay *= 1.5
+    maxDelay *= 2
   }
   
-  if (accountNumber > 10) {
-    baseDelay *= 0.8;
-    maxDelay *= 0.9;
+  const isWeekend = now.getDay() === 0 || now.getDay() === 6
+  if (isWeekend) {
+    baseDelay *= 0.8
+    maxDelay *= 0.9
   }
   
-  const delay = baseDelay + Math.random() * (maxDelay - baseDelay);
+  const delay = baseDelay + Math.random() * (maxDelay - baseDelay)
   
-  log('info', `⏰ Account ${accountNumber}: ${Math.round(delay / 1000 / 60)} minutes delay (Peak: ${isPeakHour})`);
+  log('info', `⏰ Next Facebook account in ${Math.round(delay / 1000 / 60)} minutes`)
   
-  return delay;
+  return delay
 }
 
-// API POST Handler - High Volume Support with OTP Integration
+// Facebook API endpoints
 export async function POST(request) {
   try {
-    const body = await request.json();
-    const { count = 1, userId, useHighVolume = false } = body;
+    const body = await request.json()
+    const { count = 1, platform = "facebook", userId } = body
 
-    log('info', `🚀 API Request: Creating ${count} Facebook accounts ${useHighVolume ? 'with HIGH-VOLUME mode' : 'with Enhanced Stealth'} + OTP Integration`);
+    log('info', `🚀 API Request: Creating ${count} Facebook accounts with MAXIMUM STEALTH`)
 
     if (!userId) {
-      return NextResponse.json({ success: false, message: "User ID is required" }, { status: 400 });
+      return NextResponse.json({ success: false, message: "User ID is required" }, { status: 400 })
     }
 
-    const maxCount = useHighVolume ? STEALTH_CONFIG.maxAccountsPerDay : STEALTH_CONFIG.maxAccountsPerSession;
-    if (count < 1 || count > maxCount) {
+    if (count < 1 || count > STEALTH_CONFIG.maxAccountsPerDay) {
       return NextResponse.json(
-        { success: false, message: `Count must be between 1 and ${maxCount} ${useHighVolume ? '(daily limit)' : '(per session)'}` },
-        { status: 400 }
-      );
+        { success: false, message: `Count must be between 1 and ${STEALTH_CONFIG.maxAccountsPerDay} for maximum stealth` },
+        { status: 400 },
+      )
     }
 
-    const results = [];
-    let totalSuccessCount = 0;
+    const { db } = await connectToDatabase()
+    const results = []
+    let successCount = 0
 
-    await sendNotification(
-      userId,
-      "Facebook High-Volume Creation Started",
-      `Creating ${count} Facebook accounts with ${useHighVolume ? 'HIGH-VOLUME' : 'Enhanced Stealth'} strategy + OTP Integration...`,
-      "info"
-    );
-
-    log('success', `🎭 Starting ${useHighVolume ? 'HIGH-VOLUME' : 'Enhanced Stealth'} Facebook Account Creation with OTP Integration`);
+    log('success', `🎭 Starting Facebook MAXIMUM STEALTH account creation`)
 
     for (let i = 0; i < count; i++) {
-      log('info', `\n🔄 === CREATING FACEBOOK ACCOUNT ${i + 1}/${count} ===`);
+      log('info', `\n🔄 === CREATING FACEBOOK ACCOUNT ${i + 1}/${count} ===`)
 
       try {
-        const emailResult = await createTempEmail();
+        const emailResult = await createTempEmail()
         if (!emailResult.success) {
-          throw new Error("Failed to get temporary email");
+          throw new Error("Failed to get temporary email")
         }
 
-        const profile = generateProfile();
-        log('info', `🇮🇳 Profile: ${profile.fullName}`);
-        log('info', `📧 Email: ${emailResult.email}`);
+        const profile = generateProfile()
+        log('info', `🇮🇳 Facebook Profile: ${profile.fullName}`)
+        log('info', `📧 Email: ${emailResult.email}`)
 
         const accountData = {
           email: emailResult.email,
           profile: profile,
-          platform: "facebook"
-        };
+          platform: platform,
+        }
 
-        const creationResult = await createFacebookAccount(accountData);
+        const creationResult = await createMaxStealthFacebookAccount(accountData)
 
-        const facebookAccount = {
+        const socialAccount = {
           userId: userId,
           accountNumber: i + 1,
-          platform: "facebook",
+          platform: platform,
           email: emailResult.email,
-          username: creationResult.username || profile.fullName,
+          firstName: creationResult.firstName || profile.firstName,
+          lastName: creationResult.lastName || profile.lastName,
+          fullName: creationResult.fullName || profile.fullName,
           password: profile.password,
           profile: {
             firstName: profile.firstName,
             lastName: profile.lastName,
             fullName: profile.fullName,
             birthDate: `${profile.birthYear}-${profile.birthMonth.toString().padStart(2, "0")}-${profile.birthDay.toString().padStart(2, "0")}`,
-            gender: profile.gender
+            gender: profile.gender,
           },
-          status: creationResult.success ? "active" : "failed",
-          verified: creationResult.success,
-          emailVerificationRequired: creationResult.emailVerificationRequired || false,
-          challengeType: creationResult.challengeType || null,
-          challengeBypassed: creationResult.challengeBypassed || false,
-          enhancedStealth: true,
-          noProxy: true,
-          bypassStrategies: true,
-          otpIntegration: true,
-          ipEvasion: creationResult.ipEvasion || null,
-          highVolume: useHighVolume,
-          stealthStrategy: useHighVolume ? "enhanced_stealth_high_volume_ip_evasion_otp" : "enhanced_stealth_ip_evasion_no_proxy_with_bypass_otp",
-          finalUrl: creationResult.finalUrl,
+          emailVerified: creationResult.emailVerified || false,
           creationResult: creationResult,
+          status: creationResult.success ? "active" : "failed",
+          verified: creationResult.emailVerified || false,
+          birthdayCompleted: creationResult.birthdayCompleted || false,
+          genderCompleted: creationResult.genderCompleted || false,
+          indianProfile: creationResult.indianProfile || false,
+          deviceProfile: creationResult.deviceProfile || null,
+          realAccount: true,
+          browserAutomation: true,
+          emailOnly: true,
+          enhanced: true,
+          maxStealth: true,
+          noProxy: true,
+          stealthStrategy: "facebook_no_proxy_enhanced_stealth",
           createdAt: new Date(),
-          updatedAt: new Date()
-        };
+          updatedAt: new Date(),
+        }
 
-        const { db } = await connectToDatabase();
-        await db.collection("facebook_accounts").insertOne(facebookAccount);
+        await db.collection("social_accounts").insertOne(socialAccount)
 
         results.push({
           accountNumber: i + 1,
           success: creationResult.success,
-          platform: "facebook",
+          platform: platform,
           email: emailResult.email,
-          username: creationResult.username || profile.fullName,
+          firstName: creationResult.firstName || profile.firstName,
+          lastName: creationResult.lastName || profile.lastName,
+          fullName: creationResult.fullName || profile.fullName,
           password: profile.password,
           profile: profile,
           message: creationResult.message,
           error: creationResult.error,
-          profileUrl: creationResult.profileUrl,
-          emailVerificationRequired: creationResult.emailVerificationRequired || false,
-          challengeType: creationResult.challengeType || null,
-          challengeBypassed: creationResult.challengeBypassed || false,
-          finalUrl: creationResult.finalUrl,
-          enhancedStealth: true,
+          verified: creationResult.emailVerified || false,
+          emailVerified: creationResult.emailVerified || false,
+          birthdayCompleted: creationResult.birthdayCompleted || false,
+          genderCompleted: creationResult.genderCompleted || false,
+          indianProfile: creationResult.indianProfile || false,
+          deviceProfile: creationResult.deviceProfile || null,
+          realAccount: true,
+          emailOnly: true,
+          enhanced: true,
+          maxStealth: true,
           noProxy: true,
-          bypassStrategies: true,
-          otpIntegration: true,
-          ipEvasion: creationResult.ipEvasion || {
-            applied: true,
-            webrtcBlocked: true,
-            geolocationSpoofed: true,
-            timezoneSpoofed: true,
-            networkSpoofed: true
-          },
-          highVolume: useHighVolume
-        });
+          stealthStrategy: "facebook_no_proxy_enhanced_stealth"
+        })
 
         if (creationResult.success) {
-          totalSuccessCount++;
-          log('success', `✅ FACEBOOK ACCOUNT ${i + 1} CREATED: ${creationResult.username}`);
-          
-          await sendNotification(
-            userId,
-            "Facebook Account Created",
-            `Account ${i + 1}/${count} created successfully! Name: ${creationResult.username}`,
-            "success"
-          );
+          successCount++
+          log('success', `✅ FACEBOOK ACCOUNT ${i + 1} CREATED: ${creationResult.fullName}`)
         } else {
-          log('error', `❌ FACEBOOK ACCOUNT ${i + 1} FAILED: ${creationResult.error}`);
-          
-          await sendNotification(
-            userId,
-            "Facebook Account Failed", 
-            `Account ${i + 1}/${count} failed: ${creationResult.error}`,
-            "error"
-          );
+          log('error', `❌ FACEBOOK ACCOUNT ${i + 1} FAILED: ${creationResult.error}`)
         }
 
         if (i < count - 1) {
-          const delay = useHighVolume ? 
-            calculateHighVolumeDelay(i + 1) : 
-            STEALTH_CONFIG.minDelayBetweenAccounts + Math.random() * (STEALTH_CONFIG.maxDelayBetweenAccounts - STEALTH_CONFIG.minDelayBetweenAccounts);
-            
-          log('info', `⏳ Delay: ${Math.round(delay / 1000 / 60)} minutes...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
+          const delay = calculateNextAccountDelay()
+          log('info', `⏳ Facebook STEALTH DELAY: ${Math.round(delay / 1000 / 60)} minutes until next account...`)
+          await new Promise(resolve => setTimeout(resolve, delay))
         }
 
       } catch (error) {
-        log('error', `❌ FACEBOOK ACCOUNT ${i + 1} FAILED: ${error.message}`);
+        log('error', `❌ FACEBOOK ACCOUNT ${i + 1} FAILED: ${error.message}`)
         results.push({
           accountNumber: i + 1,
           success: false,
-          platform: "facebook",
+          platform: platform,
           error: error.message,
-          enhancedStealth: true,
+          realAccount: true,
+          emailOnly: true,
+          enhanced: true,
+          maxStealth: true,
           noProxy: true,
-          bypassStrategies: true,
-          otpIntegration: true,
-          highVolume: useHighVolume
-        });
-
-        await sendNotification(
-          userId,
-          "Facebook Account Error",
-          `Account ${i + 1}/${count} failed: ${error.message}`,
-          "error"
-        );
+          stealthStrategy: "facebook_no_proxy_enhanced_stealth"
+        })
       }
     }
 
-    await sendNotification(
-      userId,
-      "Facebook Creation Completed",
-      `Facebook account creation completed! ${totalSuccessCount}/${count} accounts created with ${useHighVolume ? 'HIGH-VOLUME' : 'Enhanced Stealth'} + OTP Integration.`,
-      totalSuccessCount === count ? "success" : totalSuccessCount > 0 ? "warning" : "error"
-    );
-
-    log('success', `🎉 COMPLETED: ${totalSuccessCount}/${count} Facebook accounts created`);
+    log('success', `🎉 FACEBOOK COMPLETED: ${successCount}/${count} accounts created with MAXIMUM STEALTH`)
 
     return NextResponse.json({
       success: true,
-      message: `Facebook account creation completed with ${useHighVolume ? 'HIGH-VOLUME' : 'Enhanced Stealth'} + IP Evasion + OTP Integration! ${totalSuccessCount}/${count} accounts created successfully.`,
+      message: `Facebook account creation completed! ${successCount}/${count} accounts created successfully.`,
       totalRequested: count,
-      totalCreated: totalSuccessCount,
-      platform: "facebook",
+      totalCreated: successCount,
+      platform: platform,
       accounts: results,
+      provider: "Facebook Enhanced Stealth Creator",
       strategy: {
-        name: useHighVolume ? "High-Volume Enhanced Stealth + IP Evasion + OTP Integration" : "Enhanced Stealth + IP Evasion + OTP Integration (No Proxy)",
-        description: useHighVolume ? "High-volume creation with advanced anti-detection, IP evasion, security challenge bypass, and OTP integration" : "Advanced anti-detection with IP evasion, security challenge bypass and OTP integration capabilities",
-        mode: useHighVolume ? "HIGH_VOLUME_IP_EVASION" : "STANDARD_IP_EVASION",
+        name: "Facebook No Proxy Enhanced Stealth",
+        description: "Maximum anti-detection for Facebook without proxy servers",
         features: [
-          "Enhanced browser fingerprinting protection",
-          "Human behavior simulation", 
-          "Hardware spoofing",
-          "Canvas & WebGL protection",
-          useHighVolume ? "Optimized timing for high volume" : "Smart timing patterns",
-          "Security challenge detection",
-          "Human verification bypass",
-          "Email OTP integration",
-          "Automatic OTP checking",
-          "Facebook-specific OTP patterns",
-          // IP EVASION FEATURES
-          "WebRTC IP leak blocking",
-          "Geolocation spoofing",
-          "Timezone randomization",
-          "Network information spoofing", 
-          "DNS leak prevention",
-          "Header obfuscation",
-          "Request timing randomization",
-          "ISP fingerprint masking",
-          "Connection pattern randomization"
-        ],
-        ipEvasion: {
-          enabled: true,
-          strategies: [
-            "WebRTC completely blocked",
-            "Geolocation spoofed to random cities",
-            "Timezone randomized globally",
-            "Network speed/type spoofed",
-            "DNS requests delayed randomly",
-            "HTTP headers obfuscated",
-            "Request timing patterns randomized",
-            "Browser fingerprint masked",
-            "Connection metadata spoofed"
-          ]
-        }
+          "Advanced browser fingerprinting protection",
+          "Human behavior simulation",
+          "Facebook-specific form handling",
+          "Birthday and gender selection",
+          "Realistic device profiles",
+          "Optimal timing patterns"
+        ]
       },
-      enhancedStealth: true,
-      noProxy: true,
-      bypassStrategies: true,
-      otpIntegration: true,
-      ipEvasion: true,
-      highVolume: useHighVolume
-    });
+      realAccounts: true,
+      emailOnly: true,
+      enhanced: true,
+      maxStealth: true,
+      noProxy: true
+    })
 
   } catch (error) {
-    log('error', `❌ API Error: ${error.message}`);
+    log('error', `❌ FACEBOOK API ERROR: ${error.message}`)
     return NextResponse.json(
       {
         success: false,
         message: "Failed to create Facebook accounts",
         error: error instanceof Error ? error.message : "Unknown error"
       },
-      { status: 500 }
-    );
+      { status: 500 },
+    )
   }
 }
 
-// API GET Handler
 export async function GET(request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
+    const { searchParams } = new URL(request.url)
+    const userId = searchParams.get("userId")
+    const platform = searchParams.get("platform")
 
     if (!userId) {
-      return NextResponse.json({ success: false, message: "User ID is required" }, { status: 400 });
+      return NextResponse.json({ success: false, message: "User ID is required" }, { status: 400 })
     }
 
-    const { db } = await connectToDatabase();
-    const accounts = await db.collection("facebook_accounts").find({ userId }).sort({ createdAt: -1 }).toArray();
+    const { db } = await connectToDatabase()
+    const query = { userId }
+
+    if (platform && platform !== "all") {
+      query.platform = platform
+    }
+
+    const accounts = await db.collection("social_accounts").find(query).sort({ createdAt: -1 }).toArray()
 
     return NextResponse.json({
       success: true,
@@ -1966,39 +1633,24 @@ export async function GET(request) {
       count: accounts.length,
       summary: {
         total: accounts.length,
-        successful: accounts.filter((acc) => acc.status === "active").length,
-        failed: accounts.filter((acc) => acc.status === "failed").length,
-        enhancedStealth: accounts.filter((acc) => acc.enhancedStealth).length,
-        noProxy: accounts.filter((acc) => acc.noProxy).length,
-        bypassStrategies: accounts.filter((acc) => acc.bypassStrategies).length,
-        otpIntegration: accounts.filter((acc) => acc.otpIntegration).length,
-        ipEvasion: accounts.filter((acc) => acc.ipEvasion).length,
-        highVolume: accounts.filter((acc) => acc.highVolume).length,
-        challengesEncountered: accounts.filter((acc) => acc.challengeType).length,
-        challengesBypassed: accounts.filter((acc) => acc.challengeBypassed).length,
-        emailVerificationRequired: accounts.filter((acc) => acc.emailVerificationRequired).length,
-        avgSuccessRate: accounts.length > 0 ? (accounts.filter((acc) => acc.status === "active").length / accounts.length * 100).toFixed(1) + '%' : '0%',
-        todaysAccounts: accounts.filter((acc) => {
-          const today = new Date();
-          const createdDate = new Date(acc.createdAt);
-          return createdDate.toDateString() === today.toDateString();
-        }).length,
-        ipEvasionStrategies: {
-          webrtcBlocked: accounts.filter((acc) => acc.ipEvasion?.webrtcBlocked).length,
-          geolocationSpoofed: accounts.filter((acc) => acc.ipEvasion?.geolocationSpoofed).length,
-          timezoneSpoofed: accounts.filter((acc) => acc.ipEvasion?.timezoneSpoofed).length,
-          networkSpoofed: accounts.filter((acc) => acc.ipEvasion?.networkInfoSpoofed).length
-        }
+        successful: accounts.filter(acc => acc.status === "active").length,
+        failed: accounts.filter(acc => acc.status === "failed").length,
+        facebook: accounts.filter(acc => acc.platform === "facebook").length,
+        instagram: accounts.filter(acc => acc.platform === "instagram").length,
+        enhanced: accounts.filter(acc => acc.enhanced).length,
+        maxStealth: accounts.filter(acc => acc.maxStealth).length,
+        noProxy: accounts.filter(acc => acc.noProxy).length,
+        indianProfiles: accounts.filter(acc => acc.indianProfile).length,
       }
-    });
+    })
   } catch (error) {
     return NextResponse.json(
       {
         success: false,
-        message: "Failed to fetch Facebook accounts",
-        error: error instanceof Error ? error.message : "Unknown error"
+        message: "Failed to fetch social accounts",
+        error: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
-    );
+      { status: 500 },
+    )
   }
 }

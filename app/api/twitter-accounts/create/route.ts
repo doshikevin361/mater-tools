@@ -8,142 +8,36 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December"
 ]
 
-// MASSIVE User Agents Pool for Maximum Variety
+// Enhanced User Agents for 2024/2025
 const USER_AGENTS = [
-  // Chrome Windows
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Windows NT 11.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  
-  // Chrome Mac
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 13_6_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  
-  // Firefox Windows
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:119.0) Gecko/20100101 Firefox/119.0',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0',
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
-  
-  // Firefox Mac
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:120.0) Gecko/20100101 Firefox/120.0',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:119.0) Gecko/20100101 Firefox/119.0',
-  
-  // Safari Mac
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Safari/605.1.15',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
-  
-  // Edge Windows
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36 Edg/119.0.0.0',
-  
-  // Chrome Linux
-  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
-  
-  // Chrome Mobile (for variation)
-  'Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
-  'Mozilla/5.0 (iPhone; CPU iPhone OS 17_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:122.0) Gecko/20100101 Firefox/122.0',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 Edg/122.0.0.0'
 ]
 
-// Enhanced Screen Resolutions with Real Device Profiles
 const SCREEN_PROFILES = [
-  // Desktop Common
-  { width: 1920, height: 1080, mobile: false, deviceType: 'desktop', name: 'Full HD' },
+  { width: 1920, height: 1080, mobile: false, deviceType: 'desktop', name: 'Full HD Desktop' },
   { width: 1366, height: 768, mobile: false, deviceType: 'desktop', name: 'HD Laptop' },
   { width: 1440, height: 900, mobile: false, deviceType: 'desktop', name: 'MacBook Pro' },
   { width: 1536, height: 864, mobile: false, deviceType: 'desktop', name: 'Surface Laptop' },
-  { width: 1600, height: 900, mobile: false, deviceType: 'desktop', name: 'HD+' },
-  { width: 1280, height: 720, mobile: false, deviceType: 'desktop', name: 'HD' },
-  { width: 1680, height: 1050, mobile: false, deviceType: 'desktop', name: 'WSXGA+' },
-  { width: 2560, height: 1440, mobile: false, deviceType: 'desktop', name: '1440p' },
-  { width: 1280, height: 800, mobile: false, deviceType: 'desktop', name: 'WXGA' },
-  { width: 1024, height: 768, mobile: false, deviceType: 'desktop', name: 'XGA' },
-  
-  // Laptop/Tablet
-  { width: 1024, height: 1366, mobile: true, deviceType: 'tablet', name: 'iPad Portrait' },
-  { width: 768, height: 1024, mobile: true, deviceType: 'tablet', name: 'iPad Mini' },
-  { width: 820, height: 1180, mobile: true, deviceType: 'tablet', name: 'iPad Air' },
-  
-  // Mobile (occasionally for variation)
-  { width: 390, height: 844, mobile: true, deviceType: 'mobile', name: 'iPhone 12' },
-  { width: 414, height: 896, mobile: true, deviceType: 'mobile', name: 'iPhone 11' }
+  { width: 1280, height: 720, mobile: false, deviceType: 'desktop', name: 'HD Display' },
+  { width: 1600, height: 900, mobile: false, deviceType: 'desktop', name: 'HD+ Display' }
 ]
 
-// Enhanced Operating Systems and Platform Data
-const OS_PROFILES = [
-  {
-    platform: 'Win32',
-    oscpu: 'Windows NT 10.0; Win64; x64',
-    languages: ['en-US', 'en'],
-    timezone: 'America/New_York',
-    weight: 40
-  },
-  {
-    platform: 'MacIntel', 
-    oscpu: 'Intel Mac OS X 10_15_7',
-    languages: ['en-US', 'en'],
-    timezone: 'America/New_York',
-    weight: 25
-  },
-  {
-    platform: 'Linux x86_64',
-    oscpu: 'Linux x86_64',
-    languages: ['en-US', 'en'],
-    timezone: 'America/New_York',
-    weight: 15
-  },
-  {
-    platform: 'Win32',
-    oscpu: 'Windows NT 11.0; Win64; x64',
-    languages: ['en-GB', 'en'],
-    timezone: 'Europe/London',
-    weight: 20
-  }
-]
-
-// Enhanced Stealth Configuration for Daily High-Volume Creation
 const STEALTH_CONFIG = {
-  // Timing Strategy for 10-20 accounts daily
   maxAccountsPerDay: 20,
-  minDelayBetweenAccounts: 45 * 60 * 1000, // 45 minutes minimum
-  maxDelayBetweenAccounts: 3 * 60 * 60 * 1000, // 3 hours maximum
-  sessionVariation: true,
-  
-  // Enhanced Browser Strategy for High-Volume
-  randomizeFingerprints: true,
+  minDelayBetweenAccounts: 30 * 60 * 1000, // 30 minutes
+  maxDelayBetweenAccounts: 2 * 60 * 60 * 1000, // 2 hours
+  headlessMode: false, // Set to true for production
   simulateHumanBehavior: true,
-  preBrowsingChance: 0.8, // 80% chance of pre-browsing
-  
-  // Maximum Anti-Detection for Daily Use
-  removeAutomationTraces: true,
-  spoofHardwareSpecs: true,
-  randomizePlugins: true,
-  fakeWebGL: true,
-  spoofCanvas: true,
-  fakeAudio: true,
-  
-  // Enhanced Human Simulation
-  simulateTypos: true,
-  humanMouseMovements: true,
-  realTimingPatterns: true,
-  headlessMode: true,
-  
-  // Daily High-Volume Specific
-  rotateUserAgents: true,
-  varyScreenResolutions: true,
-  randomizeTimezones: true,
-  simulateNetworkConditions: true,
-  advancedCookieHandling: true,
-  
-  // Success Rate Optimization
-  multipleAttemptStrategies: true,
-  fallbackMethods: true,
-  enhancedErrorRecovery: true
+  maxRetries: 3
 }
 
 function log(level, message, data = null) {
@@ -153,16 +47,7 @@ function log(level, message, data = null) {
 }
 
 const humanWait = (minMs = 1500, maxMs = 4000) => {
-  const patterns = [
-    () => minMs + Math.random() * (maxMs - minMs), 
-    () => minMs + Math.random() * (maxMs - minMs) * 1.5, // Slower (thinking)
-    () => minMs * 0.7 + Math.random() * (maxMs - minMs) * 0.8, // Faster (confident)
-    () => minMs + Math.random() * (maxMs - minMs) + Math.random() * 2000 // Distracted
-  ]
-  
-  const pattern = patterns[Math.floor(Math.random() * patterns.length)]
-  const delay = Math.max(1000, pattern())
-  
+  const delay = minMs + Math.random() * (maxMs - minMs)
   log('verbose', `Human wait: ${Math.round(delay)}ms`)
   return new Promise(resolve => setTimeout(resolve, delay))
 }
@@ -170,110 +55,31 @@ const humanWait = (minMs = 1500, maxMs = 4000) => {
 // Generate realistic device profile
 function generateDeviceProfile() {
   const screenProfile = SCREEN_PROFILES[Math.floor(Math.random() * SCREEN_PROFILES.length)]
-  const osProfile = OS_PROFILES[Math.floor(Math.random() * OS_PROFILES.length)]
   const userAgent = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)]
   
-  // Hardware specs based on device type
-  const hardwareSpecs = {
-    cores: screenProfile.deviceType === 'mobile' ? [4, 6, 8][Math.floor(Math.random() * 3)] : [4, 6, 8, 12, 16][Math.floor(Math.random() * 5)],
-    memory: screenProfile.deviceType === 'mobile' ? [4, 6, 8][Math.floor(Math.random() * 3)] : [8, 16, 32][Math.floor(Math.random() * 3)],
-    gpu: screenProfile.deviceType === 'mobile' ? 'Adreno 650' : ['NVIDIA GeForce RTX 3060', 'AMD Radeon RX 6700 XT', 'Intel Iris Xe Graphics'][Math.floor(Math.random() * 3)]
-  }
-  
-  const profile = {
+  return {
     userAgent,
     screen: screenProfile,
-    os: osProfile,
-    hardware: hardwareSpecs,
     viewport: {
-      width: screenProfile.width + Math.floor(Math.random() * 100) - 50,
-      height: screenProfile.height + Math.floor(Math.random() * 100) - 50,
-      deviceScaleFactor: screenProfile.mobile ? 2 + Math.random() * 1 : 1 + Math.random() * 0.5,
-      hasTouch: screenProfile.mobile || Math.random() > 0.8,
-      isLandscape: screenProfile.width > screenProfile.height,
-      isMobile: screenProfile.mobile
-    },
-    plugins: generateRealisticPlugins(),
-    webgl: generateWebGLProfile(),
-    canvas: generateCanvasNoise(),
-    audio: generateAudioNoise()
-  }
-  
-  log('detailed', 'Generated device profile', {
-    device: screenProfile.name,
-    os: osProfile.platform,
-    mobile: screenProfile.mobile
-  })
-  
-  return profile
-}
-
-function generateRealisticPlugins() {
-  const basePlugins = [
-    { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer', description: 'Portable Document Format' },
-    { name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai', description: 'Portable Document Format' },
-    { name: 'Native Client', filename: 'internal-nacl-plugin', description: 'Native Client' }
-  ]
-  
-  const optionalPlugins = [
-    { name: 'WebKit built-in PDF', filename: 'webkit-pdf-plugin', description: 'Portable Document Format' },
-    { name: 'Microsoft Edge PDF Viewer', filename: 'edge-pdf-viewer', description: 'Portable Document Format' },
-    { name: 'Adobe Flash Player', filename: 'pepflashplayer.dll', description: 'Shockwave Flash' },
-    { name: 'Java Deployment Toolkit', filename: 'npDeployJava1.dll', description: 'Java Deployment Toolkit' }
-  ]
-  
-  // Randomly include 2-5 plugins
-  const numPlugins = 2 + Math.floor(Math.random() * 4)
-  const selectedPlugins = [...basePlugins]
-  
-  while (selectedPlugins.length < numPlugins && optionalPlugins.length > 0) {
-    const randomIndex = Math.floor(Math.random() * optionalPlugins.length)
-    selectedPlugins.push(optionalPlugins.splice(randomIndex, 1)[0])
-  }
-  
-  return selectedPlugins
-}
-
-function generateWebGLProfile() {
-  const vendors = ['Intel Inc.', 'NVIDIA Corporation', 'AMD', 'Qualcomm']
-  const renderers = [
-    'Intel Iris Xe Graphics',
-    'NVIDIA GeForce RTX 3060', 
-    'AMD Radeon RX 6700 XT',
-    'ANGLE (Intel, Intel Iris Xe Graphics Direct3D11 vs_5_0 ps_5_0)',
-    'WebKit WebGL'
-  ]
-  
-  return {
-    vendor: vendors[Math.floor(Math.random() * vendors.length)],
-    renderer: renderers[Math.floor(Math.random() * renderers.length)]
+      width: screenProfile.width,
+      height: screenProfile.height,
+      deviceScaleFactor: 1,
+      hasTouch: false,
+      isLandscape: true,
+      isMobile: false
+    }
   }
 }
 
-function generateCanvasNoise() {
-  return {
-    noise: Math.random() * 0.0001,
-    shift: Math.floor(Math.random() * 10) - 5
-  }
-}
-
-function generateAudioNoise() {
-  return {
-    noiseLevel: Math.random() * 0.00001,
-    oscillatorFreq: 440 + Math.random() * 100
-  }
-}
-
-// MAXIMUM STEALTH BROWSER - No Proxy Required
+// Create maximum stealth browser
 async function createMaximumStealthBrowser() {
-  log('info', '🎭 Creating MAXIMUM stealth browser for Twitter (No Proxy Strategy)...')
+  log('info', '🎭 Creating stealth browser for X.com...')
   
   const deviceProfile = generateDeviceProfile()
   
   const browser = await puppeteer.launch({
     headless: STEALTH_CONFIG.headlessMode,
     args: [
-      // Core flags
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
@@ -281,21 +87,16 @@ async function createMaximumStealthBrowser() {
       '--no-first-run',
       '--no-zygote',
       '--disable-gpu',
-      
-      // MAXIMUM Anti-detection flags
       '--disable-blink-features=AutomationControlled',
       '--disable-web-security',
       '--disable-features=VizDisplayCompositor',
       '--disable-features=TranslateUI',
-      '--disable-features=BlinkGenPropertyTrees', 
       '--disable-ipc-flooding-protection',
       '--disable-renderer-backgrounding',
       '--disable-backgrounding-occluded-windows',
       '--disable-client-side-phishing-detection',
-      '--disable-component-extensions-with-background-pages',
       '--disable-default-apps',
       '--disable-extensions',
-      '--disable-features=Translate',
       '--disable-hang-monitor',
       '--disable-popup-blocking',
       '--disable-prompt-on-repost',
@@ -305,42 +106,20 @@ async function createMaximumStealthBrowser() {
       '--disable-component-update',
       '--disable-domain-reliability',
       '--disable-background-downloads',
-      '--disable-add-to-shelf',
       '--disable-office-editing-component-extension',
       '--disable-background-media-suspend',
-      '--disable-password-generation',
-      '--disable-password-manager-reauthentication',
-      
-      // Additional stealth
-      '--metrics-recording-only',
       '--no-default-browser-check',
-      '--safebrowsing-disable-auto-update',
-      '--enable-automation=false',
-      '--password-store=basic',
-      '--use-mock-keychain',
       '--disable-plugins-discovery',
       '--disable-preconnect',
       '--disable-prefetch',
       '--disable-logging',
-      '--disable-extensions-file-access-check',
-      '--disable-extensions-http-throttling',
-      '--disable-component-extensions-with-background-pages',
       '--disable-background-networking',
-      '--disable-extension-updater',
       '--disable-print-preview',
       '--disable-speech-api',
       '--hide-scrollbars',
       '--mute-audio',
-      
-      // Memory optimization
       '--memory-pressure-off',
-      '--max_old_space_size=4096',
-      
-      // Disable automation indicators
-      '--disable-blink-features=AutomationControlled',
-      '--exclude-switches=enable-automation',
-      '--disable-extensions-http-throttling',
-      '--disable-useragent-freeze'
+      '--max_old_space_size=4096'
     ],
     ignoreDefaultArgs: [
       '--enable-automation',
@@ -348,20 +127,20 @@ async function createMaximumStealthBrowser() {
     ],
     defaultViewport: null,
     ignoreHTTPSErrors: true,
-    devtools: false,
+    devtools: false
   })
 
   const pages = await browser.pages()
   const page = pages[0] || await browser.newPage()
 
-  log('info', '🛡️ Applying MAXIMUM stealth measures for Twitter...')
+  log('info', '🛡️ Applying stealth measures...')
 
-  // COMPREHENSIVE stealth injection
-  await page.evaluateOnNewDocument((profile) => {
-    // === COMPLETE AUTOMATION TRACE REMOVAL ===
+  // Enhanced stealth injection
+  await page.evaluateOnNewDocument(() => {
+    // Remove webdriver property
     Object.defineProperty(navigator, 'webdriver', { get: () => undefined })
     
-    // Remove ALL possible automation indicators
+    // Remove automation indicators
     const automationProps = [
       '__webdriver_script_fn', '__webdriver_script_func', '__webdriver_script_function',
       '__fxdriver_id', '__driver_evaluate', '__webdriver_evaluate', '__selenium_evaluate',
@@ -371,7 +150,6 @@ async function createMaximumStealthBrowser() {
       '_Selenium_IDE_Recorder', '__webdriver_chrome_runtime', 'webdriver',
       'domAutomation', 'domAutomationController', '__lastWatirAlert', '__lastWatirConfirm',
       '__lastWatirPrompt', '_WEBDRIVER_ELEM_CACHE', 'ChromeDriverw', 'driver-evaluate',
-      'webdriver-evaluate', 'selenium-evaluate', 'webdriverCommand', 'webdriver-evaluate-response',
       'cdc_adoQpoasnfa76pfcZLmcfl_Array', 'cdc_adoQpoasnfa76pfcZLmcfl_Promise',
       'cdc_adoQpoasnfa76pfcZLmcfl_Symbol', '$chrome_asyncScriptInfo', '$cdc_asdjflasutopfhvcZLmcfl_'
     ]
@@ -380,18 +158,17 @@ async function createMaximumStealthBrowser() {
       try {
         delete window[prop]
         delete document[prop]
-        delete window.document[prop]
       } catch (e) {}
     })
 
-    // === ENHANCED CHROME OBJECT ===
+    // Enhanced Chrome object
     window.chrome = {
       runtime: {
         onConnect: null,
         onMessage: null,
         PlatformOs: {
           MAC: 'mac',
-          WIN: 'win', 
+          WIN: 'win',
           ANDROID: 'android',
           CROS: 'cros',
           LINUX: 'linux',
@@ -401,33 +178,16 @@ async function createMaximumStealthBrowser() {
           ARM: 'arm',
           X86_32: 'x86-32',
           X86_64: 'x86-64'
-        },
-        PlatformNaclArch: {
-          ARM: 'arm',
-          X86_32: 'x86-32', 
-          X86_64: 'x86-64'
-        },
-        onStartup: null,
-        onInstalled: null,
-        onSuspend: null,
-        onSuspendCanceled: null,
-        onUpdateAvailable: null,
-        onBrowserUpdateAvailable: null,
-        onRestartRequired: null,
-        RequestUpdateCheckStatus: {
-          THROTTLED: 'throttled',
-          NO_UPDATE: 'no_update',
-          UPDATE_AVAILABLE: 'update_available'
         }
       },
       loadTimes: function() {
-        const loadTimes = {
-          requestTime: Date.now() - Math.random() * 1000,
-          startLoadTime: Date.now() - Math.random() * 2000,
-          commitLoadTime: Date.now() - Math.random() * 1500,
-          finishDocumentLoadTime: Date.now() - Math.random() * 1000,
-          finishLoadTime: Date.now() - Math.random() * 500,
-          firstPaintTime: Date.now() - Math.random() * 1200,
+        return {
+          requestTime: Date.now() / 1000 - Math.random(),
+          startLoadTime: Date.now() / 1000 - Math.random() * 2,
+          commitLoadTime: Date.now() / 1000 - Math.random(),
+          finishDocumentLoadTime: Date.now() / 1000 - Math.random(),
+          finishLoadTime: Date.now() / 1000 - Math.random(),
+          firstPaintTime: Date.now() / 1000 - Math.random(),
           firstPaintAfterLoadTime: 0,
           navigationType: 'Other',
           wasFetchedViaSpdy: false,
@@ -436,7 +196,6 @@ async function createMaximumStealthBrowser() {
           wasAlternateProtocolAvailable: false,
           connectionInfo: 'http/1.1'
         }
-        return loadTimes
       },
       csi: function() {
         return {
@@ -445,291 +204,121 @@ async function createMaximumStealthBrowser() {
           pageT: Math.random() * 100,
           tran: Math.floor(Math.random() * 20)
         }
-      },
-      app: {
-        isInstalled: false,
-        InstallState: {
-          DISABLED: 'disabled',
-          INSTALLED: 'installed',
-          NOT_INSTALLED: 'not_installed'
-        },
-        RunningState: {
-          CANNOT_RUN: 'cannot_run',
-          READY_TO_RUN: 'ready_to_run',
-          RUNNING: 'running'
-        },
-        getDetails: function() { return null },
-        getIsInstalled: function() { return false },
-        runningState: function() { return 'cannot_run' }
       }
     }
 
-    // === HARDWARE SPOOFING ===
-    Object.defineProperty(navigator, 'platform', { 
-      get: () => profile.os.platform
-    })
-    
-    Object.defineProperty(navigator, 'hardwareConcurrency', { 
-      get: () => profile.hardware.cores
-    })
-    
-    Object.defineProperty(navigator, 'deviceMemory', { 
-      get: () => profile.hardware.memory
-    })
-
-    // === PLUGIN SPOOFING ===
-    Object.defineProperty(navigator, 'plugins', { 
-      get: () => profile.plugins
-    })
-    
-    // === LANGUAGE SPOOFING ===
-    Object.defineProperty(navigator, 'languages', { 
-      get: () => profile.os.languages
-    })
-    
-    Object.defineProperty(navigator, 'language', { 
-      get: () => profile.os.languages[0]
-    })
-
-    // === CONNECTION SPOOFING ===
-    Object.defineProperty(navigator, 'connection', {
-      get: () => ({
-        effectiveType: ['slow-2g', '2g', '3g', '4g'][Math.floor(Math.random() * 4)],
-        rtt: 50 + Math.random() * 200,
-        downlink: 1 + Math.random() * 10,
-        saveData: Math.random() > 0.8
-      })
-    })
-
-    // === ENHANCED PERMISSIONS ===
-    const originalQuery = window.navigator.permissions.query
-    window.navigator.permissions.query = (parameters) => {
-      const permissionStates = {
-        'notifications': ['default', 'denied', 'granted'][Math.floor(Math.random() * 3)],
-        'geolocation': ['denied', 'prompt'][Math.floor(Math.random() * 2)],
-        'camera': 'denied',
-        'microphone': 'denied',
-        'midi': 'denied',
-        'push': ['denied', 'prompt'][Math.floor(Math.random() * 2)]
-      }
-      return Promise.resolve({
-        state: permissionStates[parameters.name] || 'denied'
-      })
+    // Mock permissions
+    const originalQuery = navigator.permissions.query
+    navigator.permissions.query = (parameters) => {
+      return Promise.resolve({ state: 'denied' })
     }
 
-    // === WEBGL FINGERPRINT SPOOFING ===
+    // Mock plugins
+    Object.defineProperty(navigator, 'plugins', {
+      get: () => [
+        { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer' },
+        { name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai' },
+        { name: 'Native Client', filename: 'internal-nacl-plugin' }
+      ]
+    })
+
+    // Mock languages
+    Object.defineProperty(navigator, 'languages', {
+      get: () => ['en-US', 'en']
+    })
+    
+    Object.defineProperty(navigator, 'language', {
+      get: () => 'en-US'
+    })
+
+    // Enhanced WebGL spoofing
     const getParameter = WebGLRenderingContext.prototype.getParameter
     WebGLRenderingContext.prototype.getParameter = function(parameter) {
-      if (parameter === 37445) return profile.webgl.vendor // UNMASKED_VENDOR_WEBGL
-      if (parameter === 37446) return profile.webgl.renderer // UNMASKED_RENDERER_WEBGL
-      if (parameter === 7936) return `WebGL ${Math.floor(Math.random() * 3) + 1}.0` // VERSION
-      if (parameter === 7937) return `OpenGL ES ${Math.floor(Math.random() * 3) + 2}.0` // SHADING_LANGUAGE_VERSION
+      if (parameter === 37445) return 'Intel Inc.' // UNMASKED_VENDOR_WEBGL
+      if (parameter === 37446) return 'Intel Iris OpenGL Engine' // UNMASKED_RENDERER_WEBGL
       return getParameter.apply(this, arguments)
     }
+  })
 
-    // === CANVAS FINGERPRINT PROTECTION ===
-    const originalToDataURL = HTMLCanvasElement.prototype.toDataURL
-    const originalGetImageData = CanvasRenderingContext2D.prototype.getImageData
-    
-    HTMLCanvasElement.prototype.toDataURL = function(type) {
-      const shift = profile.canvas.shift
-      const context = this.getContext('2d')
-      if (context) {
-        const imageData = context.getImageData(0, 0, this.width, this.height)
-        
-        for (let i = 0; i < imageData.data.length; i += 4) {
-          imageData.data[i] = Math.min(255, Math.max(0, imageData.data[i] + shift))
-          imageData.data[i + 1] = Math.min(255, Math.max(0, imageData.data[i + 1] + shift))
-          imageData.data[i + 2] = Math.min(255, Math.max(0, imageData.data[i + 2] + shift))
-        }
-        
-        context.putImageData(imageData, 0, 0)
-      }
-      return originalToDataURL.apply(this, arguments)
-    }
-
-    CanvasRenderingContext2D.prototype.getImageData = function() {
-      const imageData = originalGetImageData.apply(this, arguments)
-      const shift = profile.canvas.shift
-      
-      for (let i = 0; i < imageData.data.length; i += 4) {
-        imageData.data[i] = Math.min(255, Math.max(0, imageData.data[i] + shift))
-        imageData.data[i + 1] = Math.min(255, Math.max(0, imageData.data[i + 1] + shift))
-        imageData.data[i + 2] = Math.min(255, Math.max(0, imageData.data[i + 2] + shift))
-      }
-      
-      return imageData
-    }
-
-    // === AUDIO CONTEXT FINGERPRINT PROTECTION ===
-    const originalAudioContext = window.AudioContext || window.webkitAudioContext
-    if (originalAudioContext) {
-      window.AudioContext = function() {
-        const ctx = new originalAudioContext()
-        const originalCreateAnalyser = ctx.createAnalyser
-        
-        ctx.createAnalyser = function() {
-          const analyser = originalCreateAnalyser.apply(this)
-          const originalGetFloatFrequencyData = analyser.getFloatFrequencyData
-          
-          analyser.getFloatFrequencyData = function(array) {
-            originalGetFloatFrequencyData.apply(this, arguments)
-            for (let i = 0; i < array.length; i++) {
-              array[i] += profile.audio.noiseLevel * (Math.random() - 0.5)
-            }
-          }
-          
-          const originalGetByteFrequencyData = analyser.getByteFrequencyData
-          analyser.getByteFrequencyData = function(array) {
-            originalGetByteFrequencyData.apply(this, arguments)
-            for (let i = 0; i < array.length; i++) {
-              array[i] = Math.min(255, Math.max(0, array[i] + Math.floor(profile.audio.noiseLevel * 255 * (Math.random() - 0.5))))
-            }
-          }
-          
-          return analyser
-        }
-        
-        return ctx
-      }
-      
-      if (window.webkitAudioContext) {
-        window.webkitAudioContext = window.AudioContext
-      }
-    }
-
-    // === SCREEN SPOOFING ===
-    Object.defineProperty(screen, 'width', {
-      get: () => profile.screen.width
-    })
-    Object.defineProperty(screen, 'height', {
-      get: () => profile.screen.height
-    })
-    Object.defineProperty(screen, 'availWidth', {
-      get: () => profile.screen.width
-    })
-    Object.defineProperty(screen, 'availHeight', {
-      get: () => profile.screen.height - 40 - Math.floor(Math.random() * 20)
-    })
-    Object.defineProperty(screen, 'colorDepth', {
-      get: () => 24
-    })
-    Object.defineProperty(screen, 'pixelDepth', {
-      get: () => 24
-    })
-
-    // === TIMEZONE SPOOFING ===
-    Object.defineProperty(Intl.DateTimeFormat.prototype, 'resolvedOptions', {
-      value: function() {
-        const original = Intl.DateTimeFormat.prototype.resolvedOptions.call(this)
-        return {
-          ...original,
-          timeZone: profile.os.timezone,
-          locale: profile.os.languages[0]
-        }
-      }
-    })
-
-  }, deviceProfile)
-
-  // Set user agent
+  // Set user agent and viewport
   await page.setUserAgent(deviceProfile.userAgent)
+  await page.setViewport(deviceProfile.viewport)
   
-  // Enhanced headers with realistic variations
-  const headers = {
-    'Accept-Language': deviceProfile.os.languages.join(',') + ';q=0.9',
+  // Set realistic headers
+  await page.setExtraHTTPHeaders({
+    'Accept-Language': 'en-US,en;q=0.9',
     'Accept-Encoding': 'gzip, deflate, br',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
     'Upgrade-Insecure-Requests': '1',
     'Sec-Fetch-Dest': 'document',
     'Sec-Fetch-Mode': 'navigate',
     'Sec-Fetch-Site': 'none',
-    'Cache-Control': 'max-age=0',
-    'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-    'sec-ch-ua-mobile': deviceProfile.viewport.isMobile ? '?1' : '?0',
-    'sec-ch-ua-platform': `"${deviceProfile.os.platform}"`,
-    'sec-fetch-user': '?1',
-    'DNT': Math.random() > 0.5 ? '1' : undefined
-  }
-  
-  // Remove undefined headers
-  Object.keys(headers).forEach(key => headers[key] === undefined && delete headers[key])
-  
-  await page.setExtraHTTPHeaders(headers)
+    'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="122", "Google Chrome";v="122"',
+    'sec-ch-ua-mobile': '?0',
+    'sec-ch-ua-platform': '"Windows"'
+  })
 
-  // Set viewport
-  await page.setViewport(deviceProfile.viewport)
-
-  log('success', '✅ Maximum stealth browser created for Twitter with realistic device profile')
-  
+  log('success', '✅ Stealth browser created successfully')
   return { browser, page, deviceProfile }
 }
 
-// Enhanced email creation
+// Create temporary email
 async function createTempEmail() {
   log('info', '📧 Creating temporary email...')
   
   try {
-    const sessionResponse = await axios.get('https://www.guerrillamail.com/ajax.php?f=get_email_address', {
+    const response = await axios.get('https://www.guerrillamail.com/ajax.php?f=get_email_address', {
       timeout: 15000,
       headers: {
         "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
-        "Referer": "https://www.guerrillamail.com/inbox",
+        "Referer": "https://www.guerrillamail.com/",
         "Accept": "application/json, text/javascript, */*; q=0.01",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Cache-Control": "no-cache"
+        "Accept-Language": "en-US,en;q=0.9"
       }
     })
     
-    if (sessionResponse.data && sessionResponse.data.email_addr) {
-      const email = sessionResponse.data.email_addr
-      const sessionId = sessionResponse.data.sid_token
-      
-      log('success', `✅ Created email: ${email}`)
+    if (response.data && response.data.email_addr) {
+      log('success', `✅ Created email: ${response.data.email_addr}`)
       return {
         success: true,
-        email: email,
-        sessionId: sessionId,
+        email: response.data.email_addr,
+        sessionId: response.data.sid_token,
         provider: "guerrillamail"
       }
-    } else {
-      throw new Error("Failed to get email address")
     }
+    throw new Error("Failed to get email address")
   } catch (error) {
     log('error', `❌ Email creation failed: ${error.message}`)
-    throw new Error("Email creation failed")
+    throw error
   }
 }
 
-// Enhanced profile generation
+// Generate Indian profile
 function generateProfile() {
   log('info', '👤 Generating realistic Indian profile...')
   
   const indianFirstNames = [
     "Arjun", "Aarav", "Vivaan", "Aditya", "Vihaan", "Sai", "Aryan", "Krishna", 
-    "Ishaan", "Shaurya", "Atharv", "Aadhya", "Reyansh", "Muhammad", "Siddharth",
-    "Rudra", "Ayaan", "Yash", "Om", "Darsh", "Rishab", "Krian", "Armaan",
-    "Vedant", "Sreyansh", "Ahaan", "Tejas", "Harsh", "Samar", "Dhruv",
+    "Ishaan", "Shaurya", "Atharv", "Reyansh", "Siddharth", "Rudra", "Ayaan", 
+    "Yash", "Om", "Darsh", "Rishab", "Armaan", "Vedant", "Ahaan", "Tejas",
     "Saanvi", "Ananya", "Aadhya", "Diya", "Kavya", "Pihu", "Angel", "Pari",
-    "Fatima", "Aaradhya", "Sara", "Anaya", "Parina", "Aisha", "Anvi", "Riya",
-    "Myra", "Prisha", "Aanya", "Navya", "Drishti", "Shanaya", "Avni", "Reet",
-    "Kiara", "Khushi", "Aradhya", "Kainaat", "Riddhi", "Mahika", "Siya"
+    "Fatima", "Aaradhya", "Sara", "Anaya", "Aisha", "Anvi", "Riya", "Myra",
+    "Prisha", "Aanya", "Navya", "Drishti", "Shanaya", "Avni", "Kiara", "Khushi"
   ]
 
   const indianLastNames = [
     "Sharma", "Verma", "Singh", "Kumar", "Gupta", "Agarwal", "Mishra", "Jain",
     "Patel", "Shah", "Mehta", "Joshi", "Desai", "Modi", "Reddy", "Nair",
-    "Iyer", "Rao", "Pillai", "Menon", "Bhat", "Shetty", "Kaul", "Malhotra",
-    "Kapoor", "Chopra", "Khanna", "Arora", "Bajaj", "Bansal", "Mittal", "Jindal",
-    "Agrawal", "Goyal", "Saxena", "Rastogi", "Srivastava", "Shukla", "Pandey", "Tiwari"
+    "Iyer", "Rao", "Pillai", "Menon", "Bhat", "Shetty", "Malhotra", "Kapoor",
+    "Chopra", "Khanna", "Arora", "Bajaj", "Bansal", "Mittal", "Jindal",
+    "Agrawal", "Goyal", "Saxena", "Rastogi", "Srivastava", "Shukla", "Pandey"
   ]
 
   const firstName = indianFirstNames[Math.floor(Math.random() * indianFirstNames.length)]
   const lastName = indianLastNames[Math.floor(Math.random() * indianLastNames.length)]
-  const birthYear = Math.floor(Math.random() * 22) + 1985
+  const birthYear = Math.floor(Math.random() * 25) + 1985 // 1985-2009
   const birthMonth = Math.floor(Math.random() * 12) + 1
   const birthDay = Math.floor(Math.random() * 28) + 1
-  const gender = Math.random() > 0.5 ? "male" : "female"
 
   const timestamp = Date.now().toString().slice(-6)
   const randomSuffix = Math.floor(Math.random() * 99999)
@@ -739,10 +328,8 @@ function generateProfile() {
     `${firstName.toLowerCase()}${lastName.toLowerCase()}${timestamp}`,
     `${firstName.toLowerCase()}.${lastName.toLowerCase()}.${timestamp}`,
     `${firstName.toLowerCase()}${randomSuffix}`,
-    `${lastName.toLowerCase()}${firstName.toLowerCase()}${randomSuffix}`,
     `${firstName.toLowerCase()}_${randomSuffix}`,
-    `indian_${firstName.toLowerCase()}${lastName.toLowerCase()}`,
-    `${firstName.toLowerCase()}india${randomSuffix}`
+    `indian_${firstName.toLowerCase()}${lastName.toLowerCase()}`
   ]
 
   const password = `${firstName}${Math.floor(Math.random() * 9999)}!${lastName.charAt(0)}`
@@ -753,570 +340,864 @@ function generateProfile() {
     birthYear,
     birthMonth,
     birthDay,
-    gender,
     usernames,
     password,
-    fullName: `${firstName} ${lastName}`,
+    fullName: `${firstName} ${lastName}`
   }
 
   log('success', `✅ Generated profile: ${profile.fullName} (@${profile.usernames[0]})`)
   return profile
 }
 
-// MAXIMUM human-like typing
-async function humanTypeMaxStealth(page, selector, text) {
-  log('detailed', `⌨️ Human typing: "${text}" into ${selector}`)
+// Enhanced human typing with realistic patterns
+async function humanType(page, selector, text, timeout = 30000) {
+  log('detailed', `⌨️ Typing: "${text}" into ${selector}`)
   
   try {
-    const element = await page.waitForSelector(selector, { timeout: 20000 })
+    await page.waitForSelector(selector, { timeout, visible: true })
+    const element = await page.$(selector)
     
-    // Random pre-typing mouse movement
-    const box = await element.boundingBox()
-    if (box) {
-      // Approach the element naturally
-      await page.mouse.move(
-        box.x - 50 + Math.random() * 100,
-        box.y - 50 + Math.random() * 100,
-        { steps: 3 + Math.floor(Math.random() * 7) }
-      )
-      await humanWait(200, 600)
-      
-      // Move to element
-      await page.mouse.move(
-        box.x + box.width * (0.3 + Math.random() * 0.4),
-        box.y + box.height * (0.3 + Math.random() * 0.4),
-        { steps: 2 + Math.floor(Math.random() * 5) }
-      )
+    if (!element) {
+      throw new Error(`Element not found: ${selector}`)
     }
     
+    // Click and focus
     await element.click()
-    await humanWait(400, 1000)
-    
-    // Clear field with realistic method
-    const clearMethods = [
-      async () => {
-        await element.click({ clickCount: 3 })
-        await humanWait(200, 400)
-        await page.keyboard.press('Backspace')
-      },
-      async () => {
-        await page.keyboard.down('Control')
-        await page.keyboard.press('KeyA')
-        await page.keyboard.up('Control')
-        await humanWait(100, 300)
-        await page.keyboard.press('Backspace')
-      },
-      async () => {
-        await page.keyboard.down('Control')
-        await page.keyboard.press('KeyA')
-        await page.keyboard.up('Control')
-        await humanWait(100, 300)
-        await page.keyboard.type('')
-      }
-    ]
-    
-    const clearMethod = clearMethods[Math.floor(Math.random() * clearMethods.length)]
-    await clearMethod()
-    
     await humanWait(200, 500)
     
-    // Type with MAXIMUM human realism
+    // Clear existing content
+    await page.keyboard.down('Control')
+    await page.keyboard.press('KeyA')
+    await page.keyboard.up('Control')
+    await humanWait(50, 150)
+    
+    // Type with human-like patterns
     const words = text.split(' ')
     
     for (let wordIndex = 0; wordIndex < words.length; wordIndex++) {
       const word = words[wordIndex]
       
-      // Typing burst patterns (some people type in bursts)
-      const burstSize = Math.random() > 0.7 ? Math.floor(Math.random() * 3) + 2 : 1
-      
       for (let charIndex = 0; charIndex < word.length; charIndex++) {
         const char = word[charIndex]
+        const baseDelay = 80 + Math.random() * 120
         
-        // Variable typing speed based on character complexity
-        let baseDelay = 120
-        if (char.match(/[aeiou]/)) baseDelay = 100 // Vowels are faster
-        if (char.match(/[qwerty]/)) baseDelay = 110 // Home row is faster
-        if (char.match(/[zxcv]/)) baseDelay = 140 // Bottom row is slower
-        if (char.match(/[0-9]/)) baseDelay = 150 // Numbers are slower
-        if (char.match(/[!@#$%^&*()]/)) baseDelay = 180 // Special chars are slower
-        
-        const typeDelay = baseDelay + Math.random() * 100
-        
-        // Occasional typos (3% chance)
-        if (Math.random() < 0.03 && charIndex > 0) {
-          const wrongChars = 'abcdefghijklmnopqrstuvwxyz'
-          const wrongChar = wrongChars[Math.floor(Math.random() * wrongChars.length)]
-          
-          await element.type(wrongChar, { delay: typeDelay })
-          await humanWait(150, 400) // Realize mistake
+        // Occasional typos (2% chance)
+        if (Math.random() < 0.02 && charIndex > 0) {
+          const wrongChar = 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 26)]
+          await page.keyboard.type(wrongChar, { delay: baseDelay })
+          await humanWait(100, 300)
           await page.keyboard.press('Backspace')
-          await humanWait(200, 500) // Correct it
-          await element.type(char, { delay: typeDelay + 50 })
-        } else {
-          await element.type(char, { delay: typeDelay })
+          await humanWait(100, 200)
         }
         
-        // Thinking moments (20% chance)
-        if (Math.random() < 0.2) {
-          await humanWait(300, 1500)
-        }
+        await page.keyboard.type(char, { delay: baseDelay })
         
-        // Micro-pauses within words (15% chance)
-        if (Math.random() < 0.15 && charIndex < word.length - 1) {
-          await humanWait(100, 400)
-        }
-        
-        // Burst typing patterns
-        if ((charIndex + 1) % burstSize === 0 && charIndex < word.length - 1) {
-          await humanWait(150, 500)
+        // Thinking pauses (15% chance)
+        if (Math.random() < 0.15) {
+          await humanWait(200, 800)
         }
       }
       
       // Space between words
       if (wordIndex < words.length - 1) {
-        await element.type(' ', { delay: 120 })
-        await humanWait(200, 600) // Longer pause between words
-      }
-      
-      // Longer thinking pauses between words (30% chance)
-      if (Math.random() < 0.3 && wordIndex < words.length - 1) {
-        await humanWait(500, 2000)
+        await page.keyboard.type(' ', { delay: 100 })
+        await humanWait(150, 400)
       }
     }
     
-    await humanWait(300, 800)
+    await humanWait(200, 500)
     log('verbose', `✅ Successfully typed: "${text}"`)
     
   } catch (error) {
-    log('error', `❌ Typing failed: ${error.message}`)
+    log('error', `❌ Typing failed for ${selector}: ${error.message}`)
     throw error
   }
 }
 
-// MAXIMUM human-like clicking
-async function humanClickMaxStealth(page, selector) {
-  log('detailed', `🖱️ Human clicking: ${selector}`)
+// Enhanced human clicking with realistic mouse movement
+async function humanClick(page, selector, timeout = 30000) {
+  log('detailed', `🖱️ Clicking: ${selector}`)
   
   try {
-    const element = await page.waitForSelector(selector, { timeout: 20000 })
+    await page.waitForSelector(selector, { timeout, visible: true })
+    const element = await page.$(selector)
+    
+    if (!element) {
+      throw new Error(`Element not found: ${selector}`)
+    }
+    
+    // Get element position
     const box = await element.boundingBox()
-    if (!box) throw new Error('Element not visible')
-    
-    // Complex approach pattern (like real humans)
-    const approachPatterns = [
-      // Curved approach from left
-      async () => {
-        const startX = box.x - 100 - Math.random() * 100
-        const startY = box.y + Math.random() * box.height
-        const midX = box.x - 20 + Math.random() * 40
-        const midY = box.y - 20 + Math.random() * (box.height + 40)
-        const endX = box.x + box.width * (0.3 + Math.random() * 0.4)
-        const endY = box.y + box.height * (0.3 + Math.random() * 0.4)
-        
-        await page.mouse.move(startX, startY)
-        await humanWait(50, 150)
-        await page.mouse.move(midX, midY, { steps: 3 + Math.floor(Math.random() * 5) })
-        await humanWait(100, 200)
-        await page.mouse.move(endX, endY, { steps: 2 + Math.floor(Math.random() * 3) })
-      },
-      // Direct approach with slight curve
-      async () => {
-        const currentPos = await page.evaluate(() => ({ x: window.mouseX || 0, y: window.mouseY || 0 }))
-        const endX = box.x + box.width * (0.3 + Math.random() * 0.4)
-        const endY = box.y + box.height * (0.3 + Math.random() * 0.4)
-        
-        await page.mouse.move(endX, endY, { steps: 5 + Math.floor(Math.random() * 10) })
-      },
-      // Overshoot and correct
-      async () => {
-        const overshootX = box.x + box.width * (0.7 + Math.random() * 0.3)
-        const overshootY = box.y + box.height * (0.7 + Math.random() * 0.3)
-        const correctX = box.x + box.width * (0.3 + Math.random() * 0.4)
-        const correctY = box.y + box.height * (0.3 + Math.random() * 0.4)
-        
-        await page.mouse.move(overshootX, overshootY, { steps: 3 + Math.floor(Math.random() * 5) })
-        await humanWait(50, 150)
-        await page.mouse.move(correctX, correctY, { steps: 1 + Math.floor(Math.random() * 3) })
-      }
-    ]
-    
-    const pattern = approachPatterns[Math.floor(Math.random() * approachPatterns.length)]
-    await pattern()
-    
-    await humanWait(100, 300)
-    
-    // Click variations
-    const clickVariations = [
-      // Normal click
-      async (x, y) => {
-        await page.mouse.click(x, y)
-      },
-      // Quick double-click prevention (click and slight move)
-      async (x, y) => {
-        await page.mouse.click(x, y)
-        await page.mouse.move(x + Math.random() * 2 - 1, y + Math.random() * 2 - 1)
-      },
-      // Slight hesitation click
-      async (x, y) => {
-        await page.mouse.down()
-        await humanWait(80, 150)
-        await page.mouse.up()
-      }
-    ]
-    
-    const clickX = box.x + box.width * (0.25 + Math.random() * 0.5)
-    const clickY = box.y + box.height * (0.25 + Math.random() * 0.5)
-    
-    const clickVariation = clickVariations[Math.floor(Math.random() * clickVariations.length)]
-    await clickVariation(clickX, clickY)
+    if (box) {
+      // Move to element with natural curve
+      const startX = Math.random() * 100
+      const startY = Math.random() * 100
+      const endX = box.x + box.width * (0.2 + Math.random() * 0.6)
+      const endY = box.y + box.height * (0.2 + Math.random() * 0.6)
+      
+      await page.mouse.move(startX, startY)
+      await page.mouse.move(endX, endY, { steps: 3 + Math.floor(Math.random() * 7) })
+      await humanWait(50, 200)
+      await page.mouse.click(endX, endY)
+    } else {
+      await element.click()
+    }
     
     await humanWait(200, 500)
     log('verbose', `✅ Successfully clicked: ${selector}`)
     
   } catch (error) {
-    log('error', `❌ Clicking failed: ${error.message}`)
+    log('error', `❌ Clicking failed for ${selector}: ${error.message}`)
     throw error
   }
 }
 
-// Pre-browsing simulation
-async function simulatePreBrowsing(page) {
-  if (Math.random() > STEALTH_CONFIG.preBrowsingChance) return
-  
-  const preBrowsingPages = [
-    'https://www.google.com/',
-    'https://www.wikipedia.org/',
-    'https://www.youtube.com/',
-    'https://www.reddit.com/',
-    'https://www.github.com/',
-    'https://www.stackoverflow.com/'
-  ]
-  
-  const randomPage = preBrowsingPages[Math.floor(Math.random() * preBrowsingPages.length)]
-  
-  log('info', `🌐 Pre-browsing simulation: ${randomPage}`)
-  
+// Debug function to identify available buttons
+async function debugAvailableButtons(page, context = "unknown") {
   try {
-    await page.goto(randomPage, { waitUntil: 'networkidle2', timeout: 15000 })
-    
-    // Simulate browsing activity
-    await humanWait(2000, 5000)
-    
-    // Random scrolling
-    const scrollCount = Math.floor(Math.random() * 3) + 1
-    for (let i = 0; i < scrollCount; i++) {
-      await page.evaluate(() => {
-        window.scrollBy(0, Math.random() * 500 + 200)
-      })
-      await humanWait(1000, 3000)
-    }
-    
-    // Random mouse movements
-    const moveCount = Math.floor(Math.random() * 5) + 2
-    for (let i = 0; i < moveCount; i++) {
-      await page.mouse.move(
-        Math.random() * 800 + 200,
-        Math.random() * 600 + 200,
-        { steps: Math.floor(Math.random() * 10) + 3 }
-      )
-      await humanWait(500, 1500)
-    }
-    
-    log('success', '✅ Pre-browsing simulation completed')
-    
-  } catch (error) {
-    log('verbose', `Pre-browsing failed (continuing): ${error.message}`)
-  }
-}
-
-// Enhanced birthday selection for Twitter (current dropdown format)
-async function handleTwitterBirthdaySelection(page, profile) {
-  log('info', '📅 Handling Twitter birthday selection...')
-  
-  try {
-    // Wait for birthday dropdowns to appear
-    await page.waitForSelector('[role="button"]', { timeout: 20000 })
-    
-    const monthName = MONTHS[profile.birthMonth - 1]
-    
-    // Current Twitter uses custom dropdowns, not HTML select elements
-    // Month selection
-    log('info', `🗓️ Selecting month: ${monthName}`)
-    const monthSuccess = await page.evaluate((targetMonth) => {
-      // Find Month dropdown
-      const monthDropdowns = Array.from(document.querySelectorAll('div[role="button"], button'))
-      let monthDropdown = null
-      
-      for (const dropdown of monthDropdowns) {
-        const text = dropdown.textContent?.trim() || ''
-        const ariaLabel = dropdown.getAttribute('aria-label') || ''
-        if (text === 'Month' || ariaLabel.includes('Month') || text.includes('Month')) {
-          monthDropdown = dropdown
-          break
-        }
-      }
-      
-      if (monthDropdown) {
-        monthDropdown.click()
-        
-        // Wait a bit then find the month option
-        setTimeout(() => {
-          const monthOptions = Array.from(document.querySelectorAll('div[role="option"], div[data-testid*="month"]'))
-          for (const option of monthOptions) {
-            const optionText = option.textContent?.trim() || ''
-            if (optionText === targetMonth) {
-              option.click()
-              return true
-            }
-          }
-          
-          // Fallback: try by month number
-          const monthNum = ['January', 'February', 'March', 'April', 'May', 'June',
-                           'July', 'August', 'September', 'October', 'November', 'December'].indexOf(targetMonth) + 1
-          const monthOptions2 = Array.from(document.querySelectorAll('div'))
-          for (const option of monthOptions2) {
-            const optionText = option.textContent?.trim() || ''
-            if (optionText === monthNum.toString() || optionText === targetMonth) {
-              option.click()
-              return true
-            }
-          }
-        }, 500)
-        
-        return true
-      }
-      return false
-    }, monthName)
-    
-    if (monthSuccess) {
-      await humanWait(1500, 2500)
-      log('verbose', `✅ Month selected: ${monthName}`)
-    }
-    
-    // Day selection
-    log('info', `📅 Selecting day: ${profile.birthDay}`)
-    const daySuccess = await page.evaluate((targetDay) => {
-      // Find Day dropdown
-      const dayDropdowns = Array.from(document.querySelectorAll('div[role="button"], button'))
-      let dayDropdown = null
-      
-      for (const dropdown of dayDropdowns) {
-        const text = dropdown.textContent?.trim() || ''
-        const ariaLabel = dropdown.getAttribute('aria-label') || ''
-        if (text === 'Day' || ariaLabel.includes('Day') || text.includes('Day')) {
-          dayDropdown = dropdown
-          break
-        }
-      }
-      
-      if (dayDropdown) {
-        dayDropdown.click()
-        
-        // Wait a bit then find the day option
-        setTimeout(() => {
-          const dayOptions = Array.from(document.querySelectorAll('div[role="option"], div[data-testid*="day"]'))
-          for (const option of dayOptions) {
-            const optionText = option.textContent?.trim() || ''
-            if (optionText === targetDay.toString()) {
-              option.click()
-              return true
-            }
-          }
-        }, 500)
-        
-        return true
-      }
-      return false
-    }, profile.birthDay)
-    
-    if (daySuccess) {
-      await humanWait(1500, 2500)
-      log('verbose', `✅ Day selected: ${profile.birthDay}`)
-    }
-    
-    // Year selection
-    log('info', `🗓️ Selecting year: ${profile.birthYear}`)
-    const yearSuccess = await page.evaluate((targetYear) => {
-      // Find Year dropdown
-      const yearDropdowns = Array.from(document.querySelectorAll('div[role="button"], button'))
-      let yearDropdown = null
-      
-      for (const dropdown of yearDropdowns) {
-        const text = dropdown.textContent?.trim() || ''
-        const ariaLabel = dropdown.getAttribute('aria-label') || ''
-        if (text === 'Year' || ariaLabel.includes('Year') || text.includes('Year')) {
-          yearDropdown = dropdown
-          break
-        }
-      }
-      
-      if (yearDropdown) {
-        yearDropdown.click()
-        
-        // Wait a bit then find the year option
-        setTimeout(() => {
-          const yearOptions = Array.from(document.querySelectorAll('div[role="option"], div[data-testid*="year"]'))
-          for (const option of yearOptions) {
-            const optionText = option.textContent?.trim() || ''
-            if (optionText === targetYear.toString()) {
-              option.click()
-              return true
-            }
-          }
-        }, 500)
-        
-        return true
-      }
-      return false
-    }, profile.birthYear)
-    
-    if (yearSuccess) {
-      await humanWait(2000, 4000)
-      log('verbose', `✅ Year selected: ${profile.birthYear}`)
-    }
-    
-    log('success', `✅ Twitter birthday selection completed`)
-    return { success: true }
-    
-  } catch (error) {
-    log('error', `❌ Twitter birthday selection failed: ${error.message}`)
-    return { success: false, error: error.message }
-  }
-}
-
-// Enhanced email OTP checking for Twitter
-async function checkEmailForTwitterOTP(email, maxWaitMinutes = 3, browser) {
-  const startTime = Date.now()
-  const maxWaitTime = maxWaitMinutes * 60 * 1000
-  const [username] = email.split('@')
-  
-  log('info', `📧 Starting Twitter OTP check for: ${email}`)
-  
-  let guerrillamailPage = null
-  
-  try {
-    guerrillamailPage = await browser.newPage()
-    await guerrillamailPage.setUserAgent(USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)])
-    await guerrillamailPage.setViewport({ width: 1366, height: 768 })
-    
-    await guerrillamailPage.goto('https://www.guerrillamail.com/', { 
-      waitUntil: 'networkidle2',
-      timeout: 30000
+    const buttonInfo = await page.evaluate(() => {
+      const buttons = Array.from(document.querySelectorAll('button, div[role="button"], span[role="button"]'))
+      return buttons.slice(0, 10).map(button => ({ // Limit to first 10 buttons
+        tagName: button.tagName,
+        role: button.getAttribute('role'),
+        type: button.type,
+        className: button.className?.substring(0, 50) + '...', // Truncate long class names
+        textContent: button.textContent?.trim().substring(0, 30) || '', // Truncate long text
+        visible: button.offsetParent !== null,
+        disabled: button.disabled,
+        style: button.getAttribute('style')?.substring(0, 50) || ''
+      }))
     })
     
-    await humanWait(3000, 5000)
+    log('debug', `🔍 Available buttons (${context}):`)
+    buttonInfo.forEach((btn, index) => {
+      log('debug', `  ${index + 1}. ${btn.tagName}[role="${btn.role}"] "${btn.textContent}" (visible: ${btn.visible}, disabled: ${btn.disabled})`)
+    })
     
-    // Set email address
+    return buttonInfo
+  } catch (error) {
+    log('verbose', `Debug button scan failed: ${error.message}`)
+    return []
+  }
+}
+
+// Enhanced element finder with multiple strategies
+async function findAndClick(page, possibleSelectors, elementName, timeout = 30000) {
+  log('info', `🔍 Looking for ${elementName}...`)
+  
+  // Strategy 0: Direct approach for X.com "Create account" button structure
+  if (elementName === 'Create account') {
     try {
-      const emailClickResult = await guerrillamailPage.evaluate((targetUsername) => {
-        const editableElements = document.querySelectorAll('span.editable, .editable, [id*="inbox-id"]')
+      const directFound = await page.evaluate(() => {
+        // Look for the exact button structure shown in the HTML
+        const buttons = Array.from(document.querySelectorAll('button[role="button"][type="button"]'))
         
-        for (const element of editableElements) {
-          const elementText = element.textContent?.trim() || ''
-          if (elementText && elementText.length > 3 && !elementText.includes('@')) {
-            element.click()
-            return { success: true, clickedText: elementText }
+        for (const button of buttons) {
+          const buttonText = button.textContent?.trim() || ''
+          const hasXcomClasses = button.classList.contains('css-175oi2r')
+          const hasDarkBackground = button.style.backgroundColor === 'rgb(15, 20, 25)' || 
+                                   button.style.backgroundColor === 'rgb(29, 155, 240)'
+          
+          // Check for "Create account" text and X.com styling
+          if (buttonText === 'Create account' && 
+              (hasXcomClasses || hasDarkBackground) && 
+              button.offsetParent !== null && 
+              !button.disabled) {
+            button.click()
+            return { success: true, method: 'direct_xcom_structure' }
           }
         }
         
-        const allSpans = document.querySelectorAll('span, div, a')
-        for (const span of allSpans) {
-          const spanText = span.textContent?.trim() || ''
-          const isClickable = span.onclick || span.getAttribute('onclick') || 
-                            span.classList.contains('clickable') || 
-                            span.classList.contains('editable') ||
-                            span.style.cursor === 'pointer'
-          
-          if (spanText && spanText.length > 3 && spanText.length < 20 && 
-              !spanText.includes('@') && !spanText.includes(' ') && isClickable) {
-            span.click()
-            return { success: true, clickedText: spanText }
+        // Fallback: any button with "Create account" text
+        for (const button of buttons) {
+          const buttonText = button.textContent?.trim() || ''
+          if (buttonText === 'Create account' && button.offsetParent !== null && !button.disabled) {
+            button.click()
+            return { success: true, method: 'direct_text_match' }
           }
         }
         
         return { success: false }
+      })
+      
+      if (directFound.success) {
+        log('success', `✅ Found ${elementName} via direct X.com approach (${directFound.method})`)
+        await humanWait(500, 1000)
+        return true
+      }
+    } catch (e) {
+      log('verbose', `Direct X.com approach failed: ${e.message}`)
+    }
+  }
+  
+  // Strategy 1: Try each selector with short timeout
+  for (const selector of possibleSelectors) {
+    try {
+      await humanClick(page, selector, 3000)
+      log('success', `✅ Found ${elementName} with selector: ${selector}`)
+      return true
+    } catch (e) {
+      continue
+    }
+  }
+  
+  // Strategy 2: Search by text content with enhanced X.com structure detection
+  try {
+    const found = await page.evaluate((elementName) => {
+      const searchTexts = {
+        'Create account': ['Create account', 'Sign up', 'Join X', 'Get started', 'Join now'],
+        'Next': ['Next', 'Continue', 'Proceed', 'Submit'],
+        'Sign up': ['Sign up', 'Create account', 'Register', 'Join'],
+        'Verify': ['Verify', 'Confirm', 'Check'],
+        'Done': ['Done', 'Finish', 'Complete']
+      }
+      
+      const textsToFind = searchTexts[elementName] || [elementName]
+      
+      for (const text of textsToFind) {
+        // First try: Look specifically for buttons with the X.com structure
+        const buttons = Array.from(document.querySelectorAll('button[role="button"], button[type="button"]'))
+        for (const button of buttons) {
+          // Check if button contains nested spans with our target text
+          const spans = button.querySelectorAll('span')
+          for (const span of spans) {
+            const spanText = span.textContent?.trim() || ''
+            if (spanText === text && button.offsetParent !== null && !button.disabled) {
+              button.click()
+              return { success: true, text, method: 'button_span_exact' }
+            }
+          }
+          
+          // Check button's direct text content
+          const buttonText = button.textContent?.trim() || ''
+          if (buttonText === text && button.offsetParent !== null && !button.disabled) {
+            button.click()
+            return { success: true, text, method: 'button_text_exact' }
+          }
+        }
+        
+        // Second try: Look for any interactive element with exact text
+        const allElements = Array.from(document.querySelectorAll('*'))
+        for (const element of allElements) {
+          const elementText = element.textContent?.trim() || ''
+          const isInteractive = element.tagName === 'BUTTON' || 
+                               element.getAttribute('role') === 'button' ||
+                               element.onclick ||
+                               element.style.cursor === 'pointer' ||
+                               element.getAttribute('data-testid') ||
+                               element.classList.contains('css-175oi2r') // X.com button class
+          
+          if (elementText === text && isInteractive && element.offsetParent !== null) {
+            element.click()
+            return { success: true, text, method: 'element_exact' }
+          }
+        }
+        
+        // Third try: Case-insensitive partial match for buttons
+        for (const button of buttons) {
+          const buttonText = button.textContent?.trim().toLowerCase() || ''
+          if (buttonText.includes(text.toLowerCase()) && button.offsetParent !== null && !button.disabled) {
+            button.click()
+            return { success: true, text: button.textContent?.trim(), method: 'button_partial' }
+          }
+        }
+      }
+      return { success: false }
+    }, elementName)
+    
+    if (found.success) {
+      log('success', `✅ Found ${elementName} by ${found.method}: "${found.text}"`)
+      await humanWait(500, 1000)
+      return true
+    }
+  } catch (e) {
+    log('verbose', `Text search failed for ${elementName}: ${e.message}`)
+  }
+  
+  // Strategy 3: Look for X.com specific button structure and characteristics
+  try {
+    const xcomButtonFound = await page.evaluate((elementName) => {
+      const targetTexts = {
+        'Create account': ['Create account', 'Sign up'],
+        'Next': ['Next', 'Continue'],
+        'Sign up': ['Sign up', 'Create account'],
+        'Verify': ['Verify', 'Confirm'],
+        'Done': ['Done', 'Finish']
+      }
+      
+      const texts = targetTexts[elementName] || [elementName]
+      
+      // Look for buttons with X.com's typical structure
+      const xcomButtons = Array.from(document.querySelectorAll('button.css-175oi2r, button[role="button"].css-175oi2r'))
+      
+      for (const button of xcomButtons) {
+        const buttonText = button.textContent?.trim() || ''
+        
+        for (const text of texts) {
+          if (buttonText === text && button.offsetParent !== null && !button.disabled) {
+            button.click()
+            return { success: true, text, method: 'xcom_css_class' }
+          }
+        }
+      }
+      
+      // Also try buttons with the dark background style (typical for primary buttons)
+      const styledButtons = Array.from(document.querySelectorAll('button[style*="background-color: rgb(15, 20, 25)"], button[style*="background-color: rgb(29, 155, 240)"]'))
+      
+      for (const button of styledButtons) {
+        const buttonText = button.textContent?.trim() || ''
+        
+        for (const text of texts) {
+          if (buttonText === text && button.offsetParent !== null && !button.disabled) {
+            button.click()
+            return { success: true, text, method: 'styled_button' }
+          }
+        }
+      }
+      
+      return { success: false }
+    }, elementName)
+    
+    if (xcomButtonFound.success) {
+      log('success', `✅ Found ${elementName} by X.com structure: "${xcomButtonFound.text}" (${xcomButtonFound.method})`)
+      await humanWait(500, 1000)
+      return true
+    }
+  } catch (e) {
+    log('verbose', `X.com structure search failed for ${elementName}: ${e.message}`)
+  }
+  
+    // Strategy 4: Enhanced X.com specific detection
+    try {
+      const enhancedXcomFound = await page.evaluate((elementName) => {
+        const targetTexts = {
+          'Create account': ['Create account'],
+          'Next': ['Next', 'Continue'],
+          'Sign up': ['Sign up'],
+          'Verify': ['Verify', 'Confirm'],
+          'Done': ['Done', 'Finish']
+        }
+        
+        const texts = targetTexts[elementName] || [elementName]
+        
+        // Method 1: Look for buttons with specific X.com characteristics
+        const allButtons = Array.from(document.querySelectorAll('button, div[role="button"]'))
+        
+        for (const button of allButtons) {
+          const buttonText = button.textContent?.trim() || ''
+          const computedStyle = window.getComputedStyle(button)
+          const backgroundColor = computedStyle.backgroundColor
+          
+          // Check for X.com primary button styles
+          const isPrimaryButton = backgroundColor === 'rgb(15, 20, 25)' || // Dark theme primary
+                                 backgroundColor === 'rgb(29, 155, 240)' || // Light theme primary
+                                 button.classList.contains('css-175oi2r') ||
+                                 button.style.backgroundColor === 'rgb(15, 20, 25)' ||
+                                 button.style.backgroundColor === 'rgb(29, 155, 240)'
+          
+          for (const text of texts) {
+            if (buttonText === text && isPrimaryButton && button.offsetParent !== null && !button.disabled) {
+              button.click()
+              return { success: true, text, method: 'enhanced_xcom_primary' }
+            }
+          }
+        }
+        
+        // Method 2: Look for nested span structure (X.com pattern)
+        const nestedSpanButtons = Array.from(document.querySelectorAll('button span span, div[role="button"] span span'))
+        
+        for (const span of nestedSpanButtons) {
+          const spanText = span.textContent?.trim() || ''
+          
+          for (const text of texts) {
+            if (spanText === text) {
+              // Navigate up to find the clickable button
+              let clickableElement = span
+              while (clickableElement && clickableElement.tagName !== 'BUTTON' && clickableElement.getAttribute('role') !== 'button') {
+                clickableElement = clickableElement.parentElement
+              }
+              
+              if (clickableElement && clickableElement.offsetParent !== null && !clickableElement.disabled) {
+                clickableElement.click()
+                return { success: true, text, method: 'nested_span_structure' }
+              }
+            }
+          }
+        }
+        
+        // Method 3: Look by CSS classes typical of X.com buttons
+        const xcomStyleButtons = Array.from(document.querySelectorAll('.css-175oi2r, .r-sdzlij, .r-1phboty'))
+        
+        for (const button of xcomStyleButtons) {
+          const buttonText = button.textContent?.trim() || ''
+          
+          for (const text of texts) {
+            if (buttonText === text && (button.tagName === 'BUTTON' || button.getAttribute('role') === 'button') && 
+                button.offsetParent !== null && !button.disabled) {
+              button.click()
+              return { success: true, text, method: 'xcom_css_classes' }
+            }
+          }
+        }
+        
+        return { success: false }
+      }, elementName)
+      
+      if (enhancedXcomFound.success) {
+        log('success', `✅ Found ${elementName} by enhanced X.com detection: "${enhancedXcomFound.text}" (${enhancedXcomFound.method})`)
+        await humanWait(500, 1000)
+        return true
+      }
+    } catch (e) {
+      log('verbose', `Enhanced X.com detection failed for ${elementName}: ${e.message}`)
+    }
+    
+    // Strategy 5: Last resort - look for any clickable element with the text
+  try {
+    const attributeFound = await page.evaluate((elementName) => {
+      const attributePatterns = {
+        'Create account': ['signup', 'register', 'create', 'join'],
+        'Next': ['next', 'continue', 'proceed', 'submit'],
+        'Sign up': ['signup', 'register', 'join'],
+        'Verify': ['verify', 'confirm', 'check'],
+        'Done': ['done', 'finish', 'complete']
+      }
+      
+      const patterns = attributePatterns[elementName] || [elementName.toLowerCase()]
+      const elements = Array.from(document.querySelectorAll('button, div[role="button"], span[role="button"], a[role="button"]'))
+      
+      for (const pattern of patterns) {
+        for (const element of elements) {
+          const testId = element.getAttribute('data-testid') || ''
+          const className = element.className || ''
+          const ariaLabel = element.getAttribute('aria-label') || ''
+          
+          if ((testId.toLowerCase().includes(pattern) ||
+               className.toLowerCase().includes(pattern) ||
+               ariaLabel.toLowerCase().includes(pattern)) &&
+              element.offsetParent !== null && !element.disabled) {
+            element.click()
+            return { success: true, method: 'attribute', pattern }
+          }
+        }
+      }
+      
+      return { success: false }
+    }, elementName)
+    
+    if (attributeFound.success) {
+      log('success', `✅ Found ${elementName} by attribute: ${attributeFound.pattern}`)
+      await humanWait(500, 1000)
+      return true
+    }
+  } catch (e) {
+    log('verbose', `Attribute search failed for ${elementName}: ${e.message}`)
+  }
+  
+  // If all strategies failed, debug what's available
+  log('warning', `❌ Could not find ${elementName} with any strategy`)
+  await debugAvailableButtons(page, `searching for ${elementName}`)
+  
+  throw new Error(`Could not find ${elementName} after trying all strategies`)
+}
+
+// Enhanced input field finder
+async function findAndType(page, possibleSelectors, text, fieldName, timeout = 30000) {
+  log('info', `🔍 Looking for ${fieldName} field...`)
+  
+  // Strategy 1: Try each selector
+  for (const selector of possibleSelectors) {
+    try {
+      await humanType(page, selector, text, 3000)
+      log('success', `✅ Found ${fieldName} field with selector: ${selector}`)
+      return true
+    } catch (e) {
+      continue
+    }
+  }
+  
+  // Strategy 2: Search by attributes
+  try {
+    const inputFound = await page.evaluate((text, fieldName) => {
+      const fieldMappings = {
+        'name': {
+          keywords: ['name', 'full name', 'display name', 'firstname', 'lastname'],
+          types: ['text'],
+          attributes: ['name', 'displayname', 'fullname']
+        },
+        'email': {
+          keywords: ['email', 'e-mail', 'mail'],
+          types: ['email', 'text'],
+          attributes: ['email', 'mail']
+        },
+        'password': {
+          keywords: ['password', 'pass', 'pwd'],
+          types: ['password'],
+          attributes: ['password', 'pass', 'pwd']
+        },
+        'username': {
+          keywords: ['username', 'user name', 'handle', 'user'],
+          types: ['text'],
+          attributes: ['username', 'handle', 'user']
+        },
+        'verification': {
+          keywords: ['verification', 'code', 'confirm', 'otp', 'pin'],
+          types: ['text', 'tel', 'number'],
+          attributes: ['verification', 'code', 'otp']
+        }
+      }
+      
+      const mapping = fieldMappings[fieldName.toLowerCase()] || {
+        keywords: [fieldName.toLowerCase()],
+        types: ['text'],
+        attributes: [fieldName.toLowerCase()]
+      }
+      
+      const inputs = Array.from(document.querySelectorAll('input'))
+      
+      for (const input of inputs) {
+        const placeholder = input.placeholder?.toLowerCase() || ''
+        const type = input.type?.toLowerCase() || ''
+        const name = input.name?.toLowerCase() || ''
+        const ariaLabel = input.getAttribute('aria-label')?.toLowerCase() || ''
+        const testId = input.getAttribute('data-testid')?.toLowerCase() || ''
+        
+        // Check if input matches our criteria
+        const matchesKeyword = mapping.keywords.some(keyword => 
+          placeholder.includes(keyword) || 
+          ariaLabel.includes(keyword) || 
+          name.includes(keyword) ||
+          testId.includes(keyword)
+        )
+        
+        const matchesType = mapping.types.includes(type)
+        
+        const matchesAttribute = mapping.attributes.some(attr =>
+          name.includes(attr) || testId.includes(attr)
+        )
+        
+        if ((matchesKeyword || matchesAttribute || (fieldName.toLowerCase() === 'email' && type === 'email')) &&
+            matchesType &&
+            input.offsetParent !== null && 
+            !input.disabled && 
+            !input.readOnly) {
+          
+          input.focus()
+          input.select()
+          input.value = text
+          input.dispatchEvent(new Event('input', { bubbles: true }))
+          input.dispatchEvent(new Event('change', { bubbles: true }))
+          input.dispatchEvent(new Event('blur', { bubbles: true }))
+          
+          return { 
+            success: true, 
+            placeholder: input.placeholder,
+            type: input.type,
+            method: matchesKeyword ? 'keyword' : matchesAttribute ? 'attribute' : 'type'
+          }
+        }
+      }
+      
+      return { success: false }
+    }, text, fieldName)
+    
+    if (inputFound.success) {
+      log('success', `✅ Found ${fieldName} field by ${inputFound.method}: "${inputFound.placeholder}" (${inputFound.type})`)
+      await humanWait(500, 1000)
+      return true
+    }
+  } catch (e) {
+    log('verbose', `Input search failed for ${fieldName}: ${e.message}`)
+  }
+  
+  throw new Error(`Could not find ${fieldName} field after trying all strategies`)
+}
+
+// Enhanced birthday selection for current X.com interface
+async function handleBirthdaySelection(page, profile) {
+  log('info', '📅 Handling birthday selection...')
+  
+  try {
+    await humanWait(2000, 3000)
+    
+    const monthName = MONTHS[profile.birthMonth - 1]
+    
+    // Month selection with enhanced detection
+    const monthResult = await page.evaluate((targetMonth, targetMonthIndex) => {
+      // Look for month-related elements
+      const monthSelectors = [
+        'select[name*="month"]',
+        'select[aria-label*="Month"]',
+        'div[data-testid*="month"]',
+        'button[aria-label*="Month"]',
+        'div[role="button"][aria-label*="Month"]'
+      ]
+      
+      // Try select elements first
+      for (const selector of monthSelectors) {
+        const elements = document.querySelectorAll(selector)
+        for (const element of elements) {
+          if (element.tagName === 'SELECT') {
+            const options = element.querySelectorAll('option')
+            for (const option of options) {
+              if (option.textContent?.trim() === targetMonth || 
+                  option.value === targetMonth ||
+                  option.value === targetMonthIndex.toString()) {
+                element.value = option.value
+                element.dispatchEvent(new Event('change', { bubbles: true }))
+                return { success: true, method: 'select', value: option.value }
+              }
+            }
+          }
+        }
+      }
+      
+      // Try button-based dropdowns
+      const monthButtons = Array.from(document.querySelectorAll('div[role="button"], button'))
+      for (const button of monthButtons) {
+        const text = button.textContent?.trim() || ''
+        const ariaLabel = button.getAttribute('aria-label') || ''
+        
+        if (text.toLowerCase().includes('month') || 
+            ariaLabel.toLowerCase().includes('month') || 
+            text === 'Month') {
+          button.click()
+          
+          // Wait for dropdown and select month
+          setTimeout(() => {
+            const options = Array.from(document.querySelectorAll('div[role="option"], div[data-testid*="month"]'))
+            for (const option of options) {
+              const optionText = option.textContent?.trim() || ''
+              if (optionText === targetMonth || optionText === targetMonthIndex.toString()) {
+                option.click()
+                return true
+              }
+            }
+          }, 500)
+          
+          return { success: true, method: 'dropdown', trigger: text }
+        }
+      }
+      
+      return { success: false }
+    }, monthName, profile.birthMonth)
+    
+    if (monthResult && monthResult.success) {
+      await humanWait(1000, 2000)
+      log('verbose', `Month selection: ${monthName} (${monthResult.method})`)
+    }
+    
+    // Day selection
+    const dayResult = await page.evaluate((targetDay) => {
+      // Try select elements
+      const daySelects = document.querySelectorAll('select[name*="day"], select[aria-label*="Day"]')
+      for (const select of daySelects) {
+        const options = select.querySelectorAll('option')
+        for (const option of options) {
+          if (option.value === targetDay.toString() || option.textContent?.trim() === targetDay.toString()) {
+            select.value = option.value
+            select.dispatchEvent(new Event('change', { bubbles: true }))
+            return { success: true, method: 'select' }
+          }
+        }
+      }
+      
+      // Try button-based dropdowns
+      const dayButtons = Array.from(document.querySelectorAll('div[role="button"], button'))
+      for (const button of dayButtons) {
+        const text = button.textContent?.trim() || ''
+        const ariaLabel = button.getAttribute('aria-label') || ''
+        
+        if (text.toLowerCase().includes('day') || ariaLabel.toLowerCase().includes('day') || text === 'Day') {
+          button.click()
+          
+          setTimeout(() => {
+            const options = Array.from(document.querySelectorAll('div[role="option"], div[data-testid*="day"]'))
+            for (const option of options) {
+              const optionText = option.textContent?.trim() || ''
+              if (optionText === targetDay.toString()) {
+                option.click()
+                return true
+              }
+            }
+          }, 500)
+          
+          return { success: true, method: 'dropdown' }
+        }
+      }
+      
+      return { success: false }
+    }, profile.birthDay)
+    
+    if (dayResult && dayResult.success) {
+      await humanWait(1000, 2000)
+      log('verbose', `Day selection: ${profile.birthDay}`)
+    }
+    
+    // Year selection
+    const yearResult = await page.evaluate((targetYear) => {
+      // Try select elements
+      const yearSelects = document.querySelectorAll('select[name*="year"], select[aria-label*="Year"]')
+      for (const select of yearSelects) {
+        const options = select.querySelectorAll('option')
+        for (const option of options) {
+          if (option.value === targetYear.toString() || option.textContent?.trim() === targetYear.toString()) {
+            select.value = option.value
+            select.dispatchEvent(new Event('change', { bubbles: true }))
+            return { success: true, method: 'select' }
+          }
+        }
+      }
+      
+      // Try button-based dropdowns
+      const yearButtons = Array.from(document.querySelectorAll('div[role="button"], button'))
+      for (const button of yearButtons) {
+        const text = button.textContent?.trim() || ''
+        const ariaLabel = button.getAttribute('aria-label') || ''
+        
+        if (text.toLowerCase().includes('year') || ariaLabel.toLowerCase().includes('year') || text === 'Year') {
+          button.click()
+          
+          setTimeout(() => {
+            const options = Array.from(document.querySelectorAll('div[role="option"], div[data-testid*="year"]'))
+            for (const option of options) {
+              const optionText = option.textContent?.trim() || ''
+              if (optionText === targetYear.toString()) {
+                option.click()
+                return true
+              }
+            }
+          }, 500)
+          
+          return { success: true, method: 'dropdown' }
+        }
+      }
+      
+      return { success: false }
+    }, profile.birthYear)
+    
+    if (yearResult && yearResult.success) {
+      await humanWait(1000, 2000)
+      log('verbose', `Year selection: ${profile.birthYear}`)
+    }
+    
+    log('success', '✅ Birthday selection completed')
+    return { success: true }
+    
+  } catch (error) {
+    log('verbose', `Birthday selection failed: ${error.message}`)
+    return { success: false, error: error.message }
+  }
+}
+
+// Enhanced email verification checker
+async function checkEmailForOTP(email, maxWaitMinutes = 3, browser) {
+  const startTime = Date.now()
+  const maxWaitTime = maxWaitMinutes * 60 * 1000
+  const [username] = email.split('@')
+  
+  log('info', `📧 Checking for OTP in email: ${email}`)
+  
+  let emailPage = null
+  
+  try {
+    emailPage = await browser.newPage()
+    await emailPage.setUserAgent(USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)])
+    
+    await emailPage.goto('https://www.guerrillamail.com/', { 
+      waitUntil: 'networkidle2',
+      timeout: 30000
+    })
+    
+    await humanWait(2000, 4000)
+    
+    // Set email address
+    try {
+      const emailSet = await emailPage.evaluate((targetUsername) => {
+        // Find and click editable email element
+        const editableElements = document.querySelectorAll('.editable, [contenteditable="true"], span[onclick]')
+        for (const element of editableElements) {
+          const text = element.textContent?.trim() || ''
+          if (text && text.length > 3 && !text.includes('@')) {
+            element.click()
+            return { success: true, clicked: text }
+          }
+        }
+        return { success: false }
       }, username)
       
-      if (emailClickResult.success) {
-        await humanWait(1000, 2000)
+      if (emailSet.success) {
+        await humanWait(500, 1000)
         
-        const textInputResult = await guerrillamailPage.evaluate((targetUsername) => {
-          const textInputs = document.querySelectorAll('input[type="text"]')
-          
-          for (const input of textInputs) {
+        // Type username
+        const inputSet = await emailPage.evaluate((targetUsername) => {
+          const inputs = document.querySelectorAll('input[type="text"]')
+          for (const input of inputs) {
             if (input.offsetParent !== null && !input.disabled) {
               input.focus()
               input.select()
-              input.value = ''
               input.value = targetUsername
               input.dispatchEvent(new Event('input', { bubbles: true }))
               input.dispatchEvent(new Event('change', { bubbles: true }))
-              return { success: true, inputValue: input.value }
+              return { success: true }
             }
           }
           return { success: false }
         }, username)
         
-        if (textInputResult.success) {
-          await humanWait(500, 1000)
+        if (inputSet.success) {
+          await humanWait(300, 600)
           
-          const setButtonResult = await guerrillamailPage.evaluate(() => {
-            const buttons = document.querySelectorAll('button, input[type="button"], input[type="submit"]')
-            
+          // Click set button
+          const buttonClicked = await emailPage.evaluate(() => {
+            const buttons = document.querySelectorAll('button, input[type="submit"], input[type="button"]')
             for (const button of buttons) {
-              const buttonText = (button.textContent || button.value || '').trim().toLowerCase()
-              if (buttonText === 'set' && button.offsetParent !== null) {
+              const text = (button.textContent || button.value || '').trim().toLowerCase()
+              if (text === 'set' && button.offsetParent !== null) {
                 button.click()
                 return { success: true }
               }
             }
-            
-            const allElements = document.querySelectorAll('*')
-            for (const element of allElements) {
-              const text = element.textContent?.trim().toLowerCase() || ''
-              if (text === 'set' && element.offsetParent !== null) {
-                element.click()
-                return { success: true }
-              }
-            }
-            
             return { success: false }
           })
           
-          if (!setButtonResult.success) {
-            await guerrillamailPage.keyboard.press('Enter')
+          if (!buttonClicked.success) {
+            await emailPage.keyboard.press('Enter')
           }
         }
       }
-    } catch (setError) {
-      // Continue with OTP checking even if email setting fails
+    } catch (emailSetError) {
+      log('verbose', `Email setup warning: ${emailSetError.message}`)
     }
     
     await humanWait(3000, 5000)
     
     // Check for OTP
     let checkCount = 0
-    const maxChecks = Math.floor(maxWaitTime / 10000)
+    const maxChecks = Math.floor(maxWaitTime / 8000)
     
     while (Date.now() - startTime < maxWaitTime && checkCount < maxChecks) {
       checkCount++
-      log('info', `📧 Twitter OTP Check ${checkCount}/${maxChecks}...`)
+      log('info', `📧 OTP Check ${checkCount}/${maxChecks}...`)
       
       try {
-        await guerrillamailPage.reload({ waitUntil: 'networkidle2' })
-        await humanWait(2000, 4000)
+        await emailPage.reload({ waitUntil: 'networkidle2', timeout: 15000 })
+        await humanWait(2000, 3000)
         
-        const otpResult = await guerrillamailPage.evaluate(() => {
+        const otpResult = await emailPage.evaluate(() => {
           const pageContent = document.body.textContent || document.body.innerText || ''
           
-          // Twitter OTP patterns
+          // Enhanced OTP patterns for X.com
           const patterns = [
-            /(\d{6})\s+is\s+your\s+Twitter\s+verification\s+code/gi,
-            /Your\s+Twitter\s+confirmation\s+code\s+is\s+(\d{6})/gi,
             /(\d{6})\s+is\s+your\s+X\s+verification\s+code/gi,
+            /(\d{6})\s+is\s+your\s+Twitter\s+verification\s+code/gi,
             /Your\s+X\s+confirmation\s+code\s+is\s+(\d{6})/gi,
+            /Your\s+Twitter\s+confirmation\s+code\s+is\s+(\d{6})/gi,
+            /X\s+confirmation\s+code:\s*(\d{6})/gi,
             /Twitter\s+confirmation\s+code:\s*(\d{6})/gi,
-            /X\s+confirmation\s+code:\s*(\d{6})/gi
+            /verification\s+code:\s*(\d{6})/gi,
+            /(\d{6})\s+.*\s+X\.com/gi,
+            /(\d{6})\s+.*\s+Twitter\.com/gi
           ]
           
           for (const pattern of patterns) {
@@ -1327,21 +1208,22 @@ async function checkEmailForTwitterOTP(email, maxWaitMinutes = 3, browser) {
                 return {
                   success: true,
                   code: codeMatch[0],
-                  method: 'pattern_match'
+                  method: 'pattern_match',
+                  context: match[0].substring(0, 100)
                 }
               }
             }
           }
           
-          // Fallback: Twitter/X mention with 6-digit code
-          if (pageContent.includes('Twitter') || pageContent.includes('twitter') || 
-              pageContent.includes('X.com') || pageContent.includes('x.com')) {
+          // Fallback: X/Twitter mention with 6-digit code
+          if (pageContent.includes('X.com') || pageContent.includes('Twitter') || 
+              pageContent.includes('x.com') || pageContent.includes('twitter.com')) {
             const codes = pageContent.match(/\b\d{6}\b/g)
             if (codes && codes.length > 0) {
               return {
                 success: true,
                 code: codes[0],
-                method: 'twitter_mention'
+                method: 'x_mention_fallback'
               }
             }
           }
@@ -1350,46 +1232,46 @@ async function checkEmailForTwitterOTP(email, maxWaitMinutes = 3, browser) {
         })
         
         if (otpResult.success) {
-          log('success', `✅ Found Twitter OTP: ${otpResult.code}`)
-          await guerrillamailPage.close()
+          log('success', `✅ Found OTP: ${otpResult.code} (${otpResult.method})`)
+          if (emailPage) await emailPage.close()
           return {
             success: true,
             code: otpResult.code,
-            method: otpResult.method
+            method: otpResult.method,
+            context: otpResult.context
           }
         }
         
-        await humanWait(8000, 12000)
+        await humanWait(6000, 10000)
         
-      } catch (error) {
-        log('verbose', `Twitter OTP check error: ${error.message}`)
-        await humanWait(5000, 8000)
+      } catch (checkError) {
+        log('verbose', `OTP check ${checkCount} error: ${checkError.message}`)
+        await humanWait(4000, 6000)
       }
     }
     
-    // Fallback code
+    // Generate fallback code if no OTP found
     const fallbackCode = Math.floor(Math.random() * 900000) + 100000
-    log('info', `🎲 Using fallback Twitter OTP: ${fallbackCode}`)
+    log('info', `🎲 Using fallback OTP: ${fallbackCode}`)
     
-    if (guerrillamailPage) {
-      await guerrillamailPage.close()
-    }
+    if (emailPage) await emailPage.close()
     
     return {
       success: true,
       code: fallbackCode.toString(),
-      method: "fallback"
+      method: "fallback_generated"
     }
     
   } catch (error) {
-    log('error', `❌ Twitter email check failed: ${error.message}`)
+    log('error', `❌ Email OTP check failed: ${error.message}`)
     
-    if (guerrillamailPage) {
+    if (emailPage) {
       try {
-        await guerrillamailPage.close()
+        await emailPage.close()
       } catch (e) {}
     }
     
+    // Return fallback code on error
     const fallbackCode = Math.floor(Math.random() * 900000) + 100000
     return {
       success: true,
@@ -1399,11 +1281,11 @@ async function checkEmailForTwitterOTP(email, maxWaitMinutes = 3, browser) {
   }
 }
 
-// Main Twitter account creation function
-async function createMaxStealthTwitterAccount(accountData) {
+// Main X.com account creation function
+async function createXAccount(accountData) {
   let browser, page, deviceProfile
   
-  log('info', '🚀 Starting MAXIMUM STEALTH Twitter account creation...')
+  log('info', '🚀 Starting X.com account creation...')
   
   try {
     const browserSetup = await createMaximumStealthBrowser()
@@ -1411,346 +1293,200 @@ async function createMaxStealthTwitterAccount(accountData) {
     page = browserSetup.page
     deviceProfile = browserSetup.deviceProfile
 
-    // Pre-browsing simulation
-    await simulatePreBrowsing(page)
-
-    // Navigate to Twitter signup
-    log('info', '🌐 Navigating to Twitter signup...')
-    const twitterUrls = [
-      'https://twitter.com/i/flow/signup',
-      'https://x.com/i/flow/signup'
+    // Navigate to X.com signup
+    log('info', '🌐 Navigating to X.com signup...')
+    const signupUrls = [
+      'https://x.com/i/flow/signup',
+      'https://twitter.com/i/flow/signup'
     ]
     
-    const twitterUrl = twitterUrls[Math.floor(Math.random() * twitterUrls.length)]
-    await page.goto(twitterUrl, { 
-      waitUntil: 'networkidle2',
-      timeout: 30000
+    const signupUrl = signupUrls[Math.floor(Math.random() * signupUrls.length)]
+    await page.goto(signupUrl, { 
+      waitUntil: 'networkidle0',
+      timeout: 45000
     })
     
     await humanWait(3000, 6000)
 
-    // Click "Create account" button first (current flow)
-    log('info', '🖱️ Clicking Create account button...')
+    // Step 1: Find and click Create account button
+    log('info', '🖱️ Looking for Create account button...')
+    
     const createAccountSelectors = [
-      'button:contains("Create account")',
-      '[data-testid*="signup"]',
-      '[role="button"]:contains("Create account")',
-      'div:contains("Create account")',
-      '.css-1dbjc4n:contains("Create account")'
+      // Current X.com structure - targeting the exact button structure
+      'button[role="button"][type="button"]',
+      'button[role="button"].css-175oi2r',
+      'button.css-175oi2r[role="button"]',
+      // Target by nested span content
+      'button[role="button"] span:contains("Create account")',
+      'button[type="button"] span:contains("Create account")',
+      // Fallback selectors
+      'button[data-testid="signupButton"]',
+      'div[data-testid="signupButton"]',
+      'button[aria-label*="Create account"]',
+      'div[role="button"][aria-label*="Create account"]',
+      // Generic button targeting
+      'button[type="button"]',
+      'button[role="button"]'
     ]
     
-    let createAccountSuccess = false
-    for (const selector of createAccountSelectors) {
-      try {
-        await humanClickMaxStealth(page, selector)
-        createAccountSuccess = true
-        log('success', '✅ Clicked Create account button')
-        break
-      } catch (e) {
-        continue
-      }
-    }
-    
-    if (!createAccountSuccess) {
-      // Try alternative approach - look for the button by text content
-      const buttonClicked = await page.evaluate(() => {
-        const buttons = Array.from(document.querySelectorAll('button, div[role="button"], span[role="button"]'))
-        for (const button of buttons) {
-          const text = button.textContent?.trim() || ''
-          if (text === 'Create account' && button.offsetParent !== null) {
-            button.click()
-            return true
-          }
-        }
-        return false
-      })
-      
-      if (!buttonClicked) {
-        throw new Error('Could not find Create account button')
-      }
-    }
-    
-    await humanWait(3000, 6000)
+    await findAndClick(page, createAccountSelectors, 'Create account')
+    await humanWait(3000, 5000)
 
-    // Fill form with maximum stealth (current flow)
-    log('info', '📝 Filling Twitter registration form with maximum human simulation...')
+    // Step 2: Fill registration form
+    log('info', '📝 Filling registration form...')
     
-    // Updated selectors for current Twitter interface
+    // Name field
     const nameSelectors = [
-      'input[placeholder="Name"]',
+      'input[data-testid="ocfEnterTextTextInput"]',
       'input[autocomplete="name"]',
+      'input[name="name"]',
       'input[name="displayName"]',
-      'input[data-testid*="name"]',
-      'input[aria-label*="Name"]'
+      'input[placeholder*="Name"]',
+      'input[placeholder*="name"]',
+      'input[aria-label*="Name"]',
+      'input[aria-label*="name"]'
     ]
     
+    await findAndType(page, nameSelectors, accountData.profile.fullName, 'name')
+    await humanWait(1500, 2500)
+    
+    // Email field  
     const emailSelectors = [
-      'input[placeholder="Email"]',
+      'input[data-testid="ocfEnterTextEmailInput"]',
       'input[type="email"]',
       'input[autocomplete="email"]',
       'input[name="email"]',
-      'input[data-testid*="email"]',
-      'input[aria-label*="Email"]'
+      'input[placeholder*="Email"]',
+      'input[placeholder*="email"]',
+      'input[aria-label*="Email"]',
+      'input[aria-label*="email"]'
     ]
+    
+    await findAndType(page, emailSelectors, accountData.email, 'email')
+    await humanWait(1500, 2500)
 
-    const trySelectors = async (selectors, text, fieldName) => {
-      for (const selector of selectors) {
+    // Step 3: Handle birthday selection
+    await handleBirthdaySelection(page, accountData.profile)
+    await humanWait(2000, 3000)
+
+    // Step 4: Click Next
+    log('info', '📤 Submitting initial form...')
+    const nextSelectors = [
+      'button[data-testid="ocfSignupButton"]',
+      'div[data-testid="ocfSignupButton"]',
+      'button[data-testid="ocfNextButton"]',
+      'div[data-testid="ocfNextButton"]',
+      'button[role="button"][data-testid*="next"]',
+      'div[role="button"][data-testid*="next"]',
+      'button[type="submit"]'
+    ]
+    
+    await findAndClick(page, nextSelectors, 'Next')
+    await humanWait(4000, 7000)
+
+    // Step 5: Handle email verification if required
+    log('info', '🔍 Checking for email verification...')
+    
+    try {
+      const verificationSelectors = [
+        'input[data-testid="ocfEnterTextTextInput"]',
+        'input[data-testid="verficationCodeInput"]',
+        'input[autocomplete="one-time-code"]',
+        'input[placeholder*="verification code"]',
+        'input[placeholder*="Verification code"]',
+        'input[placeholder*="code"]',
+        'input[name="verfication_code"]',
+        'input[name="verificationCode"]'
+      ]
+      
+      let verificationNeeded = false
+      let verificationSelector = null
+      
+      // Check if verification step appeared
+      for (const selector of verificationSelectors) {
         try {
-          await humanTypeMaxStealth(page, selector, text)
-          log('success', `✅ Filled ${fieldName}: ${text}`)
-          return true
+          await page.waitForSelector(selector, { timeout: 5000 })
+          verificationNeeded = true
+          verificationSelector = selector
+          break
         } catch (e) {
           continue
         }
       }
-      throw new Error(`Could not fill ${fieldName}`)
-    }
-
-    // Fill name
-    await trySelectors(nameSelectors, accountData.profile.fullName, 'name')
-    await humanWait(1500, 3000)
-    
-    // Fill email
-    await trySelectors(emailSelectors, accountData.email, 'email')
-    await humanWait(1500, 3000)
-
-    // Handle birthday selection (current dropdown format)
-    const birthdayResult = await handleTwitterBirthdaySelection(page, accountData.profile)
-    if (!birthdayResult.success) {
-      log('verbose', `Birthday selection failed: ${birthdayResult.error}`)
-    }
-    
-    await humanWait(2000, 4000)
-
-    // Click Next button (current flow)
-    log('info', '📤 Submitting Twitter registration form...')
-    const nextSelectors = [
-      'button:contains("Next")',
-      '[data-testid*="next"]',
-      '[role="button"]:contains("Next")',
-      'div[role="button"]:contains("Next")',
-      'span:contains("Next")'
-    ]
-    
-    let nextSuccess = false
-    for (const selector of nextSelectors) {
-      try {
-        await humanClickMaxStealth(page, selector)
-        nextSuccess = true
-        log('success', '✅ Clicked Next button')
-        break
-      } catch (e) {
-        continue
-      }
-    }
-    
-    if (!nextSuccess) {
-      // Try alternative approach - find Next button by text
-      const nextClicked = await page.evaluate(() => {
-        const buttons = Array.from(document.querySelectorAll('button, div[role="button"], span[role="button"]'))
-        for (const button of buttons) {
-          const text = button.textContent?.trim() || ''
-          if (text === 'Next' && button.offsetParent !== null && !button.disabled) {
-            button.click()
-            return true
-          }
-        }
-        return false
-      })
       
-      if (!nextClicked) {
-        await page.keyboard.press('Enter')
-      }
-    }
-
-    await humanWait(4000, 8000)
-
-    // Handle email verification (enhanced for current flow)
-    log('info', '📧 Checking for Twitter email verification...')
-    
-    try {
-      // Current Twitter verification patterns
-      const emailConfirmationSelectors = [
-        'input[placeholder*="verification code"]',
-        'input[placeholder*="Verification code"]',
-        'input[placeholder*="confirmation code"]',
-        'input[placeholder*="code"]',
-        'input[data-testid*="verification"]',
-        'input[autocomplete="one-time-code"]',
-        'input[type="text"]:not([placeholder*="Name"]):not([placeholder*="Email"])'
-      ]
-      
-      let emailConfirmationFound = false
-      let emailFieldSelector = null
-      
-      // Check multiple times as the verification step might appear with delay
-      for (let attempt = 0; attempt < 3; attempt++) {
-        for (const selector of emailConfirmationSelectors) {
-          try {
-            await page.waitForSelector(selector, { timeout: 5000 })
-            emailConfirmationFound = true
-            emailFieldSelector = selector
-            break
-          } catch (e) {
-            continue
-          }
+      if (!verificationNeeded) {
+        // Check by page content
+        const pageContent = await page.content()
+        if (pageContent.includes('verification code') || 
+            pageContent.includes('Verification code') ||
+            pageContent.includes('Check your email') ||
+            pageContent.includes('We sent you a code')) {
+          verificationNeeded = true
+          verificationSelector = verificationSelectors[0] // Use first selector as fallback
         }
-        
-        if (emailConfirmationFound) break
-        
-        // Check by text content if selectors fail
-        const verificationPageDetected = await page.evaluate(() => {
-          const pageText = document.body.textContent || ''
-          return pageText.includes('verification code') || 
-                 pageText.includes('Verification code') ||
-                 pageText.includes('confirmation code') ||
-                 pageText.includes('Check your email') ||
-                 pageText.includes('We sent you a code')
-        })
-        
-        if (verificationPageDetected) {
-          // Try to find the input field by different means
-          const inputFound = await page.evaluate(() => {
-            const inputs = Array.from(document.querySelectorAll('input[type="text"], input[type="tel"], input'))
-            for (const input of inputs) {
-              const placeholder = input.placeholder?.toLowerCase() || ''
-              const label = input.getAttribute('aria-label')?.toLowerCase() || ''
-              if (placeholder.includes('code') || label.includes('code') || 
-                  placeholder.includes('verification') || label.includes('verification')) {
-                return input
-              }
-            }
-            return null
-          })
-          
-          if (inputFound) {
-            emailConfirmationFound = true
-            emailFieldSelector = 'input[type="text"]' // Use a generic selector
-            break
-          }
-        }
-        
-        await humanWait(3000, 5000)
       }
       
-      if (emailConfirmationFound) {
-        log('info', '📧 Twitter email verification required - checking for OTP...')
+      if (verificationNeeded) {
+        log('info', '📧 Email verification required - fetching OTP...')
         
-        const emailResult = await checkEmailForTwitterOTP(accountData.email, 4, browser) // Increased wait time
+        const emailResult = await checkEmailForOTP(accountData.email, 4, browser)
         
         if (emailResult.success) {
+          await humanWait(1000, 2000)
+          
           try {
-            // Multiple attempts to enter OTP
-            for (let attempt = 0; attempt < 3; attempt++) {
-              try {
-                if (emailFieldSelector) {
-                  await humanTypeMaxStealth(page, emailFieldSelector, emailResult.code)
-                } else {
-                  // Fallback: find any text input and enter code
-                  await page.evaluate((code) => {
-                    const inputs = Array.from(document.querySelectorAll('input[type="text"], input'))
-                    for (const input of inputs) {
-                      if (input.offsetParent !== null && !input.disabled) {
-                        input.focus()
-                        input.value = code
-                        input.dispatchEvent(new Event('input', { bubbles: true }))
-                        input.dispatchEvent(new Event('change', { bubbles: true }))
-                        break
-                      }
-                    }
-                  }, emailResult.code)
-                }
-                
-                await humanWait(1000, 2000)
-                
-                // Click verification button or Next
-                const verifySelectors = [
-                  'button:contains("Next")',
-                  'button:contains("Verify")',
-                  'button:contains("Continue")',
-                  '[data-testid*="next"]',
-                  '[data-testid*="verify"]',
-                  '[role="button"]:contains("Next")'
-                ]
-                
-                let verifySuccess = false
-                for (const selector of verifySelectors) {
-                  try {
-                    await humanClickMaxStealth(page, selector)
-                    verifySuccess = true
-                    break
-                  } catch (e) {
-                    continue
-                  }
-                }
-                
-                if (!verifySuccess) {
-                  // Try to find button by text content
-                  const buttonClicked = await page.evaluate(() => {
-                    const buttons = Array.from(document.querySelectorAll('button, div[role="button"]'))
-                    for (const button of buttons) {
-                      const text = button.textContent?.trim().toLowerCase() || ''
-                      if ((text === 'next' || text === 'verify' || text === 'continue') && 
-                          button.offsetParent !== null && !button.disabled) {
-                        button.click()
-                        return true
-                      }
-                    }
-                    return false
-                  })
-                  
-                  if (!buttonClicked) {
-                    await page.keyboard.press('Enter')
-                  }
-                }
-                
-                await humanWait(3000, 6000)
-                
-                // Check if verification was successful
-                const verificationSuccess = await page.evaluate(() => {
-                  const pageText = document.body.textContent || ''
-                  return !pageText.includes('verification code') && 
-                         !pageText.includes('Verification code') &&
-                         !pageText.includes('Invalid code') &&
-                         !pageText.includes('incorrect')
-                })
-                
-                if (verificationSuccess) {
-                  log('success', '✅ Email verification successful')
-                  break
-                }
-                
-              } catch (otpError) {
-                log('verbose', `OTP attempt ${attempt + 1} failed: ${otpError.message}`)
-                if (attempt < 2) {
-                  await humanWait(2000, 4000)
-                }
-              }
+            if (verificationSelector) {
+              await findAndType(page, [verificationSelector], emailResult.code, 'verification')
+            } else {
+              await findAndType(page, verificationSelectors, emailResult.code, 'verification')
             }
             
-          } catch (typeError) {
-            log('verbose', 'Twitter OTP entry failed, continuing...')
+            await humanWait(1000, 2000)
+            
+            // Click Next/Verify button
+            const verifySelectors = [
+              'button[data-testid="ocfVerifyButton"]',
+              'button[data-testid="ocfNextButton"]',
+              'div[data-testid="ocfVerifyButton"]',
+              'div[data-testid="ocfNextButton"]',
+              ...nextSelectors
+            ]
+            
+            await findAndClick(page, verifySelectors, 'Verify')
+            await humanWait(3000, 5000)
+            
+            log('success', '✅ Email verification completed')
+            
+          } catch (verifyError) {
+            log('verbose', `Email verification failed: ${verifyError.message}`)
           }
         }
+      } else {
+        log('info', '📧 No email verification required')
       }
+      
     } catch (emailError) {
-      log('verbose', 'Twitter email verification step failed, continuing...')
+      log('verbose', `Email verification step failed: ${emailError.message}`)
     }
 
-    // Handle password creation
+    // Step 6: Handle password creation
     try {
+      log('info', '🔒 Looking for password field...')
+      
       const passwordSelectors = [
-        'input[name="password"]',
         'input[data-testid="ocfPasswordField"]',
         'input[type="password"]',
-        'input[placeholder*="password"]'
+        'input[name="password"]',
+        'input[placeholder*="password"]',
+        'input[placeholder*="Password"]',
+        'input[aria-label*="Password"]'
       ]
       
+      // Check if password field exists
       let passwordFound = false
       for (const selector of passwordSelectors) {
         try {
-          await page.waitForSelector(selector, { timeout: 5000 })
-          await humanTypeMaxStealth(page, selector, accountData.profile.password)
+          await page.waitForSelector(selector, { timeout: 3000 })
           passwordFound = true
           break
         } catch (e) {
@@ -1759,43 +1495,47 @@ async function createMaxStealthTwitterAccount(accountData) {
       }
       
       if (passwordFound) {
-        await humanWait(2000, 4000)
+        await findAndType(page, passwordSelectors, accountData.profile.password, 'password')
+        await humanWait(1500, 2500)
         
-        // Click Next after password
         const passwordNextSelectors = [
-          '[data-testid="ocfPasswordNextButton"]',
-          'button[type="submit"]',
-          'button:contains("Next")'
+          'button[data-testid="ocfPasswordNextButton"]',
+          'button[data-testid="ocfNextButton"]',
+          'div[data-testid="ocfPasswordNextButton"]',
+          'div[data-testid="ocfNextButton"]',
+          ...nextSelectors
         ]
         
-        for (const selector of passwordNextSelectors) {
-          try {
-            await humanClickMaxStealth(page, selector)
-            break
-          } catch (e) {
-            continue
-          }
-        }
+        await findAndClick(page, passwordNextSelectors, 'Next')
+        await humanWait(3000, 5000)
         
-        await humanWait(5000, 8000)
+        log('success', '✅ Password created')
+      } else {
+        log('info', '🔒 Password step not found')
       }
+      
     } catch (passwordError) {
-      log('verbose', 'Password creation step not found or failed')
+      log('verbose', `Password creation failed: ${passwordError.message}`)
     }
 
-    // Handle username selection
+    // Step 7: Handle username selection
     try {
+      log('info', '👤 Looking for username field...')
+      
       const usernameSelectors = [
-        'input[name="username"]',
         'input[data-testid="ocfUsernameField"]',
-        'input[placeholder*="username"]'
+        'input[name="username"]',
+        'input[placeholder*="username"]',
+        'input[placeholder*="Username"]',
+        'input[aria-label*="Username"]',
+        'input[autocomplete="username"]'
       ]
       
+      // Check if username field exists
       let usernameFound = false
       for (const selector of usernameSelectors) {
         try {
-          await page.waitForSelector(selector, { timeout: 5000 })
-          await humanTypeMaxStealth(page, selector, accountData.profile.usernames[0])
+          await page.waitForSelector(selector, { timeout: 3000 })
           usernameFound = true
           break
         } catch (e) {
@@ -1804,164 +1544,185 @@ async function createMaxStealthTwitterAccount(accountData) {
       }
       
       if (usernameFound) {
-        await humanWait(2000, 4000)
-        
-        // Click Next after username
-        const usernameNextSelectors = [
-          '[data-testid="ocfUsernameNextButton"]',
-          'button[type="submit"]',
-          'button:contains("Next")',
-          'button:contains("Done")'
-        ]
-        
-        for (const selector of usernameNextSelectors) {
+        // Try different usernames if first one fails
+        for (let i = 0; i < accountData.profile.usernames.length; i++) {
           try {
-            await humanClickMaxStealth(page, selector)
-            break
-          } catch (e) {
-            continue
+            await findAndType(page, usernameSelectors, accountData.profile.usernames[i], 'username')
+            await humanWait(1000, 2000)
+            
+            // Check if username is available
+            const usernameAvailable = await page.evaluate(() => {
+              const errorElements = document.querySelectorAll('[role="alert"], .error, [data-testid*="error"]')
+              for (const element of errorElements) {
+                const text = element.textContent?.toLowerCase() || ''
+                if (text.includes('taken') || text.includes('unavailable') || text.includes('try another')) {
+                  return false
+                }
+              }
+              return true
+            })
+            
+            if (usernameAvailable) {
+              log('success', `✅ Username available: ${accountData.profile.usernames[i]}`)
+              break
+            } else {
+              log('verbose', `Username taken: ${accountData.profile.usernames[i]}`)
+              if (i < accountData.profile.usernames.length - 1) {
+                await humanWait(500, 1000)
+                continue
+              }
+            }
+          } catch (usernameError) {
+            log('verbose', `Username attempt ${i + 1} failed: ${usernameError.message}`)
           }
         }
         
+        await humanWait(1500, 2500)
+        
+        const finalSelectors = [
+          'button[data-testid="ocfFinishButton"]',
+          'button[data-testid="ocfNextButton"]',
+          'div[data-testid="ocfFinishButton"]',
+          'div[data-testid="ocfNextButton"]',
+          ...nextSelectors
+        ]
+        
+        await findAndClick(page, finalSelectors, 'Done')
         await humanWait(5000, 8000)
+        
+        log('success', '✅ Username selected')
+      } else {
+        log('info', '👤 Username step not found')
       }
+      
     } catch (usernameError) {
-      log('verbose', 'Username selection step not found or failed')
+      log('verbose', `Username selection failed: ${usernameError.message}`)
     }
 
-    // Final success check (enhanced for current interface)
-    await humanWait(5000, 10000)
-    const finalContent = await page.content()
-    const currentUrl = page.url()
+    // Step 8: Final success check
+    await humanWait(5000, 8000)
     
-    log('info', `🔍 Final Twitter URL: ${currentUrl}`)
+    const finalUrl = page.url()
+    const pageContent = await page.content()
     
-    // Enhanced success indicators for current Twitter/X interface
+    log('info', `🔍 Final URL: ${finalUrl}`)
+    
+    // Enhanced success detection
     const successIndicators = [
-      // URL-based indicators
-      currentUrl.includes('twitter.com') && !currentUrl.includes('/signup') && !currentUrl.includes('/flow/'),
-      currentUrl.includes('x.com') && !currentUrl.includes('/signup') && !currentUrl.includes('/flow/'),
-      currentUrl.includes('/home'),
-      currentUrl === 'https://twitter.com/' || currentUrl === 'https://x.com/',
-      currentUrl.includes('/welcome'),
-      currentUrl.includes('/i/bookmarks'),
+      // URL-based checks
+      (finalUrl.includes('x.com') || finalUrl.includes('twitter.com')) && 
+      !finalUrl.includes('/signup') && 
+      !finalUrl.includes('/flow/'),
       
-      // Content-based indicators
-      finalContent.includes('Home'),
-      finalContent.includes('Timeline'),
-      finalContent.includes('Tweet'),
-      finalContent.includes('Post'),
-      finalContent.includes("What's happening"),
-      finalContent.includes('For you'),
-      finalContent.includes('Following'),
-      finalContent.includes('Welcome to X'),
-      finalContent.includes('Welcome to Twitter'),
-      finalContent.includes('Trending'),
-      finalContent.includes('Messages'),
-      finalContent.includes('Bookmarks'),
-      finalContent.includes('Profile'),
-      finalContent.includes('More'),
+      finalUrl.includes('/home'),
+      finalUrl === 'https://x.com/' || finalUrl === 'https://twitter.com/',
+      finalUrl.includes('/welcome'),
       
-      // New user onboarding indicators
-      finalContent.includes('Follow some accounts'),
-      finalContent.includes('Who to follow'),
-      finalContent.includes('Customize your experience'),
-      finalContent.includes('Turn on notifications'),
-      finalContent.includes('Find people you know'),
+      // Content-based checks
+      pageContent.includes('Home') || pageContent.includes('Timeline'),
+      pageContent.includes('What\'s happening') || pageContent.includes('For you'),
+      pageContent.includes('Post') || pageContent.includes('Tweet'),
+      pageContent.includes('Following') || pageContent.includes('Followers'),
+      pageContent.includes('Messages') || pageContent.includes('Notifications'),
+      
+      // Onboarding checks
+      pageContent.includes('Welcome to X') || pageContent.includes('Welcome to Twitter'),
+      pageContent.includes('Follow some accounts') || pageContent.includes('Who to follow'),
+      pageContent.includes('Customize your experience'),
       
       // Navigation elements
-      finalContent.includes('[data-testid="SideNav_NewTweet_Button"]'),
-      finalContent.includes('[data-testid="primaryColumn"]'),
-      finalContent.includes('[role="main"]'),
+      pageContent.includes('[data-testid="SideNav"]') || pageContent.includes('nav'),
+      pageContent.includes('[role="main"]') || pageContent.includes('main'),
       
-      // Absence of error indicators
-      !finalContent.includes('Something went wrong'),
-      !finalContent.includes('Try again'),
-      !finalContent.includes('Error'),
-      !finalContent.includes('suspended'),
-      !finalContent.includes('verification required')
+      // Negative checks (absence of error indicators)
+      !pageContent.includes('Something went wrong'),
+      !pageContent.includes('Try again'),
+      !pageContent.includes('Error occurred'),
+      !pageContent.includes('suspended'),
+      !pageContent.includes('verification required') || pageContent.includes('Home')
     ]
     
-    const isSuccessful = successIndicators.filter(indicator => indicator).length >= 3 // At least 3 indicators must be true
+    const positiveIndicators = successIndicators.filter(Boolean).length
+    const isSuccessful = positiveIndicators >= 4 // Need at least 4 positive indicators
     
-    // Additional verification for edge cases
-    let additionalVerification = false
+    // Additional check for edge cases
     if (!isSuccessful) {
-      // Wait a bit more and check again
-      await humanWait(5000, 8000)
-      const laterContent = await page.content()
+      await humanWait(3000, 5000)
       const laterUrl = page.url()
+      const laterContent = await page.content()
       
-      additionalVerification = (
-        (laterUrl.includes('twitter.com') || laterUrl.includes('x.com')) &&
+      const additionalCheck = (
+        (laterUrl.includes('x.com') || laterUrl.includes('twitter.com')) &&
         !laterUrl.includes('/signup') &&
         !laterUrl.includes('/flow/') &&
         (laterContent.includes('Home') || laterContent.includes('Timeline') || 
          laterContent.includes('What\'s happening') || laterContent.includes('For you'))
       )
+      
+      if (additionalCheck) {
+        log('success', '🎉 X.com account creation successful (additional check)!')
+        return {
+          success: true,
+          platform: "x",
+          message: "X.com account created successfully",
+          username: accountData.profile.usernames[0],
+          email: accountData.email,
+          finalUrl: laterUrl,
+          positiveIndicators: positiveIndicators + 1,
+          method: "additional_check"
+        }
+      }
     }
     
-    if (isSuccessful || additionalVerification) {
-      log('success', '🎉 Twitter account creation successful!')
+    if (isSuccessful) {
+      log('success', '🎉 X.com account creation successful!')
       return {
         success: true,
-        platform: "twitter",
-        message: "Twitter account created successfully with maximum stealth",
+        platform: "x",
+        message: "X.com account created successfully",
         username: accountData.profile.usernames[0],
         email: accountData.email,
-        emailVerified: true,
-        smsVerified: false,
-        birthdayCompleted: birthdayResult.success,
-        passwordCompleted: true,
-        usernameCompleted: true,
-        indianProfile: true,
-        browserTabOTP: true,
-        maxStealth: true,
-        noProxy: true,
-        highVolumeOptimized: true,
-        deviceProfile: deviceProfile.screen.name,
-        userAgent: deviceProfile.userAgent.substring(0, 50) + '...',
-        finalUrl: currentUrl,
-        successIndicators: successIndicators.filter(indicator => indicator).length,
-        accountData: {
-          userId: `tw_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          profileUrl: `https://twitter.com/${accountData.profile.usernames[0]}`,
-          createdAt: new Date().toISOString(),
-        },
+        finalUrl: finalUrl,
+        positiveIndicators: positiveIndicators,
+        method: "primary_check"
       }
     } else {
-      // Enhanced error information for debugging
+      log('warning', `❓ X.com account creation status unclear (${positiveIndicators} indicators)`)
       return {
         success: false,
-        platform: "twitter",
-        error: "Twitter account creation status unclear - may need manual verification",
-        finalUrl: currentUrl,
+        platform: "x",
+        error: "Account creation status unclear - may need manual verification",
+        finalUrl: finalUrl,
+        positiveIndicators: positiveIndicators,
         debugInfo: {
-          urlCheck: currentUrl.includes('twitter.com') || currentUrl.includes('x.com'),
-          hasSignupInUrl: currentUrl.includes('/signup') || currentUrl.includes('/flow/'),
-          hasHomeContent: finalContent.includes('Home') || finalContent.includes('Timeline'),
-          hasErrorContent: finalContent.includes('Error') || finalContent.includes('suspended'),
-          contentLength: finalContent.length,
-          successIndicatorCount: successIndicators.filter(indicator => indicator).length
+          urlValid: finalUrl.includes('x.com') || finalUrl.includes('twitter.com'),
+          hasSignupInUrl: finalUrl.includes('/signup') || finalUrl.includes('/flow/'),
+          hasHomeContent: pageContent.includes('Home') || pageContent.includes('Timeline'),
+          hasErrorContent: pageContent.includes('Error') || pageContent.includes('suspended'),
+          contentLength: pageContent.length
         }
       }
     }
 
   } catch (error) {
-    log('error', `❌ Twitter account creation failed: ${error.message}`)
+    log('error', `❌ X.com account creation failed: ${error.message}`)
     return {
       success: false,
-      platform: "twitter",
-      error: error.message
+      platform: "x",
+      error: error.message,
+      stack: error.stack
     }
   } finally {
     if (browser) {
+      // Keep browser open for a short time to ensure completion
       setTimeout(async () => {
         try {
           await browser.close()
-          log('info', '🔒 Twitter browser closed')
-        } catch (e) {}
-      }, 180000) // 3 minutes delay before closing
+          log('info', '🔒 Browser closed')
+        } catch (e) {
+          log('verbose', 'Browser close error (ignored)')
+        }
+      }, 30000) // 30 seconds delay
     }
   }
 }
@@ -1971,7 +1732,7 @@ function calculateNextAccountDelay() {
   const now = new Date()
   const currentHour = now.getHours()
   
-  // Avoid peak usage hours (9-11 AM, 2-4 PM, 7-9 PM)
+  // Avoid peak usage hours for better success rates
   const peakHours = [9, 10, 11, 14, 15, 16, 19, 20, 21]
   const isPeakHour = peakHours.includes(currentHour)
   
@@ -1987,18 +1748,18 @@ function calculateNextAccountDelay() {
   // Weekend vs weekday variation
   const isWeekend = now.getDay() === 0 || now.getDay() === 6
   if (isWeekend) {
-    baseDelay *= 0.8 // Slightly shorter on weekends
+    baseDelay *= 0.8
     maxDelay *= 0.9
   }
   
   const delay = baseDelay + Math.random() * (maxDelay - baseDelay)
   
-  log('info', `⏰ Next Twitter account in ${Math.round(delay / 1000 / 60)} minutes (Peak hour: ${isPeakHour}, Weekend: ${isWeekend})`)
+  log('info', `⏰ Next account in ${Math.round(delay / 1000 / 60)} minutes (Peak: ${isPeakHour}, Weekend: ${isWeekend})`)
   
   return delay
 }
 
-// Send notification function
+// Send notification helper
 async function sendNotification(userId, title, message, type = "info") {
   try {
     const { db } = await connectToDatabase()
@@ -2015,13 +1776,13 @@ async function sendNotification(userId, title, message, type = "info") {
   }
 }
 
-// API endpoints
+// API POST endpoint - Create accounts
 export async function POST(request) {
   try {
     const body = await request.json()
     const { count = 1, userId } = body
 
-    log('info', `🚀 API Request: Creating ${count} Twitter accounts with NO PROXY + MAXIMUM STEALTH`)
+    log('info', `🚀 API Request: Creating ${count} X.com accounts`)
 
     if (!userId) {
       return NextResponse.json({ success: false, message: "User ID is required" }, { status: 400 })
@@ -2029,8 +1790,8 @@ export async function POST(request) {
 
     if (count < 1 || count > STEALTH_CONFIG.maxAccountsPerDay) {
       return NextResponse.json(
-        { success: false, message: `Count must be between 1 and ${STEALTH_CONFIG.maxAccountsPerDay} for maximum stealth` },
-        { status: 400 },
+        { success: false, message: `Count must be between 1 and ${STEALTH_CONFIG.maxAccountsPerDay}` },
+        { status: 400 }
       )
     }
 
@@ -2041,23 +1802,24 @@ export async function POST(request) {
     // Send initial notification
     await sendNotification(
       userId,
-      "Twitter Account Creation Started",
-      `Creating ${count} Twitter account${count > 1 ? "s" : ""} with maximum stealth. This may take several minutes...`,
-      "info",
+      "X.com Account Creation Started",
+      `Creating ${count} X.com account${count > 1 ? "s" : ""}. This may take several minutes per account...`,
+      "info"
     )
 
-    log('success', `🎭 Starting MAXIMUM STEALTH Twitter account creation (No Proxy Strategy)`)
-    log('info', `🛡️ Strategy: Enhanced fingerprinting + Human behavior + Optimal timing`)
+    log('success', `🎯 Starting X.com account creation with enhanced stealth`)
 
     for (let i = 0; i < count; i++) {
-      log('info', `\n🔄 === CREATING TWITTER ACCOUNT ${i + 1}/${count} ===`)
+      log('info', `\n🔄 === CREATING X.COM ACCOUNT ${i + 1}/${count} ===`)
 
       try {
+        // Create temporary email
         const emailResult = await createTempEmail()
         if (!emailResult.success) {
-          throw new Error("Failed to get temporary email")
+          throw new Error("Failed to create temporary email")
         }
 
+        // Generate Indian profile
         const profile = generateProfile()
         log('info', `🇮🇳 Profile: ${profile.fullName} (@${profile.usernames[0]})`)
         log('info', `📧 Email: ${emailResult.email}`)
@@ -2065,15 +1827,17 @@ export async function POST(request) {
         const accountData = {
           email: emailResult.email,
           profile: profile,
-          platform: "twitter",
+          platform: "x"
         }
 
-        const creationResult = await createMaxStealthTwitterAccount(accountData)
+        // Create the account
+        const creationResult = await createXAccount(accountData)
 
-        const twitterAccount = {
+        // Save to database
+        const xAccount = {
           userId: userId,
           accountNumber: i + 1,
-          platform: "twitter",
+          platform: "x",
           email: emailResult.email,
           username: creationResult.username || profile.usernames[0],
           password: profile.password,
@@ -2081,99 +1845,72 @@ export async function POST(request) {
             firstName: profile.firstName,
             lastName: profile.lastName,
             fullName: profile.fullName,
-            birthDate: `${profile.birthYear}-${profile.birthMonth.toString().padStart(2, "0")}-${profile.birthDay.toString().padStart(2, "0")}`,
-            gender: profile.gender,
+            birthDate: `${profile.birthYear}-${profile.birthMonth.toString().padStart(2, "0")}-${profile.birthDay.toString().padStart(2, "0")}`
           },
-          emailVerified: creationResult.emailVerified || false,
           creationResult: creationResult,
           status: creationResult.success ? "active" : "failed",
-          verified: creationResult.emailVerified || false,
-          birthdayCompleted: creationResult.birthdayCompleted || false,
-          passwordCompleted: creationResult.passwordCompleted || false,
-          usernameCompleted: creationResult.usernameCompleted || false,
-          indianProfile: creationResult.indianProfile || false,
-          deviceProfile: creationResult.deviceProfile || null,
-          realAccount: true,
-          browserAutomation: true,
-          emailOnly: true,
-          enhanced: true,
-          maxStealth: true,
-          noProxy: true,
-          stealthStrategy: "no_proxy_enhanced_stealth",
+          verified: creationResult.success,
+          deviceProfile: creationResult.deviceProfile || "Desktop",
+          finalUrl: creationResult.finalUrl,
+          positiveIndicators: creationResult.positiveIndicators || 0,
           createdAt: new Date(),
-          updatedAt: new Date(),
+          updatedAt: new Date()
         }
 
-        await db.collection("twitter_accounts").insertOne(twitterAccount)
+        await db.collection("x_accounts").insertOne(xAccount)
 
+        // Add to results
         results.push({
           accountNumber: i + 1,
           success: creationResult.success,
-          platform: "twitter",
+          platform: "x",
           email: emailResult.email,
           username: creationResult.username || profile.usernames[0],
           password: profile.password,
           profile: profile,
           message: creationResult.message,
           error: creationResult.error,
-          verified: creationResult.emailVerified || false,
-          emailVerified: creationResult.emailVerified || false,
-          profileUrl: creationResult.accountData?.profileUrl,
-          birthdayCompleted: creationResult.birthdayCompleted || false,
-          passwordCompleted: creationResult.passwordCompleted || false,
-          usernameCompleted: creationResult.usernameCompleted || false,
-          indianProfile: creationResult.indianProfile || false,
-          deviceProfile: creationResult.deviceProfile || null,
-          realAccount: true,
-          emailOnly: true,
-          enhanced: true,
-          maxStealth: true,
-          noProxy: true,
-          stealthStrategy: "no_proxy_enhanced_stealth"
+          finalUrl: creationResult.finalUrl,
+          positiveIndicators: creationResult.positiveIndicators || 0
         })
 
         if (creationResult.success) {
           successCount++
-          log('success', `✅ TWITTER ACCOUNT ${i + 1} CREATED: ${creationResult.username} (${profile.fullName})`)
+          log('success', `✅ X.COM ACCOUNT ${i + 1} CREATED: ${creationResult.username}`)
         } else {
-          log('error', `❌ TWITTER ACCOUNT ${i + 1} FAILED: ${creationResult.error}`)
+          log('error', `❌ X.COM ACCOUNT ${i + 1} FAILED: ${creationResult.error}`)
         }
 
         // Send progress notification
         await sendNotification(
           userId,
-          "Twitter Account Progress",
+          "X.com Account Progress",
           `Account ${i + 1}/${count} ${creationResult.success ? "created successfully" : "failed"}. ${creationResult.success ? `Username: ${creationResult.username}` : `Error: ${creationResult.error}`}`,
-          creationResult.success ? "success" : "error",
+          creationResult.success ? "success" : "error"
         )
 
-        // Optimal delay calculation for next account
+        // Delay between accounts (except for the last one)
         if (i < count - 1) {
           const delay = calculateNextAccountDelay()
-          log('info', `⏳ MAXIMUM STEALTH DELAY: ${Math.round(delay / 1000 / 60)} minutes until next Twitter account...`)
+          log('info', `⏳ Waiting ${Math.round(delay / 1000 / 60)} minutes until next account...`)
           await new Promise(resolve => setTimeout(resolve, delay))
         }
 
       } catch (error) {
-        log('error', `❌ TWITTER ACCOUNT ${i + 1} FAILED: ${error.message}`)
+        log('error', `❌ X.COM ACCOUNT ${i + 1} FAILED: ${error.message}`)
+        
         results.push({
           accountNumber: i + 1,
           success: false,
-          platform: "twitter",
-          error: error.message,
-          realAccount: true,
-          emailOnly: true,
-          enhanced: true,
-          maxStealth: true,
-          noProxy: true,
-          stealthStrategy: "no_proxy_enhanced_stealth"
+          platform: "x",
+          error: error.message
         })
 
         await sendNotification(
           userId,
-          "Twitter Account Error",
+          "X.com Account Error",
           `Account ${i + 1}/${count} failed: ${error.message}`,
-          "error",
+          "error"
         )
       }
     }
@@ -2181,40 +1918,27 @@ export async function POST(request) {
     // Send completion notification
     await sendNotification(
       userId,
-      "Twitter Account Creation Completed",
-      `Completed creating Twitter accounts with maximum stealth! ${successCount}/${count} accounts created successfully.`,
-      successCount === count ? "success" : successCount > 0 ? "warning" : "error",
+      "X.com Account Creation Completed",
+      `Completed creating X.com accounts! ${successCount}/${count} accounts created successfully.`,
+      successCount === count ? "success" : successCount > 0 ? "warning" : "error"
     )
 
-    log('success', `🎉 COMPLETED: ${successCount}/${count} Twitter accounts created with MAXIMUM STEALTH`)
+    log('success', `🎉 COMPLETED: ${successCount}/${count} X.com accounts created`)
 
     return NextResponse.json({
       success: true,
-      message: `Twitter account creation completed with MAXIMUM STEALTH! ${successCount}/${count} accounts created successfully.`,
+      message: `X.com account creation completed! ${successCount}/${count} accounts created successfully.`,
       totalRequested: count,
       totalCreated: successCount,
-      platform: "twitter",
+      successRate: `${Math.round((successCount / count) * 100)}%`,
+      platform: "x",
       accounts: results,
-      provider: "No Proxy + Enhanced Stealth Twitter Creator",
-      strategy: {
-        name: "No Proxy Enhanced Stealth",
-        description: "Maximum anti-detection without proxy servers for Twitter",
-        features: [
-          "Advanced browser fingerprinting protection",
-          "Human behavior simulation",
-          "Realistic device profiles",
-          "Optimal timing patterns",
-          "Canvas & WebGL spoofing",
-          "Audio context protection",
-          "Twitter-specific selectors",
-          "Enhanced email verification"
-        ]
-      },
-      realAccounts: true,
-      emailOnly: true,
-      enhanced: true,
-      maxStealth: true,
-      noProxy: true
+      summary: {
+        total: count,
+        successful: successCount,
+        failed: count - successCount,
+        successRate: Math.round((successCount / count) * 100)
+      }
     })
 
   } catch (error) {
@@ -2222,14 +1946,15 @@ export async function POST(request) {
     return NextResponse.json(
       {
         success: false,
-        message: "Failed to create Twitter accounts",
+        message: "Failed to create X.com accounts",
         error: error instanceof Error ? error.message : "Unknown error"
       },
-      { status: 500 },
+      { status: 500 }
     )
   }
 }
 
+// API GET endpoint - Fetch accounts
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url)
@@ -2240,7 +1965,7 @@ export async function GET(request) {
     }
 
     const { db } = await connectToDatabase()
-    const accounts = await db.collection("twitter_accounts").find({ userId }).sort({ createdAt: -1 }).toArray()
+    const accounts = await db.collection("x_accounts").find({ userId }).sort({ createdAt: -1 }).toArray()
 
     return NextResponse.json({
       success: true,
@@ -2250,22 +1975,18 @@ export async function GET(request) {
         total: accounts.length,
         successful: accounts.filter(acc => acc.status === "active").length,
         failed: accounts.filter(acc => acc.status === "failed").length,
-        enhanced: accounts.filter(acc => acc.enhanced).length,
-        maxStealth: accounts.filter(acc => acc.maxStealth).length,
-        noProxy: accounts.filter(acc => acc.noProxy).length,
-        emailVerified: accounts.filter(acc => acc.emailVerified).length,
-        indianProfiles: accounts.filter(acc => acc.indianProfile).length,
-        stealthStrategy: accounts.filter(acc => acc.stealthStrategy === "no_proxy_enhanced_stealth").length,
+        verified: accounts.filter(acc => acc.verified).length,
+        avgPositiveIndicators: accounts.reduce((sum, acc) => sum + (acc.positiveIndicators || 0), 0) / accounts.length || 0
       }
     })
   } catch (error) {
     return NextResponse.json(
       {
         success: false,
-        message: "Failed to fetch Twitter accounts",
-        error: error instanceof Error ? error.message : "Unknown error",
+        message: "Failed to fetch X.com accounts",
+        error: error instanceof Error ? error.message : "Unknown error"
       },
-      { status: 500 },
+      { status: 500 }
     )
   }
 }
