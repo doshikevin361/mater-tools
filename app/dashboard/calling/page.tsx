@@ -8,249 +8,55 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Switch } from "@/components/ui/switch"
-import { Slider } from "@/components/ui/slider"
 import { toast } from "sonner"
-import { twilioVoiceBrowser } from "@/lib/twilio-voice-browser"
 import {
   Phone,
   PhoneCall,
   PhoneOff,
-  Mic,
-  MicOff,
-  Volume2,
-  VolumeX,
-  Square,
-  Play,
-  Pause,
-  Download,
   Clock,
   DollarSign,
-  SkipBack,
-  SkipForward,
   Wifi,
   WifiOff,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
 } from "lucide-react"
 
 interface CallRecord {
-  id: string
+  _id: string
   phoneNumber: string
+  callSid?: string
   duration: number
-  status: "completed" | "failed" | "busy" | "no-answer"
+  status: "initiated" | "ringing" | "answered" | "completed" | "failed" | "busy" | "no-answer"
   cost: number
   recordingUrl?: string
   transcript?: string
   timestamp: Date
   type?: string
-}
-
-interface AudioPlayerProps {
-  recordingUrl: string
-  callId: string
-  phoneNumber: string
-}
-
-function AudioPlayer({ recordingUrl, callId, phoneNumber }: AudioPlayerProps) {
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [currentTime, setCurrentTime] = useState(0)
-  const [duration, setDuration] = useState(0)
-  const [volume, setVolume] = useState([80])
-  const [isLoading, setIsLoading] = useState(false)
-  const audioRef = useRef<HTMLAudioElement>(null)
-
-  useEffect(() => {
-    const audio = audioRef.current
-    if (!audio) return
-
-    const updateTime = () => setCurrentTime(audio.currentTime)
-    const updateDuration = () => setDuration(audio.duration)
-    const handleEnded = () => setIsPlaying(false)
-    const handleLoadStart = () => setIsLoading(true)
-    const handleCanPlay = () => setIsLoading(false)
-
-    audio.addEventListener("timeupdate", updateTime)
-    audio.addEventListener("loadedmetadata", updateDuration)
-    audio.addEventListener("ended", handleEnded)
-    audio.addEventListener("loadstart", handleLoadStart)
-    audio.addEventListener("canplay", handleCanPlay)
-
-    return () => {
-      audio.removeEventListener("timeupdate", updateTime)
-      audio.removeEventListener("loadedmetadata", updateDuration)
-      audio.removeEventListener("ended", handleEnded)
-      audio.removeEventListener("loadstart", handleLoadStart)
-      audio.removeEventListener("canplay", handleCanPlay)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume[0] / 100
-    }
-  }, [volume])
-
-  const togglePlayPause = () => {
-    const audio = audioRef.current
-    if (!audio) return
-
-    if (isPlaying) {
-      audio.pause()
-      setIsPlaying(false)
-    } else {
-      audio.play()
-      setIsPlaying(true)
-    }
-  }
-
-  const handleSeek = (value: number[]) => {
-    const audio = audioRef.current
-    if (!audio || !duration) return
-
-    const newTime = (value[0] / 100) * duration
-    audio.currentTime = newTime
-    setCurrentTime(newTime)
-  }
-
-  const skipBackward = () => {
-    const audio = audioRef.current
-    if (!audio) return
-    audio.currentTime = Math.max(0, audio.currentTime - 10)
-  }
-
-  const skipForward = () => {
-    const audio = audioRef.current
-    if (!audio) return
-    audio.currentTime = Math.min(duration, audio.currentTime + 10)
-  }
-
-  const formatTime = (time: number) => {
-    if (isNaN(time)) return "0:00"
-    const minutes = Math.floor(time / 60)
-    const seconds = Math.floor(time % 60)
-    return `${minutes}:${seconds.toString().padStart(2, "0")}`
-  }
-
-  const downloadRecording = async () => {
-    try {
-      const response = await fetch(recordingUrl)
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `call-recording-${phoneNumber.replace(/\D/g, "")}-${callId}.mp3`
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
-      toast.success("Recording downloaded")
-    } catch (error) {
-      toast.error("Failed to download recording")
-    }
-  }
-
-  const progress = duration > 0 ? (currentTime / duration) * 100 : 0
-
-  return (
-    <div className="bg-gray-50 rounded-lg p-4 space-y-3 border">
-      <audio ref={audioRef} src={recordingUrl} preload="metadata" />
-
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-            <Phone className="h-4 w-4 text-blue-600" />
-          </div>
-          <div>
-            <p className="text-sm font-medium">Call Recording</p>
-            <p className="text-xs text-gray-500">{phoneNumber}</p>
-          </div>
-        </div>
-        <Button size="sm" variant="outline" onClick={downloadRecording} className="h-8 bg-transparent">
-          <Download className="h-3 w-3" />
-        </Button>
-      </div>
-
-      <div className="space-y-2">
-        <Slider
-          value={[progress]}
-          onValueChange={handleSeek}
-          max={100}
-          step={0.1}
-          className="w-full"
-          disabled={!duration || isLoading}
-        />
-        <div className="flex justify-between text-xs text-gray-500">
-          <span>{formatTime(currentTime)}</span>
-          <span>{formatTime(duration)}</span>
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={skipBackward}
-            disabled={!duration || isLoading}
-            className="h-8 w-8 p-0 bg-transparent"
-          >
-            <SkipBack className="h-3 w-3" />
-          </Button>
-
-          <Button size="sm" onClick={togglePlayPause} disabled={!duration || isLoading} className="h-8 w-8 p-0">
-            {isLoading ? (
-              <div className="w-3 h-3 border border-gray-300 border-t-blue-600 rounded-full animate-spin" />
-            ) : isPlaying ? (
-              <Pause className="h-3 w-3" />
-            ) : (
-              <Play className="h-3 w-3" />
-            )}
-          </Button>
-
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={skipForward}
-            disabled={!duration || isLoading}
-            className="h-8 w-8 p-0 bg-transparent"
-          >
-            <SkipForward className="h-3 w-3" />
-          </Button>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <VolumeX className="h-3 w-3 text-gray-400" />
-          <Slider value={volume} onValueChange={setVolume} max={100} step={1} className="w-16" />
-          <Volume2 className="h-3 w-3 text-gray-400" />
-        </div>
-      </div>
-    </div>
-  )
+  message?: string
+  answeredBy?: string
 }
 
 export default function CallingPage() {
   const [activeTab, setActiveTab] = useState("dialer")
   const [phoneNumber, setPhoneNumber] = useState("")
+  const [customMessage, setCustomMessage] = useState("")
   const [isCallActive, setIsCallActive] = useState(false)
   const [callDuration, setCallDuration] = useState(0)
-  const [isMuted, setIsMuted] = useState(false)
-  const [isRecording, setIsRecording] = useState(false)
-  const [volume, setVolume] = useState([80])
   const [callHistory, setCallHistory] = useState<CallRecord[]>([])
   const [balance, setBalance] = useState(25.5)
   const [autoRecord, setAutoRecord] = useState(true)
   const [callCost, setCallCost] = useState(0)
-  const [isConnected, setIsConnected] = useState(false)
+  const [isConnected, setIsConnected] = useState(true)
   const [isInitializing, setIsInitializing] = useState(false)
   const [callStatus, setCallStatus] = useState("idle")
+  const [currentCallSid, setCurrentCallSid] = useState("")
   const callTimerRef = useRef<NodeJS.Timeout>()
-
-  // Initialize Twilio Voice SDK
-  useEffect(() => {
-    initializeTwilioVoice()
-  }, [])
 
   // Load call history on component mount
   useEffect(() => {
     fetchCallHistory()
+    checkTwilioConnection()
   }, [])
 
   // Call timer effect
@@ -259,7 +65,7 @@ export default function CallingPage() {
       callTimerRef.current = setInterval(() => {
         setCallDuration((prev) => {
           const newDuration = prev + 1
-          setCallCost(newDuration * 0.05) // $0.05 per minute
+          setCallCost((newDuration / 60) * 0.05) // $0.05 per minute
           return newDuration
         })
       }, 1000)
@@ -276,64 +82,15 @@ export default function CallingPage() {
     }
   }, [isCallActive])
 
-  const initializeTwilioVoice = async () => {
+  const checkTwilioConnection = async () => {
     try {
       setIsInitializing(true)
-      await twilioVoiceBrowser.initialize()
+      // You can add a test API call here to verify Twilio credentials
       setIsConnected(true)
-      toast.success("Voice calling ready! You can now make calls directly from your browser.")
-
-      // Set up call event listeners
-      const device = twilioVoiceBrowser.getDevice()
-      if (device) {
-        device.on("connect", (call: any) => {
-          setIsCallActive(true)
-          setCallStatus("connected")
-          setCallDuration(0)
-          toast.success("Call connected!")
-        })
-
-        device.on("disconnect", (call: any) => {
-          setIsCallActive(false)
-          setCallStatus("idle")
-          setIsMuted(false)
-          toast.info("Call ended")
-
-          // Add to call history
-          const newCall: CallRecord = {
-            id: `call_${Date.now()}`,
-            phoneNumber: phoneNumber,
-            duration: callDuration,
-            status: "completed",
-            cost: callCost,
-            timestamp: new Date(),
-            type: "browser_call",
-          }
-          setCallHistory((prev) => [newCall, ...prev])
-
-          // Deduct cost from balance
-          setBalance((prev) => Math.max(0, prev - callCost))
-
-          // Refresh call history from server
-          fetchCallHistory()
-        })
-
-        device.on("error", (error: any) => {
-          console.error("Call error:", error)
-          setIsCallActive(false)
-          setCallStatus("idle")
-          toast.error(`Call error: ${error.message}`)
-        })
-
-        device.on("incoming", (call: any) => {
-          toast.info(`Incoming call from ${call.parameters.From}`)
-          setCallStatus("incoming")
-        })
-      }
+      toast.success("Twilio connection verified!")
     } catch (error) {
-      console.error("Failed to initialize Twilio Voice:", error)
       setIsConnected(false)
-      toast.error("Failed to initialize voice calling. Please check your internet connection and refresh the page.")
+      toast.error("Twilio connection failed. Please check your credentials.")
     } finally {
       setIsInitializing(false)
     }
@@ -353,31 +110,7 @@ export default function CallingPage() {
       }
     } catch (error) {
       console.error("Failed to fetch call history:", error)
-      // Fallback to mock data
-      const mockHistory: CallRecord[] = [
-        {
-          id: "call_001",
-          phoneNumber: "+919876543210",
-          duration: 125,
-          status: "completed",
-          cost: 2.5,
-          recordingUrl: "/api/recordings/sample-call-1.mp3",
-          transcript: "Hello, this is a test call recording with customer service...",
-          timestamp: new Date(Date.now() - 3600000),
-          type: "browser_call",
-        },
-        {
-          id: "call_002",
-          phoneNumber: "+919123456789",
-          duration: 89,
-          status: "completed",
-          cost: 1.75,
-          recordingUrl: "/api/recordings/sample-call-2.mp3",
-          timestamp: new Date(Date.now() - 7200000),
-          type: "browser_call",
-        },
-      ]
-      setCallHistory(mockHistory)
+      toast.error("Failed to load call history")
     }
   }
 
@@ -388,7 +121,7 @@ export default function CallingPage() {
     }
 
     if (!isConnected) {
-      toast.error("Voice calling not initialized. Please refresh the page.")
+      toast.error("Twilio connection not available. Please check your setup.")
       return
     }
 
@@ -399,58 +132,102 @@ export default function CallingPage() {
 
     try {
       setCallStatus("connecting")
-      toast.info("Connecting call...")
+      setIsCallActive(true)
+      setCallDuration(0)
+      setCallCost(0)
 
-      // Make API call to log the call attempt
-      await fetch("/api/calling/make-call", {
+      toast.info("Initiating call through Twilio...")
+
+      const response = await fetch("/api/calling/make-call", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           phoneNumber: phoneNumber,
+          message: customMessage || "Hello, this is a test call from BrandBuzz Ventures. Thank you for your time.",
+          messageType: "tts",
         }),
       })
 
-      // Make the actual browser call
-      await twilioVoiceBrowser.makeCall(phoneNumber)
+      const data = await response.json()
 
-      // The actual connection will be handled by the device event listeners
+      if (data.success) {
+        setCurrentCallSid(data.callSid)
+        setCallStatus("initiated")
+        toast.success(`Call initiated! Call SID: ${data.callSid}`)
+
+        // Start polling for call status
+        pollCallStatus(data.callSid)
+
+        // Refresh call history
+        setTimeout(() => {
+          fetchCallHistory()
+        }, 2000)
+      } else {
+        throw new Error(data.error || "Failed to initiate call")
+      }
     } catch (error) {
       console.error("Error making call:", error)
       setCallStatus("idle")
-      toast.error("Failed to make call. Please check your microphone permissions and try again.")
+      setIsCallActive(false)
+      toast.error(`Failed to make call: ${error.message}`)
     }
+  }
+
+  const pollCallStatus = async (callSid: string) => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await fetch(`/api/calling/status?callSid=${callSid}`)
+        const data = await response.json()
+
+        if (data.success) {
+          const status = data.status
+          setCallStatus(status)
+
+          if (status === "completed" || status === "failed" || status === "busy" || status === "no-answer") {
+            setIsCallActive(false)
+            clearInterval(pollInterval)
+
+            if (status === "completed") {
+              toast.success("Call completed successfully!")
+            } else {
+              toast.error(`Call ${status}`)
+            }
+
+            // Refresh call history
+            fetchCallHistory()
+          }
+        }
+      } catch (error) {
+        console.error("Error polling call status:", error)
+      }
+    }, 3000) // Poll every 3 seconds
+
+    // Stop polling after 2 minutes
+    setTimeout(() => {
+      clearInterval(pollInterval)
+      if (isCallActive) {
+        setIsCallActive(false)
+        setCallStatus("timeout")
+        toast.error("Call monitoring timeout")
+      }
+    }, 120000)
   }
 
   const endCall = async () => {
     try {
-      await twilioVoiceBrowser.hangupCall()
-      // The disconnect will be handled by the device event listeners
+      if (currentCallSid) {
+        // You can implement call termination here if needed
+        toast.info("Call will end naturally or you can hang up from your phone")
+      }
+
+      setIsCallActive(false)
+      setCallStatus("idle")
+      setCurrentCallSid("")
     } catch (error) {
       console.error("Error ending call:", error)
       toast.error("Failed to end call")
-    }
-  }
-
-  const toggleMute = async () => {
-    try {
-      const newMutedState = !isMuted
-      await twilioVoiceBrowser.muteCall(newMutedState)
-      setIsMuted(newMutedState)
-      toast.info(newMutedState ? "Microphone muted" : "Microphone unmuted")
-    } catch (error) {
-      console.error("Error toggling mute:", error)
-      toast.error("Failed to toggle mute")
-    }
-  }
-
-  const handleVolumeChange = async (newVolume: number[]) => {
-    try {
-      setVolume(newVolume)
-      await twilioVoiceBrowser.setVolume(newVolume[0])
-    } catch (error) {
-      console.error("Error setting volume:", error)
     }
   }
 
@@ -476,6 +253,38 @@ export default function CallingPage() {
     return number
   }
 
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "completed":
+        return <CheckCircle className="h-4 w-4 text-green-600" />
+      case "failed":
+      case "busy":
+      case "no-answer":
+        return <XCircle className="h-4 w-4 text-red-600" />
+      case "initiated":
+      case "ringing":
+        return <AlertCircle className="h-4 w-4 text-yellow-600" />
+      default:
+        return <Phone className="h-4 w-4 text-gray-600" />
+    }
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "completed":
+        return "bg-green-100 text-green-800"
+      case "failed":
+      case "busy":
+      case "no-answer":
+        return "bg-red-100 text-red-800"
+      case "initiated":
+      case "ringing":
+        return "bg-yellow-100 text-yellow-800"
+      default:
+        return "bg-gray-100 text-gray-800"
+    }
+  }
+
   const dialPadNumbers = [
     ["1", "2", "3"],
     ["4", "5", "6"],
@@ -499,14 +308,14 @@ export default function CallingPage() {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Browser Voice Calling</h1>
-          <p className="text-muted-foreground">Make calls directly from your browser - no app download needed</p>
+          <h1 className="text-3xl font-bold">Twilio Voice Calling</h1>
+          <p className="text-muted-foreground">Make real voice calls using Twilio API</p>
         </div>
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
             {isConnected ? <Wifi className="h-4 w-4 text-green-600" /> : <WifiOff className="h-4 w-4 text-red-600" />}
             <span className={`text-sm ${isConnected ? "text-green-600" : "text-red-600"}`}>
-              {isInitializing ? "Initializing..." : isConnected ? "Connected" : "Disconnected"}
+              {isInitializing ? "Checking..." : isConnected ? "Twilio Ready" : "Disconnected"}
             </span>
           </div>
           <div className="text-right">
@@ -518,7 +327,7 @@ export default function CallingPage() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="dialer">Browser Dialer</TabsTrigger>
+          <TabsTrigger value="dialer">Voice Dialer</TabsTrigger>
           <TabsTrigger value="history">Call History</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
@@ -530,9 +339,9 @@ export default function CallingPage() {
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Phone className="h-5 w-5" />
-                  <span>Click-to-Call Dialer</span>
+                  <span>Twilio Voice Dialer</span>
                 </CardTitle>
-                <CardDescription>Enter Indian mobile number (automatic +91 prefix)</CardDescription>
+                <CardDescription>Make real voice calls to Indian mobile numbers</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
@@ -550,6 +359,19 @@ export default function CallingPage() {
                   <p className="text-xs text-muted-foreground text-center">
                     Will call: {phoneNumber ? formatPhoneNumber(phoneNumber) : "+91 XXXXX XXXXX"}
                   </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="message">Custom Message (Optional)</Label>
+                  <Input
+                    id="message"
+                    type="text"
+                    placeholder="Enter custom voice message..."
+                    value={customMessage}
+                    onChange={(e) => setCustomMessage(e.target.value)}
+                    disabled={isCallActive || !isConnected}
+                  />
+                  <p className="text-xs text-muted-foreground">Leave empty for default message</p>
                 </div>
 
                 {/* Dial Pad */}
@@ -580,7 +402,7 @@ export default function CallingPage() {
                     Clear
                   </Button>
                   <Button
-                    onClick={phoneNumber.slice(0, -1) ? () => setPhoneNumber(phoneNumber.slice(0, -1)) : undefined}
+                    onClick={() => setPhoneNumber(phoneNumber.slice(0, -1))}
                     variant="outline"
                     disabled={isCallActive || !phoneNumber || !isConnected}
                     className="flex-1"
@@ -598,12 +420,12 @@ export default function CallingPage() {
                       disabled={!isConnected || isInitializing || callStatus === "connecting"}
                     >
                       <PhoneCall className="mr-2 h-4 w-4" />
-                      {callStatus === "connecting" ? "Connecting..." : "Call Now"}
+                      {callStatus === "connecting" ? "Connecting..." : "Make Call"}
                     </Button>
                   ) : (
                     <Button onClick={endCall} variant="destructive" className="flex-1" size="lg">
                       <PhoneOff className="mr-2 h-4 w-4" />
-                      End Call
+                      End Monitoring
                     </Button>
                   )}
                 </div>
@@ -611,20 +433,19 @@ export default function CallingPage() {
                 {!isConnected && (
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                     <p className="text-sm text-yellow-800">
-                      <strong>Note:</strong> Voice calling requires microphone access. Please allow microphone
-                      permission when prompted.
+                      <strong>Note:</strong> Twilio connection required. Please check your environment variables.
                     </p>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            {/* Call Controls Card */}
+            {/* Call Status Card */}
             <Card>
               <CardHeader>
-                <CardTitle>Live Call Controls</CardTitle>
+                <CardTitle>Call Status</CardTitle>
                 <CardDescription>
-                  {isCallActive ? `Active call - ${formatDuration(callDuration)}` : "No active call"}
+                  {isCallActive ? `Monitoring call - ${formatDuration(callDuration)}` : "No active call"}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -639,32 +460,14 @@ export default function CallingPage() {
                         </div>
                         <div className="flex items-center space-x-1">
                           <DollarSign className="h-4 w-4" />
-                          <span>${callCost.toFixed(2)}</span>
+                          <span>${callCost.toFixed(3)}</span>
                         </div>
                       </div>
-                      <Badge variant="default" className="bg-green-600">
-                        🔴 LIVE - Browser Call
-                      </Badge>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <Button onClick={toggleMute} variant={isMuted ? "destructive" : "outline"} size="lg">
-                        {isMuted ? <MicOff className="mr-2 h-4 w-4" /> : <Mic className="mr-2 h-4 w-4" />}
-                        {isMuted ? "Unmute" : "Mute"}
-                      </Button>
-
-                      <Button variant="outline" size="lg" disabled>
-                        <Square className="mr-2 h-4 w-4" />
-                        Recording
-                      </Button>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="flex items-center space-x-2">
-                        {volume[0] > 0 ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-                        <span>Call Volume: {volume[0]}%</span>
-                      </Label>
-                      <Slider value={volume} onValueChange={handleVolumeChange} max={100} step={1} className="w-full" />
+                      <div className="flex items-center justify-center space-x-2">
+                        {getStatusIcon(callStatus)}
+                        <Badge className={getStatusColor(callStatus)}>{callStatus.toUpperCase()}</Badge>
+                      </div>
+                      {currentCallSid && <p className="text-xs text-muted-foreground">Call SID: {currentCallSid}</p>}
                     </div>
                   </>
                 )}
@@ -673,10 +476,8 @@ export default function CallingPage() {
                   <div className="text-center text-muted-foreground py-8">
                     <Phone className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>No active call</p>
-                    <p className="text-sm">Enter a number and press "Call Now" to start</p>
-                    <p className="text-xs mt-2 text-blue-600">
-                      ✨ Calls work directly through your browser microphone & speakers
-                    </p>
+                    <p className="text-sm">Enter a number and press "Make Call" to start</p>
+                    <p className="text-xs mt-2 text-blue-600">✨ Real voice calls powered by Twilio</p>
                   </div>
                 )}
               </CardContent>
@@ -688,24 +489,24 @@ export default function CallingPage() {
           <Card>
             <CardHeader>
               <CardTitle>Call History</CardTitle>
-              <CardDescription>View your recent browser calls and listen to recordings</CardDescription>
+              <CardDescription>View your recent Twilio voice calls</CardDescription>
             </CardHeader>
             <CardContent>
               {callHistory.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <PhoneCall className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>No call history yet</p>
-                  <p className="text-sm">Your browser calls will appear here</p>
+                  <p className="text-sm">Your voice calls will appear here</p>
                 </div>
               ) : (
-                <div className="space-y-6">
+                <div className="space-y-4">
                   {callHistory.map((call) => (
-                    <div key={call.id} className="border rounded-lg p-4 space-y-4">
+                    <div key={call._id} className="border rounded-lg p-4">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
                           <div className="flex-shrink-0">
                             <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                              <Phone className="h-5 w-5 text-blue-600" />
+                              {getStatusIcon(call.status)}
                             </div>
                           </div>
                           <div>
@@ -717,51 +518,16 @@ export default function CallingPage() {
                               </span>
                               <span className="flex items-center space-x-1">
                                 <DollarSign className="h-3 w-3" />
-                                <span>${call.cost.toFixed(2)}</span>
+                                <span>${call.cost.toFixed(3)}</span>
                               </span>
                               <span>{new Date(call.timestamp).toLocaleString()}</span>
-                              {call.type && (
-                                <Badge variant="outline" className="text-xs">
-                                  {call.type}
-                                </Badge>
-                              )}
+                              {call.callSid && <span className="text-xs">SID: {call.callSid.slice(-8)}</span>}
                             </div>
+                            {call.message && <p className="text-sm text-gray-600 mt-1">"{call.message}"</p>}
                           </div>
                         </div>
-                        <Badge
-                          variant={
-                            call.status === "completed"
-                              ? "default"
-                              : call.status === "failed"
-                                ? "destructive"
-                                : "secondary"
-                          }
-                        >
-                          {call.status}
-                        </Badge>
+                        <Badge className={getStatusColor(call.status)}>{call.status}</Badge>
                       </div>
-
-                      {call.recordingUrl && (
-                        <AudioPlayer recordingUrl={call.recordingUrl} callId={call.id} phoneNumber={call.phoneNumber} />
-                      )}
-
-                      {call.transcript && (
-                        <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <div className="w-4 h-4 bg-blue-600 rounded-full flex items-center justify-center">
-                              <span className="text-xs text-white font-bold">T</span>
-                            </div>
-                            <span className="text-sm font-medium text-blue-800">Transcript</span>
-                          </div>
-                          <p className="text-sm text-blue-700 leading-relaxed">{call.transcript}</p>
-                        </div>
-                      )}
-
-                      {!call.recordingUrl && call.status === "completed" && (
-                        <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                          <p className="text-sm text-gray-600 text-center">No recording available for this call</p>
-                        </div>
-                      )}
                     </div>
                   ))}
                 </div>
@@ -773,14 +539,14 @@ export default function CallingPage() {
         <TabsContent value="settings" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Browser Calling Settings</CardTitle>
-              <CardDescription>Configure your browser-based calling preferences</CardDescription>
+              <CardTitle>Twilio Voice Settings</CardTitle>
+              <CardDescription>Configure your Twilio voice calling preferences</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label>Auto-record calls</Label>
-                  <p className="text-sm text-muted-foreground">Automatically start recording when a call begins</p>
+                  <p className="text-sm text-muted-foreground">Automatically record voice calls</p>
                 </div>
                 <Switch checked={autoRecord} onCheckedChange={setAutoRecord} />
               </div>
@@ -799,12 +565,12 @@ export default function CallingPage() {
               </div>
 
               <div className="space-y-2">
-                <Label>Browser Requirements</Label>
+                <Label>Twilio Configuration</Label>
                 <div className="text-sm text-muted-foreground space-y-1">
-                  <p>✅ Chrome, Firefox, Safari, Edge (latest versions)</p>
-                  <p>✅ Microphone access required</p>
-                  <p>✅ HTTPS connection (secure)</p>
-                  <p>✅ No app download needed</p>
+                  <p>✅ Account SID: {process.env.TWILIO_ACCOUNT_SID ? "Configured" : "Missing"}</p>
+                  <p>✅ API Key: {process.env.TWILIO_API_KEY ? "Configured" : "Missing"}</p>
+                  <p>✅ API Secret: {process.env.TWILIO_API_SECRET ? "Configured" : "Missing"}</p>
+                  <p>✅ Phone Number: {process.env.TWILIO_PHONE_NUMBER || "+19252617266"}</p>
                 </div>
               </div>
 
@@ -819,20 +585,9 @@ export default function CallingPage() {
                   ) : (
                     <>
                       <WifiOff className="h-4 w-4 text-red-600" />
-                      <span className="text-sm text-red-600">Disconnected - Please refresh page</span>
+                      <span className="text-sm text-red-600">Disconnected - Check configuration</span>
                     </>
                   )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Environment Variables Required</Label>
-                <div className="text-xs text-muted-foreground space-y-1 bg-gray-50 p-3 rounded">
-                  <p>TWILIO_ACCOUNT_SID=your_account_sid</p>
-                  <p>TWILIO_API_KEY=your_api_key</p>
-                  <p>TWILIO_API_SECRET=your_api_secret</p>
-                  <p>TWILIO_TWIML_APP_SID=your_twiml_app_sid</p>
-                  <p>TWILIO_PHONE_NUMBER=your_twilio_number</p>
                 </div>
               </div>
             </CardContent>

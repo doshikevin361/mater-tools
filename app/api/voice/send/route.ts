@@ -145,7 +145,6 @@ try {
     console.log("Voice contacts prepared:", voiceContacts.length)
     console.log("Audio URL being used:", audioUrl)
 
-    // Enhanced voice options with status callback
     const enhancedVoiceOptions = {
       ...voiceOptions,
       statusCallback: `${process.env.NEXT_PUBLIC_BASE_URL || process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000"}/api/voice/webhook`,

@@ -9,8 +9,15 @@ export async function POST(request: NextRequest) {
     const callDuration = formData.get("CallDuration") as string
     const from = formData.get("From") as string
     const to = formData.get("To") as string
+    const answeredBy = formData.get("AnsweredBy") as string
 
-    console.log(`Call webhook: ${callSid} - Status: ${callStatus}`)
+    console.log(`Call webhook received:`)
+    console.log(`- CallSid: ${callSid}`)
+    console.log(`- Status: ${callStatus}`)
+    console.log(`- Duration: ${callDuration}`)
+    console.log(`- From: ${from}`)
+    console.log(`- To: ${to}`)
+    console.log(`- AnsweredBy: ${answeredBy}`)
 
     const { db } = await connectToDatabase()
 
@@ -24,7 +31,12 @@ export async function POST(request: NextRequest) {
       updateData.cost = (Number.parseInt(callDuration) / 60) * 0.05 // $0.05 per minute
     }
 
-    await db.collection("calls").updateOne(
+    if (answeredBy) {
+      updateData.answeredBy = answeredBy
+    }
+
+    // Update existing call record by callSid
+    const updateResult = await db.collection("calls").updateOne(
       { callSid: callSid },
       {
         $set: updateData,
@@ -37,6 +49,8 @@ export async function POST(request: NextRequest) {
       },
       { upsert: true },
     )
+
+    console.log(`Database update result:`, updateResult)
 
     return NextResponse.json({ success: true })
   } catch (error) {
