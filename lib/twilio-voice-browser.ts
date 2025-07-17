@@ -29,19 +29,24 @@ export class TwilioVoiceBrowser {
 
       this.token = data.token
 
-      // Initialize Twilio Device
+      // Initialize Twilio Device for live calling
       this.device = new window.Twilio.Device(this.token, {
         logLevel: 1,
         answerOnBridge: true,
         fakeLocalDTMF: true,
         enableRingingState: true,
+        sounds: {
+          disconnect: false,
+          incoming: true,
+          outgoing: true,
+        },
       })
 
-      // Set up device event listeners
+      // Set up device event listeners for live calling
       this.setupDeviceListeners()
 
       this.isInitialized = true
-      console.log("Twilio Voice SDK initialized successfully")
+      console.log("Twilio Voice SDK initialized for live calling")
     } catch (error) {
       console.error("Failed to initialize Twilio Voice SDK:", error)
       throw error
@@ -51,7 +56,7 @@ export class TwilioVoiceBrowser {
   private async loadTwilioSDK(): Promise<void> {
     return new Promise((resolve, reject) => {
       const script = document.createElement("script")
-      script.src = "https://cdn.jsdelivr.net/npm/@twilio/voice-sdk@2.11.0/dist/twilio.min.js"
+      script.src = "https://sdk.twilio.com/js/voice/releases/2.11.0/twilio.min.js"
       script.crossOrigin = "anonymous"
       script.onload = () => resolve()
       script.onerror = () => reject(new Error("Failed to load Twilio SDK"))
@@ -61,7 +66,7 @@ export class TwilioVoiceBrowser {
 
   private setupDeviceListeners() {
     this.device.on("ready", () => {
-      console.log("Twilio Device is ready for connections")
+      console.log("Twilio Device ready for live calling")
     })
 
     this.device.on("error", (error: any) => {
@@ -69,23 +74,22 @@ export class TwilioVoiceBrowser {
     })
 
     this.device.on("connect", (call: any) => {
-      console.log("Call connected")
+      console.log("Live call connected - you can now talk!")
       this.activeCall = call
     })
 
     this.device.on("disconnect", (call: any) => {
-      console.log("Call disconnected")
+      console.log("Live call disconnected")
       this.activeCall = null
     })
 
     this.device.on("incoming", (call: any) => {
       console.log("Incoming call from:", call.parameters.From)
-      // Handle incoming call
       this.activeCall = call
     })
   }
 
-  async makeCall(phoneNumber: string): Promise<any> {
+  async makeLiveCall(phoneNumber: string): Promise<any> {
     if (!this.isInitialized) {
       await this.initialize()
     }
@@ -94,7 +98,7 @@ export class TwilioVoiceBrowser {
       // Format Indian phone number
       const formattedNumber = this.formatIndianNumber(phoneNumber)
 
-      console.log("Making call to:", formattedNumber)
+      console.log("Making live call to:", formattedNumber)
 
       const call = await this.device.connect({
         params: {
@@ -105,7 +109,7 @@ export class TwilioVoiceBrowser {
       this.activeCall = call
       return call
     } catch (error) {
-      console.error("Error making call:", error)
+      console.error("Error making live call:", error)
       throw error
     }
   }

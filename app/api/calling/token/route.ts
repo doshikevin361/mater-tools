@@ -21,13 +21,18 @@ export async function GET(request: NextRequest) {
     })
 
     const voiceGrant = new VoiceGrant({
-      outgoingApplicationSid: appSid, 
+      outgoingApplicationSid: appSid,
       incomingAllow: true,
     })
 
     accessToken.addGrant(voiceGrant)
 
     const token = accessToken.toJwt()
+
+    console.log("Generated access token for live calling:", {
+      identity,
+      appSid,
+    })
 
     return NextResponse.json({
       success: true,
