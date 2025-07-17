@@ -1,6 +1,8 @@
-import twilio from "twilio"
-import { AccessToken } from "twilio/lib/jwt/AccessToken"
-import VoiceGrant from "twilio/lib/jwt/AccessToken/VoiceGrant"
+import twilio, { jwt } from "twilio"
+
+// `jwt.AccessToken` contains the class *and* the built-in grants
+const { AccessToken } = jwt
+const { VoiceGrant } = AccessToken
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID!
 const apiKey = process.env.TWILIO_API_KEY!

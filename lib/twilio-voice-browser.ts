@@ -1,6 +1,6 @@
 "use client"
 
-import { Device } from "@twilio/voice-sdk"
+import { Device, type Connection } from "@twilio/voice-sdk"
 
 export interface VoiceDeviceConfig {
   token: string
@@ -15,7 +15,7 @@ export interface CallOptions {
 
 export class TwilioVoiceManager {
   private device: Device | null = null
-  private currentCall: any = null
+  private currentCall: Connection | null = null
   private isInitialized = false
 
   constructor() {
@@ -29,25 +29,28 @@ export class TwilioVoiceManager {
       console.log("Initializing Twilio Voice Device...")
 
       // Create device with access token
+      if (this.device) {
+        // If a device already exists, shut it down cleanly
+        this.device.destroy()
+        this.device = null
+      }
+
       this.device = new Device(config.token, {
-        debug: config.debug || true,
-        edge: config.edge || ["sydney", "dublin", "tokyo"],
-        sounds: {
-          disconnect: false,
-          dtmf8: false,
-          dtmf9: false,
-          dtmfh: false,
-          dtmfs: false,
-          incoming: true,
-          outgoing: true,
-        },
+        codecPreferences: ["opus", "pcmu"],
+        fakeLocalDTMF: true,
+        enableRingingState: true,
       })
 
       // Set up event listeners
       this.setupEventListeners()
 
       // Register the device
-      await this.device.register()
+      await new Promise<void>((resolve, reject) => {
+        if (!this.device) return reject(new Error("Device not initialised"))
+
+        this.device.on("ready", () => resolve())
+        this.device.on("error", (e) => reject(e))
+      })
 
       this.isInitialized = true
       console.log("Twilio Voice Device initialized successfully")
@@ -63,7 +66,7 @@ export class TwilioVoiceManager {
   private setupEventListeners(): void {
     if (!this.device) return
 
-    this.device.on("registered", () => {
+    this.device.on("ready", () => {
       console.log("Device registered successfully")
     })
 
@@ -85,7 +88,7 @@ export class TwilioVoiceManager {
     })
   }
 
-  private setupCallEventListeners(call: any): void {
+  private setupCallEventListeners(call: Connection): void {
     call.on("accept", () => {
       console.log("Call accepted")
     })
@@ -135,7 +138,7 @@ export class TwilioVoiceManager {
         To: formattedNumber,
       }
 
-      this.currentCall = await this.device.connect(callOptions)
+      this.currentCall = this.device.connect(callOptions)
       this.setupCallEventListeners(this.currentCall)
 
       console.log("Call initiated successfully")
@@ -242,6 +245,8 @@ export class TwilioVoiceManager {
   }
 }
 
-// Provide both names for compatibility
+/**
+ * Singleton – import { twilioVoiceBrowser } from "@/lib/twilio-voice-browser"
+ */
 export const twilioVoiceBrowser = new TwilioVoiceManager()
 export const voiceManager = twilioVoiceBrowser
