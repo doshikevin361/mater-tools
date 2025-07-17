@@ -2,10 +2,12 @@ import { NextResponse } from "next/server"
 
 export async function GET() {
   try {
+
     const accountSid = process.env.TWILIO_ACCOUNT_SID || "AC86b70352ccc2023f8cfa305712b474cd"
-    const apiKey = process.env.TWILIO_API_KEY || "SK0745de76832af1b501e871e36bc467ae"
-    const apiSecret = process.env.TWILIO_API_SECRET || "Ge1LcneXSoJmREekmK7wmoqsn4E1qOz9"
-    const twimlAppSid = process.env.TWILIO_TWIML_APP_SID || "APe32c170c79e356138bd267904ffc6814"
+const apiKey = process.env.TWILIO_API_KEY || "SK0745de76832af1b501e871e36bc467ae"
+const apiSecret = process.env.TWILIO_API_SECRET || "Ge1LcneXSoJmREekmK7wmoqsn4E1qOz9"
+const twimlAppSid = process.env.TWILIO_TWIML_APP_SID || "APe32c170c79e356138bd267904ffc6814"
+
 
     if (!accountSid || !apiKey || !apiSecret || !twimlAppSid) {
       console.error("Missing Twilio credentials:", {
@@ -17,7 +19,8 @@ export async function GET() {
       return NextResponse.json(
         {
           success: false,
-          error: "Missing Twilio credentials. Please check environment variables.",
+          error:
+            "Missing Twilio credentials. Please set TWILIO_ACCOUNT_SID, TWILIO_API_KEY, TWILIO_API_SECRET, and TWILIO_TWIML_APP_SID environment variables.",
         },
         { status: 500 },
       )
@@ -59,7 +62,7 @@ export async function GET() {
       return NextResponse.json(
         {
           success: false,
-          error: `Twilio JWT error: ${twilioError.message}`,
+          error: `Twilio JWT error: ${twilioError.message}. Please check your Twilio credentials.`,
         },
         { status: 500 },
       )

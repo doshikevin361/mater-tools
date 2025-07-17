@@ -22,6 +22,7 @@ export async function POST(request: NextRequest) {
       cost: 0,
       type: "outbound",
       platform: "browser",
+      callSid: null,
     }
 
     const result = await db.collection("call_history").insertOne(callRecord)

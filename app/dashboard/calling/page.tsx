@@ -43,19 +43,17 @@ export default function CallingPage() {
   const [connectionError, setConnectionError] = useState<string>("")
   const [activeConnection, setActiveConnection] = useState<any>(null)
   const [initializingSDK, setInitializingSDK] = useState(false)
-  const [sdkLoadAttempts, setSdkLoadAttempts] = useState(0)
+  const [callDuration, setCallDuration] = useState(0)
   const deviceRef = useRef<any>(null)
-  const initTimeoutRef = useRef<NodeJS.Timeout>()
+  const callTimerRef = useRef<NodeJS.Timeout>()
 
-  // Initialize Twilio Device
   useEffect(() => {
     initializeTwilio()
     fetchCallHistory()
 
-    // Cleanup on unmount
     return () => {
-      if (initTimeoutRef.current) {
-        clearTimeout(initTimeoutRef.current)
+      if (callTimerRef.current) {
+        clearInterval(callTimerRef.current)
       }
       if (deviceRef.current) {
         try {
@@ -67,19 +65,31 @@ export default function CallingPage() {
     }
   }, [])
 
+  // Call timer effect
+  useEffect(() => {
+    if (isInCall) {
+      callTimerRef.current = setInterval(() => {
+        setCallDuration((prev) => prev + 1)
+      }, 1000)
+    } else {
+      if (callTimerRef.current) {
+        clearInterval(callTimerRef.current)
+      }
+      setCallDuration(0)
+    }
+
+    return () => {
+      if (callTimerRef.current) {
+        clearInterval(callTimerRef.current)
+      }
+    }
+  }, [isInCall])
+
   const initializeTwilio = async () => {
     try {
-      console.log("Starting Twilio initialization...")
+      console.log("Initializing Twilio Voice...")
       setInitializingSDK(true)
       setConnectionError("")
-      setSdkLoadAttempts((prev) => prev + 1)
-
-      // Set timeout for initialization
-      initTimeoutRef.current = setTimeout(() => {
-        setInitializingSDK(false)
-        setConnectionError("Initialization timeout. Please try again.")
-        toast.error("Voice service initialization timed out")
-      }, 15000) // 15 second timeout
 
       // Get access token from server
       const response = await fetch("/api/calling/token")
@@ -89,41 +99,102 @@ export default function CallingPage() {
         throw new Error(data.error || "Failed to get access token")
       }
 
-      console.log("Access token received")
+      console.log("Access token received, loading Twilio SDK...")
       setToken(data.token)
 
-      // Try to use Web Audio API for calling instead of Twilio SDK
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        // Request microphone permission
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-          console.log("Microphone access granted")
+      // Load Twilio Voice SDK
+      await loadTwilioSDK()
 
-          // Stop the stream for now
-          stream.getTracks().forEach((track) => track.stop())
+      // Create device instance
+      const newDevice = new (window as any).Twilio.Device(data.token, {
+        logLevel: 1,
+        answerOnBridge: true,
+        fakeLocalDTMF: true,
+        enableRingingState: true,
+      })
 
-          // Set as connected since we have mic access and token
-          setIsConnected(true)
-          setInitializingSDK(false)
-          clearTimeout(initTimeoutRef.current!)
-          toast.success("Voice calling ready! (Simplified mode)")
-        } catch (micError) {
-          console.error("Microphone access denied:", micError)
-          throw new Error("Microphone access required for voice calling")
-        }
-      } else {
-        throw new Error("Web Audio API not supported in this browser")
-      }
+      // Set up event listeners
+      newDevice.on("ready", () => {
+        console.log("Twilio Device Ready")
+        setIsConnected(true)
+        setConnectionError("")
+        setInitializingSDK(false)
+        toast.success("Voice calling ready!")
+      })
+
+      newDevice.on("error", (error: any) => {
+        console.error("Twilio Device Error:", error)
+        setConnectionError(error.message)
+        setIsConnected(false)
+        setInitializingSDK(false)
+        toast.error(`Device Error: ${error.message}`)
+      })
+
+      newDevice.on("incoming", (conn: any) => {
+        console.log("Incoming call from:", conn.parameters.From)
+        toast.info(`Incoming call from ${conn.parameters.From}`)
+      })
+
+      newDevice.on("connect", (conn: any) => {
+        console.log("Call connected:", conn)
+        setIsInCall(true)
+        setActiveConnection(conn)
+        setCallDuration(0)
+        toast.success("Call connected!")
+      })
+
+      newDevice.on("disconnect", (conn: any) => {
+        console.log("Call disconnected:", conn)
+        setIsInCall(false)
+        setIsMuted(false)
+        setActiveConnection(null)
+        setCallDuration(0)
+        toast.info("Call ended")
+        fetchCallHistory()
+      })
+
+      newDevice.on("cancel", (conn: any) => {
+        console.log("Call cancelled:", conn)
+        setIsInCall(false)
+        setActiveConnection(null)
+        setCallDuration(0)
+        toast.info("Call cancelled")
+      })
+
+      // Register device
+      console.log("Registering device...")
+      setDevice(newDevice)
+      deviceRef.current = newDevice
     } catch (error) {
-      console.error("Failed to initialize calling:", error)
+      console.error("Failed to initialize Twilio:", error)
       setConnectionError(error.message)
       setIsConnected(false)
       setInitializingSDK(false)
-      if (initTimeoutRef.current) {
-        clearTimeout(initTimeoutRef.current)
-      }
       toast.error(`Failed to initialize calling: ${error.message}`)
     }
+  }
+
+  const loadTwilioSDK = (): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      // Check if already loaded
+      if ((window as any).Twilio) {
+        console.log("Twilio SDK already loaded")
+        resolve()
+        return
+      }
+
+      // Use npm package approach instead of CDN
+      import("@twilio/voice-sdk")
+        .then((TwilioVoice) => {
+          ;(window as any).Twilio = TwilioVoice
+          console.log("Twilio Voice SDK loaded successfully")
+          resolve()
+        })
+        .catch((error) => {
+          console.error("Failed to load Twilio Voice SDK:", error)
+          reject(new Error("Failed to load Twilio Voice SDK"))
+        })
+    })
   }
 
   const fetchCallHistory = async () => {
@@ -138,38 +209,22 @@ export default function CallingPage() {
       }
     } catch (error) {
       console.error("Failed to fetch call history:", error)
-      // Set mock data for testing
-      setCallHistory([
-        {
-          _id: "mock_1",
-          phoneNumber: "+919876543210",
-          status: "completed",
-          timestamp: new Date().toISOString(),
-          duration: 120,
-          cost: 0.5,
-          type: "outbound",
-        },
-        {
-          _id: "mock_2",
-          phoneNumber: "+919123456789",
-          status: "failed",
-          timestamp: new Date(Date.now() - 3600000).toISOString(),
-          duration: 0,
-          cost: 0,
-          type: "outbound",
-        },
-      ])
     }
   }
 
   const makeCall = async () => {
+    if (!device) {
+      toast.error("Voice service not initialized. Please refresh the page.")
+      return
+    }
+
     if (!phoneNumber.trim()) {
       toast.error("Please enter a phone number")
       return
     }
 
     if (!isConnected) {
-      toast.error("Voice service not connected. Please try initializing again.")
+      toast.error("Voice service not connected. Please check your connection.")
       return
     }
 
@@ -210,16 +265,16 @@ export default function CallingPage() {
         throw new Error(callData.error)
       }
 
-      // Simulate call connection for now
-      setIsInCall(true)
-      toast.success(`Calling ${formattedNumber}...`)
+      // Make call through Twilio Device
+      console.log("Connecting call through Twilio Device...")
+      const connection = await device.connect({
+        params: {
+          To: formattedNumber,
+        },
+      })
 
-      // Simulate call duration
-      setTimeout(() => {
-        setIsInCall(false)
-        toast.info("Call ended")
-        fetchCallHistory()
-      }, 5000) // End call after 5 seconds for demo
+      console.log("Call connection initiated:", connection)
+      toast.success(`Calling ${formattedNumber}...`)
     } catch (error) {
       console.error("Call failed:", error)
       toast.error(`Call failed: ${error.message}`)
@@ -230,9 +285,18 @@ export default function CallingPage() {
 
   const hangUp = () => {
     try {
+      if (activeConnection) {
+        console.log("Hanging up active connection...")
+        activeConnection.disconnect()
+      } else if (device) {
+        console.log("Disconnecting all calls...")
+        device.disconnectAll()
+      }
+
       setIsInCall(false)
       setIsMuted(false)
       setActiveConnection(null)
+      setCallDuration(0)
       toast.info("Call ended")
     } catch (error) {
       console.error("Error hanging up:", error)
@@ -242,8 +306,19 @@ export default function CallingPage() {
 
   const toggleMute = () => {
     try {
-      setIsMuted(!isMuted)
-      toast.info(isMuted ? "Unmuted" : "Muted")
+      if (activeConnection) {
+        if (isMuted) {
+          activeConnection.mute(false)
+          setIsMuted(false)
+          toast.info("Unmuted")
+        } else {
+          activeConnection.mute(true)
+          setIsMuted(true)
+          toast.info("Muted")
+        }
+      } else {
+        toast.error("No active call to mute/unmute")
+      }
     } catch (error) {
       console.error("Error toggling mute:", error)
       toast.error("Error toggling mute")
@@ -253,7 +328,6 @@ export default function CallingPage() {
   const retryInitialization = () => {
     setConnectionError("")
     setInitializingSDK(false)
-    setSdkLoadAttempts(0)
     initializeTwilio()
   }
 
@@ -304,7 +378,7 @@ export default function CallingPage() {
           )}
           {isInCall && (
             <Badge variant="destructive" className="animate-pulse">
-              🔴 In Call
+              🔴 Live Call - {formatDuration(callDuration)}
             </Badge>
           )}
         </div>
@@ -319,7 +393,7 @@ export default function CallingPage() {
                 <h3 className="font-medium text-red-800">Connection Error</h3>
                 <p className="text-sm text-red-700">{connectionError}</p>
                 <p className="text-xs text-red-600 mt-1">
-                  Attempts: {sdkLoadAttempts}. Please check your internet connection and Twilio credentials.
+                  Please check your Twilio credentials and internet connection.
                 </p>
               </div>
             </div>
@@ -415,7 +489,7 @@ export default function CallingPage() {
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
                     <div className="flex items-center space-x-2">
                       <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-                      <p className="text-sm text-blue-800">Initializing voice service... Attempt {sdkLoadAttempts}</p>
+                      <p className="text-sm text-blue-800">Loading Twilio Voice SDK...</p>
                     </div>
                   </div>
                 )}
@@ -432,7 +506,7 @@ export default function CallingPage() {
 
                 <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
                   <p className="text-sm text-blue-800">
-                    💡 <strong>Requirements:</strong> Microphone access, HTTPS connection, modern browser
+                    💡 <strong>Requirements:</strong> Microphone access, HTTPS connection, Twilio credentials
                   </p>
                 </div>
               </CardContent>
@@ -451,7 +525,7 @@ export default function CallingPage() {
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Service Status:</span>
                     <Badge variant={initializingSDK ? "secondary" : isConnected ? "default" : "destructive"}>
-                      {initializingSDK ? "Initializing..." : isConnected ? "Ready" : "Error"}
+                      {initializingSDK ? "Loading..." : isConnected ? "Ready" : "Error"}
                     </Badge>
                   </div>
 
@@ -472,23 +546,28 @@ export default function CallingPage() {
                   {isInCall && (
                     <>
                       <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">Call Duration:</span>
+                        <Badge variant="default">{formatDuration(callDuration)}</Badge>
+                      </div>
+
+                      <div className="flex items-center justify-between">
                         <span className="text-sm font-medium">Audio Status:</span>
                         <Badge variant={isMuted ? "destructive" : "default"}>{isMuted ? "Muted" : "Unmuted"}</Badge>
                       </div>
 
                       <div className="text-center p-4 bg-green-50 border border-green-200 rounded-lg">
                         <p className="text-lg font-semibold text-green-800">
-                          📞 Calling: {formatPhoneDisplay(phoneNumber)}
+                          📞 Connected: {formatPhoneDisplay(phoneNumber)}
                         </p>
-                        <p className="text-sm text-green-600">Call is active (Demo mode)</p>
+                        <p className="text-sm text-green-600">Duration: {formatDuration(callDuration)}</p>
                       </div>
                     </>
                   )}
 
                   <div className="pt-4 border-t">
                     <p className="text-xs text-muted-foreground">
-                      💡 <strong>Tip:</strong> Make sure your microphone is enabled and working properly. The call will
-                      connect through your browser speakers.
+                      💡 <strong>Tip:</strong> Make sure your microphone is enabled. Calls connect through browser
+                      audio.
                     </p>
                   </div>
 

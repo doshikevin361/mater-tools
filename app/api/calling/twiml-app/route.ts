@@ -5,7 +5,7 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData()
     const to = formData.get("To") as string
     const from = formData.get("From") as string
-    const callerId = process.env.TWILIO_PHONE_NUMBER || "+19252617266"
+    const callerId = process.env.TWILIO_PHONE_NUMBER
 
     console.log(`TwiML App: Outbound call from ${from} to ${to}`)
     console.log("Using Caller ID:", callerId)
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     // Generate TwiML for outbound call
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Dial callerId="${callerId}" timeout="30" record="record-from-ringing-dual" recordingStatusCallback="/api/calling/recording-webhook">
+    <Dial callerId="${callerId || from}" timeout="30" record="record-from-ringing-dual" recordingStatusCallback="/api/calling/recording-webhook">
         <Number>${to}</Number>
     </Dial>
     <Say voice="alice">The call could not be completed. Please check the number and try again.</Say>

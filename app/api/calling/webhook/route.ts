@@ -25,6 +25,7 @@ export async function POST(request: NextRequest) {
       callSid,
       status: callStatus?.toLowerCase() || "unknown",
       duration: Number.parseInt(callDuration) || 0,
+      cost: ((Number.parseInt(callDuration) || 0) / 60) * 0.05, // $0.05 per minute
       updatedAt: new Date(),
     }
 

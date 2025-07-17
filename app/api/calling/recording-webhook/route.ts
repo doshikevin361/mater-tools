@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
       recordingUrl,
       recordingSid,
       recordingDuration: Number.parseInt(recordingDuration) || 0,
+      hasRecording: true,
       recordingUpdatedAt: new Date(),
     }
 
