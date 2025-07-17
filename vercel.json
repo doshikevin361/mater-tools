@@ -1,5 +1,0 @@
-{
-  // Ensure the correct install command is used in Vercel’s build step
-  "installCommand": "pnpm install --no-frozen-lockfile",
-  "buildCommand": "pnpm run build"
-}
