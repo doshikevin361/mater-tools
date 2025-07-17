@@ -5,25 +5,35 @@ export async function GET(request: NextRequest) {
   try {
     const { db } = await connectToDatabase()
 
-    const calls = await db.collection("calls").find({}).sort({ timestamp: -1 }).limit(50).toArray()
+    // Fetch call history from database
+    const calls = await db.collection("call_history").find({}).sort({ timestamp: -1 }).limit(50).toArray()
 
-    const formattedCalls = calls.map((call) => ({
-      id: call._id.toString(),
-      phoneNumber: call.phoneNumber,
-      duration: call.duration || 0,
-      status: call.status === "completed" ? "completed" : call.status === "failed" ? "failed" : "completed",
-      cost: call.cost || 0,
-      recordingUrl: call.recordingUrl,
-      timestamp: call.timestamp,
-      type: call.type || "browser_call",
-    }))
+    console.log(`Fetched ${calls.length} call records`)
 
     return NextResponse.json({
       success: true,
-      calls: formattedCalls,
+      calls: calls.map((call) => ({
+        _id: call._id.toString(),
+        phoneNumber: call.phoneNumber,
+        callSid: call.callSid,
+        status: call.status,
+        duration: call.duration || 0,
+        cost: call.cost || 0,
+        message: call.message,
+        recordingUrl: call.recordingUrl,
+        timestamp: call.timestamp,
+        answeredBy: call.webhookData?.answeredBy,
+      })),
     })
   } catch (error) {
     console.error("Error fetching call history:", error)
-    return NextResponse.json({ success: false, error: "Failed to fetch call history" }, { status: 500 })
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to fetch call history",
+      },
+      { status: 500 },
+    )
   }
 }

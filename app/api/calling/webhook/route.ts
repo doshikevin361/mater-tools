@@ -4,26 +4,42 @@ import { connectToDatabase } from "@/lib/mongodb"
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
+
+    // Extract Twilio webhook data
     const callSid = formData.get("CallSid") as string
     const callStatus = formData.get("CallStatus") as string
     const callDuration = formData.get("CallDuration") as string
     const from = formData.get("From") as string
     const to = formData.get("To") as string
     const answeredBy = formData.get("AnsweredBy") as string
+    const recordingUrl = formData.get("RecordingUrl") as string
 
-    console.log(`Call webhook received:`)
-    console.log(`- CallSid: ${callSid}`)
-    console.log(`- Status: ${callStatus}`)
-    console.log(`- Duration: ${callDuration}`)
-    console.log(`- From: ${from}`)
-    console.log(`- To: ${to}`)
-    console.log(`- AnsweredBy: ${answeredBy}`)
+    console.log("Twilio webhook received:", {
+      callSid,
+      callStatus,
+      callDuration,
+      from,
+      to,
+      answeredBy,
+      recordingUrl,
+    })
 
+    // Connect to database
     const { db } = await connectToDatabase()
 
+    // Update call record in database
     const updateData: any = {
       status: callStatus,
-      updatedAt: new Date(),
+      lastUpdated: new Date(),
+      webhookData: {
+        callSid,
+        callStatus,
+        callDuration: callDuration ? Number.parseInt(callDuration) : 0,
+        from,
+        to,
+        answeredBy,
+        recordingUrl,
+      },
     }
 
     if (callDuration) {
@@ -31,30 +47,39 @@ export async function POST(request: NextRequest) {
       updateData.cost = (Number.parseInt(callDuration) / 60) * 0.05 // $0.05 per minute
     }
 
-    if (answeredBy) {
-      updateData.answeredBy = answeredBy
+    if (recordingUrl) {
+      updateData.recordingUrl = recordingUrl
     }
 
-    // Update existing call record by callSid
-    const updateResult = await db.collection("calls").updateOne(
-      { callSid: callSid },
+    const result = await db.collection("call_history").updateOne({ callSid: callSid }, { $set: updateData })
+
+    console.log("Call record updated:", result.modifiedCount)
+
+    // Return TwiML response (empty response is fine for status callbacks)
+    return new NextResponse(
+      `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+</Response>`,
       {
-        $set: updateData,
-        $setOnInsert: {
-          phoneNumber: to,
-          fromNumber: from,
-          timestamp: new Date(),
-          type: "browser_call",
+        status: 200,
+        headers: {
+          "Content-Type": "text/xml",
         },
       },
-      { upsert: true },
     )
-
-    console.log(`Database update result:`, updateResult)
-
-    return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Error processing webhook:", error)
-    return NextResponse.json({ success: false, error: "Failed to process webhook" }, { status: 500 })
+    console.error("Webhook error:", error)
+
+    return new NextResponse(
+      `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+</Response>`,
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "text/xml",
+        },
+      },
+    )
   }
 }

@@ -4,93 +4,87 @@ import { voiceService } from "@/lib/voice-service"
 
 export async function POST(request: NextRequest) {
   try {
-    const { phoneNumber, message, messageType = "tts" } = await request.json()
+    const body = await request.json()
+    const { phoneNumber, message, messageType = "tts" } = body
 
     if (!phoneNumber) {
-      return NextResponse.json({ success: false, error: "Phone number is required" }, { status: 400 })
-    }
-
-    // Format Indian phone number
-    const formatIndianNumber = (number: string): string => {
-      const cleaned = number.replace(/\D/g, "")
-      if (cleaned.length === 10) {
-        return `+91${cleaned}`
-      }
-      if (cleaned.startsWith("91") && cleaned.length === 12) {
-        return `+${cleaned}`
-      }
-      return `+91${cleaned}`
-    }
-
-    const formattedNumber = formatIndianNumber(phoneNumber)
-    const callMessage = message || "Hello, this is a test call from BrandBuzz Ventures. Thank you for your time."
-
-    console.log(`Initiating call to ${formattedNumber} with message: ${callMessage}`)
-
-    // Make actual Twilio call
-    let twilioResult
-    try {
-      if (messageType === "tts") {
-        twilioResult = await voiceService.makeVoiceCallWithTTS(formattedNumber, callMessage, {
-          voice: "alice",
-          language: "en-US",
-          record: true,
-          timeout: 30,
-          statusCallback: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/calling/webhook`,
-        })
-      } else {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "Audio calls not supported in this endpoint",
-          },
-          { status: 400 },
-        )
-      }
-
-      console.log("Twilio call result:", twilioResult)
-    } catch (twilioError) {
-      console.error("Twilio call error:", twilioError)
       return NextResponse.json(
         {
           success: false,
-          error: `Call failed: ${twilioError.message}`,
+          error: "Phone number is required",
         },
-        { status: 500 },
+        { status: 400 },
       )
     }
 
-    // Store call record in database
+    console.log(`Making call to: ${phoneNumber}`)
+    console.log(`Message type: ${messageType}`)
+    console.log(`Message: ${message}`)
+
+    // Connect to database
     const { db } = await connectToDatabase()
-    const callRecord = {
-      phoneNumber: formattedNumber,
-      callSid: twilioResult.callSid,
-      status: twilioResult.status || "initiated",
-      timestamp: new Date(),
-      duration: 0,
-      cost: 0,
-      type: "browser_call",
-      message: callMessage,
-      messageType: messageType,
+
+    // Make the actual Twilio call
+    let callResult
+    if (messageType === "tts") {
+      const voiceMessage = message || "Hello, this is a test call from BrandBuzz Ventures. Thank you for your time."
+      callResult = await voiceService.makeVoiceCallWithTTS(phoneNumber, voiceMessage, {
+        voice: "alice",
+        language: "en-US",
+        record: true,
+        statusCallback: `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/api/calling/webhook`,
+      })
+    } else {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Audio calls not yet implemented",
+        },
+        { status: 400 },
+      )
     }
 
-    const result = await db.collection("calls").insertOne(callRecord)
+    console.log("Twilio call result:", callResult)
+
+    // Save call record to database
+    const callRecord = {
+      phoneNumber: phoneNumber,
+      callSid: callResult.callSid,
+      status: callResult.status || "initiated",
+      message: message || "Default message",
+      messageType: messageType,
+      duration: 0,
+      cost: 0,
+      timestamp: new Date(),
+      twilioResponse: {
+        callSid: callResult.callSid,
+        status: callResult.status,
+        to: callResult.to,
+        from: callResult.from,
+      },
+    }
+
+    const result = await db.collection("call_history").insertOne(callRecord)
+
+    console.log("Call record saved to database:", result.insertedId)
 
     return NextResponse.json({
       success: true,
       callId: result.insertedId,
-      callSid: twilioResult.callSid,
-      phoneNumber: formattedNumber,
-      status: twilioResult.status,
+      callSid: callResult.callSid,
+      phoneNumber: phoneNumber,
+      status: callResult.status,
       message: "Call initiated successfully through Twilio",
-      twilioResponse: twilioResult,
+      twilioResponse: callResult,
     })
   } catch (error) {
     console.error("Error making call:", error)
+
     return NextResponse.json(
       {
         success: false,
-        error: `Failed to make call: ${error.message}`,
+        error: error.message || "Failed to make call",
+        details: error.toString(),
       },
       { status: 500 },
     )
