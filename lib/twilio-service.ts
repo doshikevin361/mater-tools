@@ -1,209 +1,188 @@
 import twilio from "twilio"
+import { AccessToken } from "twilio/lib/jwt/AccessToken"
+import VoiceGrant from "twilio/lib/jwt/AccessToken/VoiceGrant"
 
-class TwilioService {
-  private client: any
-  private accountSid: string
-  private apiKey: string
-  private apiSecret: string
-  private phoneNumber: string
+const accountSid = process.env.TWILIO_ACCOUNT_SID!
+const apiKey = process.env.TWILIO_API_KEY!
+const apiSecret = process.env.TWILIO_API_SECRET!
+const twimlAppSid = process.env.TWILIO_TWIML_APP_SID!
+const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER!
 
-  constructor() {
-    this.accountSid = process.env.TWILIO_ACCOUNT_SID || "AC86b70352ccc2023f8cfa305712b474cd"
-    this.apiKey = process.env.TWILIO_API_KEY || "SK0745de76832af1b501e871e36bc467ae"
-    this.apiSecret = process.env.TWILIO_API_SECRET || "Ge1LcneXSoJmREekmK7wmoqsn4E1qOz9"
-    this.phoneNumber = process.env.TWILIO_PHONE_NUMBER || "+19252617266"
+const client = twilio(accountSid, process.env.TWILIO_AUTH_TOKEN)
 
-    // Initialize Twilio client with API Key and Secret
-    this.client = twilio(this.apiKey, this.apiSecret, {
-      accountSid: this.accountSid,
+export interface CallOptions {
+  to: string
+  from?: string
+  url?: string
+  method?: string
+  record?: boolean
+  recordingChannels?: string
+  recordingStatusCallback?: string
+}
+
+export interface CallResult {
+  success: boolean
+  callSid?: string
+  error?: string
+  message?: string
+}
+
+// Generate access token for browser calling
+export function generateAccessToken(identity: string): string {
+  try {
+    const accessToken = new AccessToken(accountSid, apiKey, apiSecret, {
+      identity: identity,
+      ttl: 3600, // 1 hour
     })
+
+    const voiceGrant = new VoiceGrant({
+      outgoingApplicationSid: twimlAppSid,
+      incomingAllow: true,
+    })
+
+    accessToken.addGrant(voiceGrant)
+
+    console.log("Generated access token for identity:", identity)
+    return accessToken.toJwt()
+  } catch (error) {
+    console.error("Error generating access token:", error)
+    throw new Error("Failed to generate access token")
   }
+}
 
-  // Make a voice call with text-to-speech
-  async makeVoiceCall(
-    toNumber: string,
-    message: string,
-    voiceOptions?: {
-      voice?: "man" | "woman" | "alice"
-      language?: string
-      speed?: number
-    },
-  ) {
-    try {
-      // Clean and format phone number
-      const cleanNumber = this.formatPhoneNumber(toNumber)
+// Make a browser call using TwiML App
+export async function makeBrowserCall(options: CallOptions): Promise<CallResult> {
+  try {
+    console.log("Making browser call with options:", options)
 
-      // Create TwiML for text-to-speech
-      const twiml = this.createTwiML(message, voiceOptions)
-
-      console.log(`Making voice call to ${cleanNumber} with message: ${message.substring(0, 50)}...`)
-
-      const call = await this.client.calls.create({
-        to: cleanNumber,
-        from: this.phoneNumber,
-        twiml: twiml,
-        timeout: 30, // Ring for 30 seconds
-        record: false, // Don't record the call
-      })
-
-      return {
-        success: true,
-        callSid: call.sid,
-        status: call.status,
-        to: call.to,
-        from: call.from,
-        response: call,
-      }
-    } catch (error) {
-      console.error("Twilio voice call error:", error)
-      throw new Error(`Voice call failed: ${error.message}`)
+    // Format phone number for Indian numbers
+    let formattedTo = options.to
+    if (options.to.startsWith("91") && !options.to.startsWith("+91")) {
+      formattedTo = `+${options.to}`
+    } else if (options.to.length === 10 && !options.to.startsWith("+")) {
+      formattedTo = `+91${options.to}`
     }
-  }
 
-  // Make bulk voice calls
-  async makeBulkVoiceCalls(
-    contacts: Array<{ phone: string; name?: string }>,
-    message: string,
-    voiceOptions?: {
-      voice?: "man" | "woman" | "alice"
-      language?: string
-      speed?: number
-    },
-  ) {
-    const results = []
-    let successful = 0
-    let failed = 0
+    const call = await client.calls.create({
+      to: formattedTo,
+      from: twilioPhoneNumber,
+      url: options.url || `${process.env.NEXT_PUBLIC_BASE_URL}/api/calling/twiml-app`,
+      method: options.method || "POST",
+      record: options.record || true,
+      recordingChannels: options.recordingChannels || "dual",
+      recordingStatusCallback:
+        options.recordingStatusCallback || `${process.env.NEXT_PUBLIC_BASE_URL}/api/calling/recording-webhook`,
+      statusCallback: `${process.env.NEXT_PUBLIC_BASE_URL}/api/calling/webhook`,
+      statusCallbackEvent: ["initiated", "ringing", "answered", "completed"],
+      statusCallbackMethod: "POST",
+    })
 
-    console.log(`Starting bulk voice calls to ${contacts.length} contacts`)
-
-    for (const contact of contacts) {
-      try {
-        // Add a small delay between calls to avoid rate limiting
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-
-        const result = await this.makeVoiceCall(contact.phone, message, voiceOptions)
-
-        results.push({
-          contact: contact,
-          success: true,
-          callSid: result.callSid,
-          status: result.status,
-          timestamp: new Date(),
-        })
-
-        successful++
-        console.log(`✅ Call initiated to ${contact.phone} (${contact.name || "Unknown"})`)
-      } catch (error) {
-        results.push({
-          contact: contact,
-          success: false,
-          error: error.message,
-          timestamp: new Date(),
-        })
-
-        failed++
-        console.error(`❌ Failed to call ${contact.phone} (${contact.name || "Unknown"}):`, error.message)
-      }
-    }
+    console.log("Call created successfully:", call.sid)
 
     return {
-      totalContacts: contacts.length,
-      successful,
-      failed,
-      results,
-      successRate: ((successful / contacts.length) * 100).toFixed(1),
+      success: true,
+      callSid: call.sid,
+      message: "Call initiated successfully",
     }
-  }
-
-  // Create TwiML for text-to-speech
-  private createTwiML(
-    message: string,
-    voiceOptions?: {
-      voice?: "man" | "woman" | "alice"
-      language?: string
-      speed?: number
-    },
-  ) {
-    const voice = voiceOptions?.voice || "alice"
-    const language = voiceOptions?.language || "en-US"
-
-    // Create TwiML XML
-    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-    <Say voice="${voice}" language="${language}">${this.escapeXml(message)}</Say>
-    <Pause length="1"/>
-    <Say voice="${voice}" language="${language}">Thank you for listening. Goodbye!</Say>
-</Response>`
-
-    return twiml
-  }
-
-  // Format phone number for Twilio (E.164 format)
-  private formatPhoneNumber(phoneNumber: string): string {
-    // Remove all non-digit characters
-    const cleaned = phoneNumber.replace(/\D/g, "")
-
-    // If it starts with 91 (India), add + prefix
-    if (cleaned.startsWith("91") && cleaned.length === 12) {
-      return `+${cleaned}`
-    }
-
-    // If it's 10 digits, assume it's Indian number and add +91
-    if (cleaned.length === 10) {
-      return `+91${cleaned}`
-    }
-
-    // If it doesn't start with +, add it
-    if (!phoneNumber.startsWith("+")) {
-      return `+${cleaned}`
-    }
-
-    return phoneNumber
-  }
-
-  // Escape XML characters for TwiML
-  private escapeXml(text: string): string {
-    return text
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&apos;")
-  }
-
-  // Get call status
-  async getCallStatus(callSid: string) {
-    try {
-      const call = await this.client.calls(callSid).fetch()
-      return {
-        success: true,
-        status: call.status,
-        duration: call.duration,
-        startTime: call.startTime,
-        endTime: call.endTime,
-        price: call.price,
-        priceUnit: call.priceUnit,
-      }
-    } catch (error) {
-      console.error("Get call status error:", error)
-      throw error
-    }
-  }
-
-  // Get account balance
-  async getAccountBalance() {
-    try {
-      const account = await this.client.api.accounts(this.accountSid).fetch()
-      return {
-        success: true,
-        balance: account.balance,
-        currency: account.currency || "USD",
-      }
-    } catch (error) {
-      console.error("Get account balance error:", error)
-      throw error
+  } catch (error: any) {
+    console.error("Error making browser call:", error)
+    return {
+      success: false,
+      error: error.message || "Failed to make call",
+      message: "Call failed to initiate",
     }
   }
 }
 
-export const twilioService = new TwilioService()
+// Make a direct call (not browser-based)
+export async function makeDirectCall(options: CallOptions): Promise<CallResult> {
+  try {
+    console.log("Making direct call with options:", options)
+
+    let formattedTo = options.to
+    if (options.to.startsWith("91") && !options.to.startsWith("+91")) {
+      formattedTo = `+${options.to}`
+    } else if (options.to.length === 10 && !options.to.startsWith("+")) {
+      formattedTo = `+91${options.to}`
+    }
+
+    const call = await client.calls.create({
+      to: formattedTo,
+      from: options.from || twilioPhoneNumber,
+      url: options.url,
+      method: options.method || "POST",
+      record: options.record || true,
+      recordingChannels: options.recordingChannels || "dual",
+      recordingStatusCallback: options.recordingStatusCallback,
+      statusCallback: `${process.env.NEXT_PUBLIC_BASE_URL}/api/calling/webhook`,
+      statusCallbackEvent: ["initiated", "ringing", "answered", "completed"],
+      statusCallbackMethod: "POST",
+    })
+
+    return {
+      success: true,
+      callSid: call.sid,
+      message: "Call initiated successfully",
+    }
+  } catch (error: any) {
+    console.error("Error making direct call:", error)
+    return {
+      success: false,
+      error: error.message || "Failed to make call",
+      message: "Call failed to initiate",
+    }
+  }
+}
+
+// Get call details
+export async function getCallDetails(callSid: string) {
+  try {
+    const call = await client.calls(callSid).fetch()
+    return {
+      success: true,
+      call: {
+        sid: call.sid,
+        status: call.status,
+        duration: call.duration,
+        startTime: call.startTime,
+        endTime: call.endTime,
+        from: call.from,
+        to: call.to,
+        price: call.price,
+        priceUnit: call.priceUnit,
+      },
+    }
+  } catch (error: any) {
+    console.error("Error fetching call details:", error)
+    return {
+      success: false,
+      error: error.message,
+    }
+  }
+}
+
+// Get call recordings
+export async function getCallRecordings(callSid: string) {
+  try {
+    const recordings = await client.recordings.list({ callSid: callSid })
+    return {
+      success: true,
+      recordings: recordings.map((recording) => ({
+        sid: recording.sid,
+        duration: recording.duration,
+        status: recording.status,
+        dateCreated: recording.dateCreated,
+        uri: recording.uri,
+        mediaUrl: `https://api.twilio.com${recording.uri.replace(".json", ".mp3")}`,
+      })),
+    }
+  } catch (error: any) {
+    console.error("Error fetching recordings:", error)
+    return {
+      success: false,
+      error: error.message,
+    }
+  }
+}
+
+export { client as twilioClient }

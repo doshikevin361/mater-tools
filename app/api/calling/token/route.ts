@@ -1,41 +1,71 @@
 import { type NextRequest, NextResponse } from "next/server"
-
-const accountSid = process.env.TWILIO_ACCOUNT_SID || "AC86b70352ccc2023f8cfa305712b474cd"
-const apiKey = process.env.TWILIO_API_KEY || "SK0745de76832af1b501e871e36bc467ae"
-const apiSecret = process.env.TWILIO_API_SECRET || "Ge1LcneXSoJmREekmK7wmoqsn4E1qOz9"
-const appSid = process.env.TWILIO_TWIML_APP_SID || "APe32c170c79e356138bd267904ffc6814"
+import { generateAccessToken } from "@/lib/twilio-service"
 
 export async function GET(request: NextRequest) {
   try {
-    if (!accountSid || !apiKey || !apiSecret || !appSid) {
-      return NextResponse.json({ success: false, error: "Twilio credentials not configured" }, { status: 500 })
-    }
+    const { searchParams } = new URL(request.url)
+    const identity = searchParams.get("identity") || `user_${Date.now()}`
 
-    const identity = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+    console.log("Generating access token for identity:", identity)
 
-    const AccessToken = require("twilio").jwt.AccessToken
-    const VoiceGrant = AccessToken.VoiceGrant
-
-    const accessToken = new AccessToken(accountSid, apiKey, apiSecret, {
-      identity: identity,
-    })
-
-    const voiceGrant = new VoiceGrant({
-      outgoingApplicationSid: appSid, 
-      incomingAllow: true,
-    })
-
-    accessToken.addGrant(voiceGrant)
-
-    const token = accessToken.toJwt()
+    const token = generateAccessToken(identity)
 
     return NextResponse.json({
       success: true,
       token: token,
       identity: identity,
+      message: "Access token generated successfully",
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error generating access token:", error)
-    return NextResponse.json({ success: false, error: "Failed to generate access token" }, { status: 500 })
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: error.message || "Failed to generate access token",
+        message: "Token generation failed",
+      },
+      { status: 500 },
+    )
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { identity } = body
+
+    if (!identity) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Identity is required",
+          message: "Please provide a valid identity",
+        },
+        { status: 400 },
+      )
+    }
+
+    console.log("Generating access token for identity:", identity)
+
+    const token = generateAccessToken(identity)
+
+    return NextResponse.json({
+      success: true,
+      token: token,
+      identity: identity,
+      message: "Access token generated successfully",
+    })
+  } catch (error: any) {
+    console.error("Error generating access token:", error)
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: error.message || "Failed to generate access token",
+        message: "Token generation failed",
+      },
+      { status: 500 },
+    )
   }
 }

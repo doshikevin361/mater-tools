@@ -1,180 +1,247 @@
-declare global {
-  interface Window {
-    Twilio: any
-  }
+"use client"
+
+import { Device } from "@twilio/voice-sdk"
+
+export interface VoiceDeviceConfig {
+  token: string
+  debug?: boolean
+  edge?: string[]
 }
 
-export class TwilioVoiceBrowser {
-  private device: any = null
-  private activeCall: any = null
+export interface CallOptions {
+  To: string
+  [key: string]: string
+}
+
+export class TwilioVoiceManager {
+  private device: Device | null = null
+  private currentCall: any = null
   private isInitialized = false
-  private token = ""
 
-  async initialize() {
-    if (this.isInitialized) return
+  constructor() {
+    this.device = null
+    this.currentCall = null
+    this.isInitialized = false
+  }
 
+  async initialize(config: VoiceDeviceConfig): Promise<boolean> {
     try {
-      // Load Twilio Voice SDK
-      if (!window.Twilio) {
-        await this.loadTwilioSDK()
-      }
+      console.log("Initializing Twilio Voice Device...")
 
-      // Get access token from server
-      const response = await fetch("/api/calling/token")
-      const data = await response.json()
-
-      if (!data.success) {
-        throw new Error("Failed to get access token")
-      }
-
-      this.token = data.token
-
-      // Initialize Twilio Device
-      this.device = new window.Twilio.Device(this.token, {
-        logLevel: 1,
-        answerOnBridge: true,
-        fakeLocalDTMF: true,
-        enableRingingState: true,
-      })
-
-      // Set up device event listeners
-      this.setupDeviceListeners()
-
-      this.isInitialized = true
-      console.log("Twilio Voice SDK initialized successfully")
-    } catch (error) {
-      console.error("Failed to initialize Twilio Voice SDK:", error)
-      throw error
-    }
-  }
-
-  private async loadTwilioSDK(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const script = document.createElement("script")
-      script.src = "https://cdn.jsdelivr.net/npm/@twilio/voice-sdk@2.11.0/dist/twilio.min.js"
-      script.crossOrigin = "anonymous"
-      script.onload = () => resolve()
-      script.onerror = () => reject(new Error("Failed to load Twilio SDK"))
-      document.head.appendChild(script)
-    })
-  }
-
-  private setupDeviceListeners() {
-    this.device.on("ready", () => {
-      console.log("Twilio Device is ready for connections")
-    })
-
-    this.device.on("error", (error: any) => {
-      console.error("Twilio Device error:", error)
-    })
-
-    this.device.on("connect", (call: any) => {
-      console.log("Call connected")
-      this.activeCall = call
-    })
-
-    this.device.on("disconnect", (call: any) => {
-      console.log("Call disconnected")
-      this.activeCall = null
-    })
-
-    this.device.on("incoming", (call: any) => {
-      console.log("Incoming call from:", call.parameters.From)
-      // Handle incoming call
-      this.activeCall = call
-    })
-  }
-
-  async makeCall(phoneNumber: string): Promise<any> {
-    if (!this.isInitialized) {
-      await this.initialize()
-    }
-
-    try {
-      // Format Indian phone number
-      const formattedNumber = this.formatIndianNumber(phoneNumber)
-
-      console.log("Making call to:", formattedNumber)
-
-      const call = await this.device.connect({
-        params: {
-          To: formattedNumber,
+      // Create device with access token
+      this.device = new Device(config.token, {
+        debug: config.debug || true,
+        edge: config.edge || ["sydney", "dublin", "tokyo"],
+        sounds: {
+          disconnect: false,
+          dtmf8: false,
+          dtmf9: false,
+          dtmfh: false,
+          dtmfs: false,
+          incoming: true,
+          outgoing: true,
         },
       })
 
-      this.activeCall = call
-      return call
+      // Set up event listeners
+      this.setupEventListeners()
+
+      // Register the device
+      await this.device.register()
+
+      this.isInitialized = true
+      console.log("Twilio Voice Device initialized successfully")
+
+      return true
     } catch (error) {
-      console.error("Error making call:", error)
-      throw error
+      console.error("Error initializing Twilio Voice Device:", error)
+      this.isInitialized = false
+      return false
     }
   }
 
-  async answerCall(): Promise<void> {
-    if (this.activeCall) {
-      this.activeCall.accept()
+  private setupEventListeners(): void {
+    if (!this.device) return
+
+    this.device.on("registered", () => {
+      console.log("Device registered successfully")
+    })
+
+    this.device.on("error", (error) => {
+      console.error("Device error:", error)
+    })
+
+    this.device.on("incoming", (call) => {
+      console.log("Incoming call received:", call)
+      this.currentCall = call
+
+      // Set up call event listeners
+      this.setupCallEventListeners(call)
+    })
+
+    this.device.on("tokenWillExpire", async () => {
+      console.log("Token will expire, refreshing...")
+      await this.refreshToken()
+    })
+  }
+
+  private setupCallEventListeners(call: any): void {
+    call.on("accept", () => {
+      console.log("Call accepted")
+    })
+
+    call.on("disconnect", () => {
+      console.log("Call disconnected")
+      this.currentCall = null
+    })
+
+    call.on("cancel", () => {
+      console.log("Call cancelled")
+      this.currentCall = null
+    })
+
+    call.on("reject", () => {
+      console.log("Call rejected")
+      this.currentCall = null
+    })
+
+    call.on("error", (error: any) => {
+      console.error("Call error:", error)
+      this.currentCall = null
+    })
+  }
+
+  async makeCall(phoneNumber: string): Promise<boolean> {
+    try {
+      if (!this.device || !this.isInitialized) {
+        throw new Error("Device not initialized")
+      }
+
+      if (this.currentCall) {
+        throw new Error("Another call is already in progress")
+      }
+
+      console.log("Making call to:", phoneNumber)
+
+      // Format phone number
+      let formattedNumber = phoneNumber
+      if (phoneNumber.startsWith("91") && !phoneNumber.startsWith("+91")) {
+        formattedNumber = `+${phoneNumber}`
+      } else if (phoneNumber.length === 10 && !phoneNumber.startsWith("+")) {
+        formattedNumber = `+91${phoneNumber}`
+      }
+
+      const callOptions: CallOptions = {
+        To: formattedNumber,
+      }
+
+      this.currentCall = await this.device.connect(callOptions)
+      this.setupCallEventListeners(this.currentCall)
+
+      console.log("Call initiated successfully")
+      return true
+    } catch (error) {
+      console.error("Error making call:", error)
+      return false
     }
   }
 
   async hangupCall(): Promise<void> {
-    if (this.activeCall) {
-      this.activeCall.disconnect()
-      this.activeCall = null
+    try {
+      if (this.currentCall) {
+        this.currentCall.disconnect()
+        this.currentCall = null
+        console.log("Call hung up")
+      }
+    } catch (error) {
+      console.error("Error hanging up call:", error)
+    }
+  }
+
+  async acceptCall(): Promise<void> {
+    try {
+      if (this.currentCall) {
+        this.currentCall.accept()
+        console.log("Call accepted")
+      }
+    } catch (error) {
+      console.error("Error accepting call:", error)
+    }
+  }
+
+  async rejectCall(): Promise<void> {
+    try {
+      if (this.currentCall) {
+        this.currentCall.reject()
+        this.currentCall = null
+        console.log("Call rejected")
+      }
+    } catch (error) {
+      console.error("Error rejecting call:", error)
     }
   }
 
   async muteCall(muted: boolean): Promise<void> {
-    if (this.activeCall) {
-      this.activeCall.mute(muted)
+    try {
+      if (this.currentCall) {
+        this.currentCall.mute(muted)
+        console.log(`Call ${muted ? "muted" : "unmuted"}`)
+      }
+    } catch (error) {
+      console.error("Error muting/unmuting call:", error)
     }
   }
 
-  async setVolume(volume: number): Promise<void> {
-    if (this.activeCall) {
-      // Volume is between 0.0 and 1.0
-      this.activeCall.volume(volume / 100)
+  async refreshToken(): Promise<void> {
+    try {
+      const response = await fetch("/api/calling/token", {
+        method: "GET",
+      })
+
+      const data = await response.json()
+
+      if (data.success && this.device) {
+        this.device.updateToken(data.token)
+        console.log("Token refreshed successfully")
+      }
+    } catch (error) {
+      console.error("Error refreshing token:", error)
     }
-  }
-
-  private formatIndianNumber(phoneNumber: string): string {
-    // Remove all non-digit characters
-    const cleaned = phoneNumber.replace(/\D/g, "")
-
-    // If it's already 12 digits starting with 91, use as is
-    if (cleaned.startsWith("91") && cleaned.length === 12) {
-      return `+${cleaned}`
-    }
-
-    // If it's 10 digits, add +91 prefix
-    if (cleaned.length === 10) {
-      return `+91${cleaned}`
-    }
-
-    // If it starts with 91 but not 12 digits, assume it's missing country code
-    if (cleaned.startsWith("91")) {
-      return `+${cleaned}`
-    }
-
-    // Default: add +91 to any number
-    return `+91${cleaned}`
   }
 
   getCallStatus(): string {
-    if (!this.activeCall) return "idle"
-    return this.activeCall.status()
+    if (!this.currentCall) return "idle"
+    return this.currentCall.status()
   }
 
   isCallActive(): boolean {
-    return this.activeCall !== null && this.activeCall.status() === "open"
+    return this.currentCall !== null
   }
 
-  getDevice() {
+  getDevice(): Device | null {
     return this.device
   }
 
-  getActiveCall() {
-    return this.activeCall
+  async destroy(): Promise<void> {
+    try {
+      if (this.currentCall) {
+        this.currentCall.disconnect()
+        this.currentCall = null
+      }
+
+      if (this.device) {
+        this.device.destroy()
+        this.device = null
+      }
+
+      this.isInitialized = false
+      console.log("Twilio Voice Device destroyed")
+    } catch (error) {
+      console.error("Error destroying device:", error)
+    }
   }
 }
 
-export const twilioVoiceBrowser = new TwilioVoiceBrowser()
+// Provide both names for compatibility
+export const twilioVoiceBrowser = new TwilioVoiceManager()
+export const voiceManager = twilioVoiceBrowser
