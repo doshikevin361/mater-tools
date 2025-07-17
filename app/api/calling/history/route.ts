@@ -3,37 +3,30 @@ import { connectToDatabase } from "@/lib/mongodb"
 
 export async function GET(request: NextRequest) {
   try {
+    // Connect to database
     const { db } = await connectToDatabase()
 
-    // Get recent calls (last 50)
-    const calls = await db.collection("calls").find({}).sort({ timestamp: -1 }).limit(50).toArray()
+    // Fetch call history (last 50 calls)
+    const calls = await db.collection("call_history").find({}).sort({ timestamp: -1 }).limit(50).toArray()
 
     // Format calls for frontend
     const formattedCalls = calls.map((call) => ({
       _id: call._id.toString(),
       phoneNumber: call.phoneNumber,
-      status: call.status || "unknown",
+      status: call.status || "completed",
       timestamp: call.timestamp,
       duration: call.duration || 0,
       cost: call.cost || 0,
-      type: call.type || "voice_call",
+      type: call.type || "outbound",
       callSid: call.callSid,
-      message: call.message,
     }))
 
     return NextResponse.json({
       success: true,
       calls: formattedCalls,
-      total: calls.length,
     })
   } catch (error) {
-    console.error("Fetch call history error:", error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: `Failed to fetch call history: ${error.message}`,
-      },
-      { status: 500 },
-    )
+    console.error("Error fetching call history:", error)
+    return NextResponse.json({ success: false, error: "Failed to fetch call history" }, { status: 500 })
   }
 }

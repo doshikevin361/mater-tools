@@ -8,13 +8,14 @@ export async function POST(request: NextRequest) {
     const callerId = process.env.TWILIO_PHONE_NUMBER || "+19252617266"
 
     console.log(`TwiML App: Outbound call from ${from} to ${to}`)
+    console.log("Using Caller ID:", callerId)
 
     // Validate phone number format
     if (!to || !to.startsWith("+")) {
       console.error("Invalid phone number format:", to)
       const errorTwiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Say voice="alice">Invalid phone number format. Please try again.</Say>
+    <Say voice="alice">Invalid phone number format. Please try again with country code.</Say>
 </Response>`
       return new NextResponse(errorTwiml, {
         headers: { "Content-Type": "text/xml" },
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
     <Say voice="alice">The call could not be completed. Please check the number and try again.</Say>
 </Response>`
 
-    console.log("Generated TwiML:", twiml)
+    console.log("Generated TwiML response")
 
     return new NextResponse(twiml, {
       headers: {

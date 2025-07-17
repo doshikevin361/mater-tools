@@ -8,44 +8,62 @@ export async function GET() {
     const twimlAppSid = process.env.TWILIO_TWIML_APP_SID || "APe32c170c79e356138bd267904ffc6814"
 
     if (!accountSid || !apiKey || !apiSecret || !twimlAppSid) {
+      console.error("Missing Twilio credentials:", {
+        accountSid: !!accountSid,
+        apiKey: !!apiKey,
+        apiSecret: !!apiSecret,
+        twimlAppSid: !!twimlAppSid,
+      })
       return NextResponse.json(
         {
           success: false,
-          error: "Missing Twilio credentials",
+          error: "Missing Twilio credentials. Please check environment variables.",
         },
         { status: 500 },
       )
     }
 
-    // Import Twilio JWT
-    const twilio = require("twilio")
-    const AccessToken = twilio.jwt.AccessToken
-    const VoiceGrant = AccessToken.VoiceGrant
+    try {
+      // Import Twilio JWT
+      const twilio = require("twilio")
+      const AccessToken = twilio.jwt.AccessToken
+      const VoiceGrant = AccessToken.VoiceGrant
 
-    // Generate unique identity
-    const identity = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      // Generate unique identity
+      const identity = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 
-    // Create access token
-    const accessToken = new AccessToken(accountSid, apiKey, apiSecret, {
-      identity: identity,
-      ttl: 3600, // 1 hour
-    })
+      // Create access token
+      const accessToken = new AccessToken(accountSid, apiKey, apiSecret, {
+        identity: identity,
+        ttl: 3600, // 1 hour
+      })
 
-    // Create Voice grant
-    const voiceGrant = new VoiceGrant({
-      outgoingApplicationSid: twimlAppSid,
-      incomingAllow: true,
-    })
+      // Create Voice grant
+      const voiceGrant = new VoiceGrant({
+        outgoingApplicationSid: twimlAppSid,
+        incomingAllow: true,
+      })
 
-    accessToken.addGrant(voiceGrant)
+      accessToken.addGrant(voiceGrant)
 
-    console.log("Generated access token for identity:", identity)
+      const token = accessToken.toJwt()
+      console.log("Generated access token for identity:", identity)
 
-    return NextResponse.json({
-      success: true,
-      token: accessToken.toJwt(),
-      identity: identity,
-    })
+      return NextResponse.json({
+        success: true,
+        token: token,
+        identity: identity,
+      })
+    } catch (twilioError) {
+      console.error("Twilio JWT generation error:", twilioError)
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Twilio JWT error: ${twilioError.message}`,
+        },
+        { status: 500 },
+      )
+    }
   } catch (error) {
     console.error("Token generation error:", error)
     return NextResponse.json(

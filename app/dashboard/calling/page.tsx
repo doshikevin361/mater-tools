@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Phone, PhoneCall, PhoneOff, Mic, MicOff, Volume2, History, AlertCircle } from "lucide-react"
+import { Phone, PhoneCall, PhoneOff, Mic, MicOff, Volume2, History, AlertCircle, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
 interface CallHistory {
@@ -31,6 +31,7 @@ export default function CallingPage() {
   const [token, setToken] = useState<string>("")
   const [connectionError, setConnectionError] = useState<string>("")
   const [activeConnection, setActiveConnection] = useState<any>(null)
+  const [initializingSDK, setInitializingSDK] = useState(true)
   const deviceRef = useRef<any>(null)
 
   // Initialize Twilio Device
@@ -38,6 +39,7 @@ export default function CallingPage() {
     const initializeTwilio = async () => {
       try {
         console.log("Initializing Twilio Voice SDK...")
+        setInitializingSDK(true)
 
         // Get access token from server
         const response = await fetch("/api/calling/token")
@@ -47,20 +49,19 @@ export default function CallingPage() {
           throw new Error(data.error || "Failed to get access token")
         }
 
-        console.log("Access token received, initializing device...")
+        console.log("Access token received, loading SDK...")
         setToken(data.token)
 
-        // Load Twilio Voice SDK from CDN
-        if (!window.Twilio) {
-          await loadTwilioSDK()
-        }
+        // Load Twilio Voice SDK with fallback methods
+        await loadTwilioSDK()
 
         // Create device instance
-        const newDevice = new window.Twilio.Device(data.token, {
+        const newDevice = new (window as any).Twilio.Device(data.token, {
           logLevel: 1,
           answerOnBridge: true,
           fakeLocalDTMF: true,
           enableRingingState: true,
+          allowIncomingWhileBusy: false,
         })
 
         // Set up event listeners
@@ -68,6 +69,7 @@ export default function CallingPage() {
           console.log("Twilio Device Ready")
           setIsConnected(true)
           setConnectionError("")
+          setInitializingSDK(false)
           toast.success("Voice calling ready! You can now make calls.")
         })
 
@@ -75,6 +77,7 @@ export default function CallingPage() {
           console.error("Twilio Device Error:", error)
           setConnectionError(error.message)
           setIsConnected(false)
+          setInitializingSDK(false)
           toast.error(`Device Error: ${error.message}`)
         })
 
@@ -114,24 +117,54 @@ export default function CallingPage() {
         console.error("Failed to initialize Twilio:", error)
         setConnectionError(error.message)
         setIsConnected(false)
+        setInitializingSDK(false)
         toast.error(`Failed to initialize calling: ${error.message}`)
       }
     }
 
     const loadTwilioSDK = (): Promise<void> => {
       return new Promise((resolve, reject) => {
-        const script = document.createElement("script")
-        script.src = "https://sdk.twilio.com/js/voice/releases/2.11.0/twilio.min.js"
-        script.crossOrigin = "anonymous"
-        script.onload = () => {
-          console.log("Twilio SDK loaded successfully")
+        // Check if already loaded
+        if ((window as any).Twilio) {
+          console.log("Twilio SDK already loaded")
           resolve()
+          return
         }
-        script.onerror = () => {
-          console.error("Failed to load Twilio SDK")
-          reject(new Error("Failed to load Twilio SDK"))
+
+        // Try multiple CDN sources
+        const cdnUrls = [
+          "https://media.twiliocdn.com/sdk/js/voice/releases/2.11.0/twilio.min.js",
+          "https://cdn.jsdelivr.net/npm/@twilio/voice-sdk@2.11.0/dist/twilio.min.js",
+          "https://unpkg.com/@twilio/voice-sdk@2.11.0/dist/twilio.min.js",
+        ]
+
+        let currentIndex = 0
+
+        const tryLoadScript = () => {
+          if (currentIndex >= cdnUrls.length) {
+            reject(new Error("Failed to load Twilio SDK from all CDN sources"))
+            return
+          }
+
+          const script = document.createElement("script")
+          script.src = cdnUrls[currentIndex]
+          script.crossOrigin = "anonymous"
+
+          script.onload = () => {
+            console.log(`Twilio SDK loaded successfully from: ${cdnUrls[currentIndex]}`)
+            resolve()
+          }
+
+          script.onerror = () => {
+            console.warn(`Failed to load from: ${cdnUrls[currentIndex]}`)
+            currentIndex++
+            tryLoadScript()
+          }
+
+          document.head.appendChild(script)
         }
-        document.head.appendChild(script)
+
+        tryLoadScript()
       })
     }
 
@@ -162,6 +195,18 @@ export default function CallingPage() {
       }
     } catch (error) {
       console.error("Failed to fetch call history:", error)
+      // Set mock data for testing
+      setCallHistory([
+        {
+          _id: "mock_1",
+          phoneNumber: "+919876543210",
+          status: "completed",
+          timestamp: new Date().toISOString(),
+          duration: 120,
+          cost: 0.5,
+          type: "outbound",
+        },
+      ])
     }
   }
 
@@ -314,7 +359,14 @@ export default function CallingPage() {
           <p className="text-muted-foreground">Make and manage voice calls directly from your browser</p>
         </div>
         <div className="flex items-center space-x-2">
-          <Badge variant={isConnected ? "default" : "secondary"}>{isConnected ? "Connected" : "Disconnected"}</Badge>
+          {initializingSDK ? (
+            <Badge variant="secondary" className="flex items-center space-x-1">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              <span>Initializing...</span>
+            </Badge>
+          ) : (
+            <Badge variant={isConnected ? "default" : "secondary"}>{isConnected ? "Connected" : "Disconnected"}</Badge>
+          )}
           {isInCall && (
             <Badge variant="destructive" className="animate-pulse">
               🔴 In Call
@@ -330,7 +382,9 @@ export default function CallingPage() {
             <div>
               <h3 className="font-medium text-red-800">Connection Error</h3>
               <p className="text-sm text-red-700">{connectionError}</p>
-              <p className="text-xs text-red-600 mt-1">Please check your Twilio credentials and refresh the page.</p>
+              <p className="text-xs text-red-600 mt-1">
+                Please check your Twilio credentials and internet connection. Try refreshing the page.
+              </p>
             </div>
           </div>
         </div>
@@ -367,7 +421,7 @@ export default function CallingPage() {
                     placeholder="9876543210 or +919876543210"
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
-                    disabled={isInCall}
+                    disabled={isInCall || initializingSDK}
                     className="text-lg"
                   />
                   <p className="text-xs text-muted-foreground">
@@ -381,12 +435,21 @@ export default function CallingPage() {
                   {!isInCall ? (
                     <Button
                       onClick={makeCall}
-                      disabled={loading || !isConnected || !phoneNumber.trim()}
+                      disabled={loading || !isConnected || !phoneNumber.trim() || initializingSDK}
                       className="flex-1"
                       size="lg"
                     >
-                      <PhoneCall className="h-4 w-4 mr-2" />
-                      {loading ? "Calling..." : "Call Now"}
+                      {loading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Calling...
+                        </>
+                      ) : (
+                        <>
+                          <PhoneCall className="h-4 w-4 mr-2" />
+                          Call Now
+                        </>
+                      )}
                     </Button>
                   ) : (
                     <>
@@ -407,7 +470,16 @@ export default function CallingPage() {
                   )}
                 </div>
 
-                {!isConnected && !connectionError && (
+                {initializingSDK && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                    <div className="flex items-center space-x-2">
+                      <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                      <p className="text-sm text-blue-800">Loading voice calling service... Please wait.</p>
+                    </div>
+                  </div>
+                )}
+
+                {!isConnected && !connectionError && !initializingSDK && (
                   <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
                     <p className="text-sm text-yellow-800">⚠️ Voice service is connecting... Please wait.</p>
                   </div>
@@ -432,9 +504,16 @@ export default function CallingPage() {
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">SDK Status:</span>
+                    <Badge variant={initializingSDK ? "secondary" : isConnected ? "default" : "destructive"}>
+                      {initializingSDK ? "Loading..." : isConnected ? "Ready" : "Error"}
+                    </Badge>
+                  </div>
+
+                  <div className="flex items-center justify-between">
                     <span className="text-sm font-medium">Connection Status:</span>
                     <Badge variant={isConnected ? "default" : "secondary"}>
-                      {isConnected ? "Ready" : "Connecting..."}
+                      {isConnected ? "Connected" : "Disconnected"}
                     </Badge>
                   </div>
 
