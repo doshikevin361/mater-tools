@@ -21,11 +21,75 @@ class VoiceService {
     this.client = twilio(this.apiKey, this.apiSecret, {
       accountSid: this.accountSid,
     })
+  }
 
-    console.log("VoiceService initialized with:")
-    console.log(`- Account SID: ${this.accountSid}`)
-    console.log(`- Phone Number: ${this.phoneNumber}`)
-    console.log(`- Base URL: ${this.baseUrl}`)
+  async makeVoiceCallWithAudio(
+    toNumber: string,
+    audioUrl: string,
+    options?: {
+      record?: boolean
+      timeout?: number
+      statusCallback?: string
+      fallbackUrl?: string
+    },
+  ) {
+    try {
+      const cleanNumber = this.formatPhoneNumber(toNumber)
+
+      console.log(`Making voice call with audio to ${cleanNumber}`)
+      console.log(`Audio URL: ${audioUrl}`)
+
+      // Validate audio URL
+      if (!audioUrl || audioUrl.startsWith("blob:")) {
+        throw new Error("Invalid audio URL provided")
+      }
+
+      // Test if audio URL is accessible
+      try {
+        new URL(audioUrl)
+      } catch (urlError) {
+        throw new Error("Invalid audio URL format")
+      }
+
+      // Create TwiML directly with the audio URL
+      const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Play>${audioUrl}</Play>
+  <Pause length="1"/>
+  <Say voice="alice" language="en-US">Thank you for listening. Have a great day!</Say>
+</Response>`
+
+      console.log(`Generated TwiML for audio call:`, twiml)
+
+      const call = await this.client.calls.create({
+        to: cleanNumber,
+        from: this.phoneNumber,
+        twiml: twiml,
+        timeout: options?.timeout || 30,
+        record: options?.record || false,
+        statusCallback: options?.statusCallback,
+        statusCallbackEvent: ["initiated", "ringing", "answered", "completed"],
+        statusCallbackMethod: "POST",
+        fallbackUrl: options?.fallbackUrl,
+        machineDetection: "Enable",
+        machineDetectionTimeout: 5,
+      })
+
+      console.log(`Call initiated: ${call.sid} with audio: ${audioUrl}`)
+
+      return {
+        success: true,
+        callSid: call.sid,
+        status: call.status,
+        to: call.to,
+        from: call.from,
+        audioUrl: audioUrl,
+        response: call,
+      }
+    } catch (error) {
+      console.error("Voice call with audio error:", error)
+      throw new Error(`Voice call failed: ${error.message}`)
+    }
   }
 
   async makeVoiceCallWithTTS(
@@ -43,120 +107,36 @@ class VoiceService {
     try {
       const cleanNumber = this.formatPhoneNumber(toNumber)
 
-      console.log(`Making real business call to ${cleanNumber}`)
+      console.log(`Making TTS voice call to ${cleanNumber}`)
       console.log(`Message: ${message}`)
 
-      // Create real business TwiML - NO testing language
+      // Create TwiML directly with the message
       const voice = voiceOptions?.voice || "alice"
       const language = voiceOptions?.language || "en-US"
 
       const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say voice="${voice}" language="${language}" rate="medium">${this.escapeXml(message)}</Say>
-  <Pause length="2"/>
-  <Say voice="${voice}" language="${language}" rate="medium">You can reach us anytime by calling back this number or visiting our website. We appreciate your time and look forward to helping your business grow. Goodbye!</Say>
+  <Say voice="${voice}" language="${language}">${this.escapeXml(message)}</Say>
+  <Pause length="1"/>
+  <Say voice="${voice}" language="${language}">Thank you for listening. Have a great day!</Say>
 </Response>`
 
-      console.log(`Generated real business TwiML`)
-
-      const callParams: any = {
-        to: cleanNumber,
-        from: this.phoneNumber,
-        twiml: twiml,
-        timeout: voiceOptions?.timeout || 45,
-        record: voiceOptions?.record || false,
-        machineDetection: "Enable",
-        machineDetectionTimeout: 10,
-      }
-
-      if (voiceOptions?.statusCallback) {
-        callParams.statusCallback = voiceOptions.statusCallback
-        callParams.statusCallbackEvent = ["initiated", "ringing", "answered", "completed"]
-        callParams.statusCallbackMethod = "POST"
-      }
-
-      console.log("Making real business call with parameters:", {
-        to: callParams.to,
-        from: callParams.from,
-        timeout: callParams.timeout,
-        record: callParams.record,
-      })
-
-      const call = await this.client.calls.create(callParams)
-
-      console.log(`Real business call initiated successfully:`)
-      console.log(`- Call SID: ${call.sid}`)
-      console.log(`- Status: ${call.status}`)
-      console.log(`- To: ${call.to}`)
-      console.log(`- From: ${call.from}`)
-
-      return {
-        success: true,
-        callSid: call.sid,
-        status: call.status,
-        to: call.to,
-        from: call.from,
-        response: call,
-      }
-    } catch (error) {
-      console.error("Real business call error:", error)
-      throw new Error(`Business call failed: ${error.message}`)
-    }
-  }
-
-  async makeVoiceCallWithAudio(
-    toNumber: string,
-    audioUrl: string,
-    options?: {
-      record?: boolean
-      timeout?: number
-      statusCallback?: string
-      fallbackUrl?: string
-    },
-  ) {
-    try {
-      const cleanNumber = this.formatPhoneNumber(toNumber)
-
-      console.log(`Making real audio business call to ${cleanNumber}`)
-      console.log(`Audio URL: ${audioUrl}`)
-
-      // Validate audio URL
-      if (!audioUrl || audioUrl.startsWith("blob:")) {
-        throw new Error("Invalid audio URL provided")
-      }
-
-      // Test if audio URL is accessible
-      try {
-        new URL(audioUrl)
-      } catch (urlError) {
-        throw new Error("Invalid audio URL format")
-      }
-
-      // Create real business TwiML with audio - NO testing language
-      const twiml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Play>${audioUrl}</Play>
-  <Pause length="2"/>
-  <Say voice="alice" language="en-US" rate="medium">This message was brought to you by BrandBuzz Ventures, your trusted digital marketing partner. For more information about our services, please call us back or visit our website. We look forward to helping your business succeed. Thank you and goodbye!</Say>
-</Response>`
-
-      console.log(`Generated real business audio TwiML`)
+      console.log(`Generated TwiML for TTS call:`, twiml)
 
       const call = await this.client.calls.create({
         to: cleanNumber,
         from: this.phoneNumber,
         twiml: twiml,
-        timeout: options?.timeout || 45,
-        record: options?.record || false,
-        statusCallback: options?.statusCallback,
+        timeout: voiceOptions?.timeout || 30,
+        record: voiceOptions?.record || false,
+        statusCallback: voiceOptions?.statusCallback,
         statusCallbackEvent: ["initiated", "ringing", "answered", "completed"],
         statusCallbackMethod: "POST",
-        fallbackUrl: options?.fallbackUrl,
         machineDetection: "Enable",
-        machineDetectionTimeout: 10,
+        machineDetectionTimeout: 5,
       })
 
-      console.log(`Real business audio call initiated: ${call.sid}`)
+      console.log(`TTS call initiated: ${call.sid}`)
 
       return {
         success: true,
@@ -164,12 +144,108 @@ class VoiceService {
         status: call.status,
         to: call.to,
         from: call.from,
-        audioUrl: audioUrl,
         response: call,
       }
     } catch (error) {
-      console.error("Real business audio call error:", error)
-      throw new Error(`Audio call failed: ${error.message}`)
+      console.error("TTS voice call error:", error)
+      throw new Error(`Voice call failed: ${error.message}`)
+    }
+  }
+
+  async createConference(
+    participants: string[],
+    options?: {
+      record?: boolean
+      statusCallback?: string
+      friendlyName?: string
+    },
+  ) {
+    try {
+      const conferenceName = options?.friendlyName || `Conference-${Date.now()}`
+
+      const conference = await this.client.conferences.create({
+        friendlyName: conferenceName,
+        record: options?.record || false,
+        statusCallback: options?.statusCallback,
+        statusCallbackEvent: ["start", "end", "join", "leave"],
+      })
+
+      const calls = []
+      for (const participant of participants) {
+        const call = await this.client.calls.create({
+          to: this.formatPhoneNumber(participant),
+          from: this.phoneNumber,
+          twiml: `<Response><Dial><Conference>${conferenceName}</Conference></Dial></Response>`,
+        })
+        calls.push(call)
+      }
+
+      return {
+        success: true,
+        conferenceSid: conference.sid,
+        conferenceName,
+        calls,
+      }
+    } catch (error) {
+      console.error("Conference creation error:", error)
+      throw error
+    }
+  }
+
+  async forwardCall(fromNumber: string, toNumber: string, options?: { record?: boolean }) {
+    try {
+      const call = await this.client.calls.create({
+        to: this.formatPhoneNumber(toNumber),
+        from: this.phoneNumber,
+        twiml: `<Response><Dial record="${options?.record ? "record-from-answer" : "do-not-record"}">${this.formatPhoneNumber(fromNumber)}</Dial></Response>`,
+      })
+
+      return {
+        success: true,
+        callSid: call.sid,
+        status: call.status,
+      }
+    } catch (error) {
+      console.error("Call forwarding error:", error)
+      throw error
+    }
+  }
+
+  async createInteractiveVoiceResponse(
+    toNumber: string,
+    menuOptions: Array<{ key: string; action: string; message: string }>,
+    welcomeMessage: string,
+  ) {
+    try {
+      let twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="alice">${this.escapeXml(welcomeMessage)}</Say>
+  <Gather numDigits="1" action="${this.baseUrl}/api/voice/ivr-response" method="POST">
+      <Say voice="alice">Press a number to continue.</Say>`
+
+      menuOptions.forEach((option) => {
+        twiml += `<Say voice="alice">Press ${option.key} for ${this.escapeXml(option.message)}</Say>`
+      })
+
+      twiml += `</Gather>
+  <Say voice="alice">Sorry, I didn't get that. Please try again.</Say>
+  <Redirect>${this.baseUrl}/api/voice/ivr-response</Redirect>
+</Response>`
+
+      const call = await this.client.calls.create({
+        to: this.formatPhoneNumber(toNumber),
+        from: this.phoneNumber,
+        twiml: twiml,
+      })
+
+      return {
+        success: true,
+        callSid: call.sid,
+        status: call.status,
+      }
+    } catch (error) {
+      console.error("IVR creation error:", error)
+      throw error
     }
   }
 
@@ -193,16 +269,11 @@ class VoiceService {
     let successful = 0
     let failed = 0
 
-    console.log(`Starting bulk business outreach to ${contacts.length} contacts`)
-
-    // Real business message for bulk calls - NO testing language
-    const realBulkMessage =
-      defaultMessage ||
-      `Hello, this is BrandBuzz Ventures calling to introduce our comprehensive digital marketing services. We are a full-service marketing agency that specializes in helping businesses like yours increase their online visibility, attract more customers, and grow their revenue through proven digital strategies. Our services include social media management, targeted advertising campaigns, email marketing automation, SMS marketing, and website optimization. We have successfully helped numerous businesses achieve significant growth and we would love to discuss how we can do the same for you. Our team of marketing experts is ready to create a customized strategy that fits your specific business needs and budget. Please feel free to call us back to schedule a free consultation, or visit our website to learn more about our success stories. We are committed to helping your business reach its full potential. Thank you for your time, and we look forward to the opportunity to work with you!`
+    console.log(`Starting bulk voice calls to ${contacts.length} contacts`)
 
     for (const contact of contacts) {
       try {
-        await new Promise((resolve) => setTimeout(resolve, 4000)) // 4 seconds between calls for professional pacing
+        await new Promise((resolve) => setTimeout(resolve, 2000)) // Rate limiting - 2 seconds between calls
 
         let result
         if (contact.messageType === "audio" && contact.audioUrl) {
@@ -218,7 +289,10 @@ class VoiceService {
             statusCallback: voiceOptions?.statusCallback,
           })
         } else {
-          const message = contact.message || realBulkMessage
+          const message =
+            contact.message ||
+            defaultMessage ||
+            "Hello, this is an automated message from BrandBuzz Ventures. Thank you for your time."
           result = await this.makeVoiceCallWithTTS(contact.phone, message, voiceOptions)
         }
 
@@ -231,7 +305,7 @@ class VoiceService {
         })
 
         successful++
-        console.log(`✅ Business call initiated to ${contact.phone} (${contact.name || "Prospect"})`)
+        console.log(`✅ Call initiated to ${contact.phone} (${contact.name || "Unknown"})`)
       } catch (error) {
         results.push({
           contact: contact,
@@ -241,7 +315,7 @@ class VoiceService {
         })
 
         failed++
-        console.error(`❌ Failed to call ${contact.phone} (${contact.name || "Prospect"}):`, error.message)
+        console.error(`❌ Failed to call ${contact.phone} (${contact.name || "Unknown"}):`, error.message)
       }
     }
 
@@ -254,40 +328,44 @@ class VoiceService {
     }
   }
 
-  async getCallStatus(callSid: string) {
+  async getCallRecordings(callSid: string) {
     try {
-      const call = await this.client.calls(callSid).fetch()
+      const recordings = await this.client.recordings.list({ callSid: callSid })
       return {
         success: true,
-        status: call.status,
-        duration: call.duration,
-        startTime: call.startTime,
-        endTime: call.endTime,
-        price: call.price,
-        priceUnit: call.priceUnit,
-        answeredBy: call.answeredBy,
+        recordings: recordings.map((recording) => ({
+          sid: recording.sid,
+          duration: recording.duration,
+          dateCreated: recording.dateCreated,
+          uri: recording.uri,
+          mediaUrl: `https://api.twilio.com${recording.uri.replace(".json", ".mp3")}`,
+        })),
       }
     } catch (error) {
-      console.error("Get call status error:", error)
+      console.error("Get recordings error:", error)
       throw error
     }
   }
 
-  async getAccountInfo() {
+  async getCallAnalytics(callSid: string) {
     try {
-      const account = await this.client.api.accounts(this.accountSid).fetch()
-
+      const call = await this.client.calls(callSid).fetch()
       return {
         success: true,
-        account: {
-          balance: account.balance,
-          currency: account.currency || "USD",
-          status: account.status,
-          friendlyName: account.friendlyName,
+        analytics: {
+          sid: call.sid,
+          status: call.status,
+          duration: call.duration,
+          startTime: call.startTime,
+          endTime: call.endTime,
+          price: call.price,
+          priceUnit: call.priceUnit,
+          direction: call.direction,
+          answeredBy: call.answeredBy,
         },
       }
     } catch (error) {
-      console.error("Get account info error:", error)
+      console.error("Get call analytics error:", error)
       throw error
     }
   }
@@ -317,6 +395,32 @@ class VoiceService {
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&apos;")
+  }
+
+  async getAccountInfo() {
+    try {
+      const account = await this.client.api.accounts(this.accountSid).fetch()
+      const usage = await this.client.usage.records.list({ category: "calls" })
+
+      return {
+        success: true,
+        account: {
+          balance: account.balance,
+          currency: account.currency || "USD",
+          status: account.status,
+        },
+        usage: usage.map((record) => ({
+          category: record.category,
+          count: record.count,
+          usage: record.usage,
+          price: record.price,
+          priceUnit: record.priceUnit,
+        })),
+      }
+    } catch (error) {
+      console.error("Get account info error:", error)
+      throw error
+    }
   }
 }
 

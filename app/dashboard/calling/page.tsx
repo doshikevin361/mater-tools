@@ -1,328 +1,390 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Phone, PhoneCall, Clock, CheckCircle, XCircle, AlertCircle, Loader2, Building2 } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Phone, PhoneCall, PhoneOff, Mic, MicOff, Volume2, History } from "lucide-react"
 import { toast } from "sonner"
 
-interface CallRecord {
+interface CallHistory {
   _id: string
   phoneNumber: string
-  callSid: string
   status: string
-  message: string
-  duration: number
   timestamp: string
-  price?: number
-  priceUnit?: string
+  duration: number
+  cost: number
+  type: string
+  callSid?: string
 }
 
 export default function CallingPage() {
   const [phoneNumber, setPhoneNumber] = useState("")
-  const [customMessage, setCustomMessage] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [callHistory, setCallHistory] = useState<CallRecord[]>([])
-  const [currentCall, setCurrentCall] = useState<{
-    callSid: string
-    status: string
-    phoneNumber: string
-  } | null>(null)
+  const [isConnected, setIsConnected] = useState(false)
+  const [isInCall, setIsInCall] = useState(false)
+  const [isMuted, setIsMuted] = useState(false)
+  const [callHistory, setCallHistory] = useState<CallHistory[]>([])
+  const [loading, setLoading] = useState(false)
+  const [device, setDevice] = useState<any>(null)
+  const [token, setToken] = useState<string>("")
+  const deviceRef = useRef<any>(null)
 
-  // Real business message - NO testing language
-  const realBusinessMessage = `Hello, this is BrandBuzz Ventures reaching out to you today. We are a premier digital marketing agency that helps businesses like yours grow their online presence and increase revenue through proven marketing strategies. We specialize in social media automation, targeted email campaigns, SMS marketing, and comprehensive digital solutions that deliver real results. Our team has helped hundreds of businesses expand their reach, engage more customers, and significantly boost their sales. We would love the opportunity to discuss how we can help your business achieve similar success. Please feel free to call us back or visit our website to learn more about our services. We look forward to the possibility of working together. Thank you for your time and have a wonderful day!`
+  // Initialize Twilio Device
+  useEffect(() => {
+    const initializeTwilio = async () => {
+      try {
+        // Get access token from server
+        const response = await fetch("/api/calling/token")
+        const data = await response.json()
+
+        if (data.success) {
+          setToken(data.token)
+
+          // Import Twilio Device SDK
+          const { Device } = await import("@twilio/voice-sdk")
+
+          // Create device instance
+          const newDevice = new Device(data.token, {
+            logLevel: 1,
+            answerOnBridge: true,
+          })
+
+          // Set up event listeners
+          newDevice.on("ready", () => {
+            console.log("Twilio Device Ready")
+            setIsConnected(true)
+            toast.success("Voice calling ready!")
+          })
+
+          newDevice.on("error", (error: any) => {
+            console.error("Twilio Device Error:", error)
+            toast.error(`Device Error: ${error.message}`)
+          })
+
+          newDevice.on("incoming", (conn: any) => {
+            console.log("Incoming call from:", conn.parameters.From)
+            toast.info(`Incoming call from ${conn.parameters.From}`)
+          })
+
+          newDevice.on("connect", (conn: any) => {
+            console.log("Call connected")
+            setIsInCall(true)
+            toast.success("Call connected!")
+          })
+
+          newDevice.on("disconnect", (conn: any) => {
+            console.log("Call disconnected")
+            setIsInCall(false)
+            setIsMuted(false)
+            toast.info("Call ended")
+            fetchCallHistory()
+          })
+
+          // Register device
+          await newDevice.register()
+          setDevice(newDevice)
+          deviceRef.current = newDevice
+        }
+      } catch (error) {
+        console.error("Failed to initialize Twilio:", error)
+        toast.error("Failed to initialize calling service")
+      }
+    }
+
+    initializeTwilio()
+    fetchCallHistory()
+
+    // Cleanup on unmount
+    return () => {
+      if (deviceRef.current) {
+        deviceRef.current.destroy()
+      }
+    }
+  }, [])
 
   const fetchCallHistory = async () => {
     try {
       const response = await fetch("/api/calling/history")
-      if (response.ok) {
-        const data = await response.json()
-        setCallHistory(data.calls || [])
-      }
-    } catch (error) {
-      console.error("Error fetching call history:", error)
-    }
-  }
+      const data = await response.json()
 
-  const checkCallStatus = async (callSid: string) => {
-    try {
-      const response = await fetch(`/api/calling/status?callSid=${callSid}`)
-      if (response.ok) {
-        const data = await response.json()
-        return data
+      if (data.success) {
+        setCallHistory(data.calls)
       }
     } catch (error) {
-      console.error("Error checking call status:", error)
+      console.error("Failed to fetch call history:", error)
     }
-    return null
   }
 
   const makeCall = async () => {
-    if (!phoneNumber.trim()) {
+    if (!device || !phoneNumber.trim()) {
       toast.error("Please enter a phone number")
       return
     }
 
-    setIsLoading(true)
+    setLoading(true)
 
     try {
-      const response = await fetch("/api/calling/make-call", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      // Format phone number for Indian numbers
+      const formatPhoneNumber = (number: string) => {
+        const cleaned = number.replace(/\D/g, "")
+        if (cleaned.length === 10) {
+          return `+91${cleaned}`
+        }
+        if (cleaned.startsWith("91") && cleaned.length === 12) {
+          return `+${cleaned}`
+        }
+        return `+91${cleaned}`
+      }
+
+      const formattedNumber = formatPhoneNumber(phoneNumber)
+
+      // Make call through Twilio Device
+      const connection = await device.connect({
+        params: {
+          To: formattedNumber,
         },
-        body: JSON.stringify({
-          phoneNumber: phoneNumber.trim(),
-          message: customMessage.trim() || realBusinessMessage,
-          messageType: "tts",
-        }),
       })
 
-      const data = await response.json()
+      console.log("Call initiated:", connection)
+      toast.success(`Calling ${formattedNumber}...`)
 
-      if (data.success) {
-        toast.success("Business call initiated successfully!")
-
-        setCurrentCall({
-          callSid: data.callSid,
-          status: data.status,
-          phoneNumber: data.phoneNumber,
-        })
-
-        // Start polling call status
-        const pollInterval = setInterval(async () => {
-          const statusData = await checkCallStatus(data.callSid)
-          if (statusData) {
-            setCurrentCall((prev) => (prev ? { ...prev, status: statusData.status } : null))
-
-            if (
-              statusData.status === "completed" ||
-              statusData.status === "failed" ||
-              statusData.status === "busy" ||
-              statusData.status === "no-answer"
-            ) {
-              clearInterval(pollInterval)
-              setCurrentCall(null)
-              fetchCallHistory() // Refresh history
-
-              if (statusData.status === "completed") {
-                toast.success(`Call completed successfully! Duration: ${statusData.duration || 0} seconds`)
-              } else {
-                toast.error(`Call ${statusData.status}`)
-              }
-            }
-          }
-        }, 3000)
-
-        // Clear form
-        setPhoneNumber("")
-        setCustomMessage("")
-
-        // Refresh call history
-        fetchCallHistory()
-      } else {
-        toast.error(data.error || "Failed to make call")
-      }
+      // Store call record
+      await fetch("/api/calling/make-call", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phoneNumber: formattedNumber,
+          message: "Browser call initiated",
+        }),
+      })
     } catch (error) {
-      console.error("Error making call:", error)
-      toast.error("Failed to make call")
+      console.error("Call failed:", error)
+      toast.error(`Call failed: ${error.message}`)
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "completed":
-        return <CheckCircle className="h-4 w-4 text-green-500" />
-      case "failed":
-      case "busy":
-      case "no-answer":
-        return <XCircle className="h-4 w-4 text-red-500" />
-      case "in-progress":
-      case "ringing":
-        return <Phone className="h-4 w-4 text-blue-500 animate-pulse" />
-      default:
-        return <AlertCircle className="h-4 w-4 text-yellow-500" />
+  const hangUp = () => {
+    if (device && isInCall) {
+      device.disconnectAll()
+      setIsInCall(false)
+      setIsMuted(false)
+      toast.info("Call ended")
     }
+  }
+
+  const toggleMute = () => {
+    if (device && isInCall) {
+      const activeConnection = device.activeConnection
+      if (activeConnection) {
+        if (isMuted) {
+          activeConnection.mute(false)
+          setIsMuted(false)
+          toast.info("Unmuted")
+        } else {
+          activeConnection.mute(true)
+          setIsMuted(true)
+          toast.info("Muted")
+        }
+      }
+    }
+  }
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, "0")}`
   }
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case "completed":
-        return "bg-green-100 text-green-800"
-      case "failed":
+        return "bg-green-500"
       case "busy":
+        return "bg-yellow-500"
+      case "failed":
+        return "bg-red-500"
       case "no-answer":
-        return "bg-red-100 text-red-800"
-      case "in-progress":
-      case "ringing":
-        return "bg-blue-100 text-blue-800"
+        return "bg-gray-500"
       default:
-        return "bg-yellow-100 text-yellow-800"
+        return "bg-blue-500"
     }
   }
 
-  useEffect(() => {
-    fetchCallHistory()
-  }, [])
-
   return (
-    <div className="container mx-auto p-6 space-y-8">
-      <div className="flex items-center gap-3">
-        <Building2 className="h-8 w-8 text-blue-600" />
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Business Voice Outreach</h1>
-          <p className="text-muted-foreground">Real business calls for lead generation and customer outreach</p>
+          <h1 className="text-3xl font-bold">Voice Calling</h1>
+          <p className="text-muted-foreground">Make and manage voice calls</p>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Badge variant={isConnected ? "default" : "secondary"}>{isConnected ? "Connected" : "Disconnected"}</Badge>
+          {isInCall && (
+            <Badge variant="destructive" className="animate-pulse">
+              In Call
+            </Badge>
+          )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Make Call Section */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Phone className="h-5 w-5" />
-              Make Business Call
-            </CardTitle>
-            <CardDescription>Initiate real business outreach calls to prospects and customers</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Phone Number</label>
-              <Input
-                type="tel"
-                placeholder="Enter phone number (e.g., 8733832957)"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                className="w-full"
-              />
-            </div>
+      <Tabs defaultValue="dialer" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="dialer" className="flex items-center space-x-2">
+            <Phone className="h-4 w-4" />
+            <span>Dialer</span>
+          </TabsTrigger>
+          <TabsTrigger value="history" className="flex items-center space-x-2">
+            <History className="h-4 w-4" />
+            <span>Call History</span>
+          </TabsTrigger>
+        </TabsList>
 
-            <div>
-              <label className="text-sm font-medium mb-2 block">Custom Message (Optional)</label>
-              <Textarea
-                placeholder="Enter your custom business message or leave blank for default outreach message..."
-                value={customMessage}
-                onChange={(e) => setCustomMessage(e.target.value)}
-                rows={4}
-                className="w-full"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Leave blank to use our proven business outreach message
-              </p>
-            </div>
-
-            <Button onClick={makeCall} disabled={isLoading || !phoneNumber.trim()} className="w-full" size="lg">
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Initiating Call...
-                </>
-              ) : (
-                <>
-                  <PhoneCall className="mr-2 h-4 w-4" />
-                  Make Business Call
-                </>
-              )}
-            </Button>
-
-            {/* Current Call Status */}
-            {currentCall && (
-              <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Active Business Call</p>
-                    <p className="text-sm text-muted-foreground">{currentCall.phoneNumber}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {getStatusIcon(currentCall.status)}
-                    <Badge className={getStatusColor(currentCall.status)}>{currentCall.status}</Badge>
-                  </div>
+        <TabsContent value="dialer">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Dialer Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <PhoneCall className="h-5 w-5" />
+                  <span>Make a Call</span>
+                </CardTitle>
+                <CardDescription>Enter a phone number to start a voice call</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Phone Number</label>
+                  <Input
+                    type="tel"
+                    placeholder="+91 9876543210"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    disabled={isInCall}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Enter Indian mobile number (10 digits) or international format
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">Call SID: {currentCall.callSid}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
 
-        {/* Default Message Preview */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5" />
-              Default Business Message
-            </CardTitle>
-            <CardDescription>
-              This proven outreach message will be used if no custom message is provided
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="bg-gray-50 p-4 rounded-lg border">
-              <p className="text-sm leading-relaxed">{realBusinessMessage}</p>
-            </div>
-            <div className="mt-4 text-xs text-muted-foreground">
-              <p>• Professional company introduction</p>
-              <p>• Clear value proposition and services</p>
-              <p>• Proven track record and results</p>
-              <p>• Clear call-to-action for prospects</p>
-              <p>• Professional closing and contact info</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+                <div className="flex space-x-2">
+                  {!isInCall ? (
+                    <Button
+                      onClick={makeCall}
+                      disabled={loading || !isConnected || !phoneNumber.trim()}
+                      className="flex-1"
+                    >
+                      <PhoneCall className="h-4 w-4 mr-2" />
+                      {loading ? "Calling..." : "Call"}
+                    </Button>
+                  ) : (
+                    <>
+                      <Button onClick={toggleMute} variant={isMuted ? "destructive" : "outline"} size="sm">
+                        {isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                      </Button>
+                      <Button onClick={hangUp} variant="destructive" className="flex-1">
+                        <PhoneOff className="h-4 w-4 mr-2" />
+                        Hang Up
+                      </Button>
+                    </>
+                  )}
+                </div>
 
-      {/* Call History */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            Business Call History
-          </CardTitle>
-          <CardDescription>Recent business outreach calls and their results</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {callHistory.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <PhoneCall className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No business calls made yet</p>
-              <p className="text-sm">Your outreach call history will appear here</p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {callHistory.map((call) => (
-                <div key={call._id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-2">
-                        {getStatusIcon(call.status)}
-                        <span className="font-medium">{call.phoneNumber}</span>
-                      </div>
-                      <Badge className={getStatusColor(call.status)}>{call.status}</Badge>
+                {!isConnected && (
+                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                    <p className="text-sm text-yellow-800">⚠️ Voice service is connecting... Please wait.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Call Status Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <Volume2 className="h-5 w-5" />
+                  <span>Call Status</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Connection Status:</span>
+                    <Badge variant={isConnected ? "default" : "secondary"}>
+                      {isConnected ? "Ready" : "Connecting..."}
+                    </Badge>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Call Status:</span>
+                    <Badge variant={isInCall ? "destructive" : "outline"}>
+                      {isInCall ? "Active Call" : "No Active Call"}
+                    </Badge>
+                  </div>
+
+                  {isInCall && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Audio Status:</span>
+                      <Badge variant={isMuted ? "destructive" : "default"}>{isMuted ? "Muted" : "Unmuted"}</Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground mt-1">{new Date(call.timestamp).toLocaleString()}</p>
-                    {call.duration > 0 && (
-                      <p className="text-sm text-muted-foreground">Duration: {call.duration} seconds</p>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground">Call SID</p>
-                    <p className="text-xs font-mono">{call.callSid}</p>
-                    {call.price && (
-                      <p className="text-xs text-muted-foreground">
-                        Cost: {call.price} {call.priceUnit}
-                      </p>
-                    )}
+                  )}
+
+                  <div className="pt-4 border-t">
+                    <p className="text-xs text-muted-foreground">
+                      💡 Tip: Make sure your microphone is enabled and working properly
+                    </p>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="history">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <History className="h-5 w-5" />
+                <span>Call History</span>
+              </CardTitle>
+              <CardDescription>Recent voice calls and their status</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {callHistory.length === 0 ? (
+                <div className="text-center py-8">
+                  <Phone className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">No call history yet</p>
+                  <p className="text-sm text-muted-foreground">Make your first call to see history here</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {callHistory.map((call) => (
+                    <div key={call._id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-3 h-3 rounded-full ${getStatusColor(call.status)}`} />
+                        <div>
+                          <p className="font-medium">{call.phoneNumber}</p>
+                          <p className="text-sm text-muted-foreground">{new Date(call.timestamp).toLocaleString()}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <Badge variant="outline" className="mb-1">
+                          {call.status}
+                        </Badge>
+                        <p className="text-sm text-muted-foreground">
+                          {call.duration > 0 ? formatDuration(call.duration) : "0:00"}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
