@@ -41,7 +41,6 @@
     "@radix-ui/react-toggle-group": "latest",
     "@radix-ui/react-tooltip": "latest",
     "@sparticuz/chromium": "^116.0.0",
-    "@twilio/voice-sdk": "latest",
     "@vercel/blob": "latest",
     "autoprefixer": "^10.4.20",
     "axios": "latest",
