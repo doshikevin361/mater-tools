@@ -1,37 +1,41 @@
-import { NextResponse } from "next/server"
-import twilio from "twilio"
+import { type NextRequest, NextResponse } from "next/server"
 
-const AccessToken = twilio.jwt.AccessToken
-const VoiceGrant = AccessToken.VoiceGrant
+const accountSid = process.env.TWILIO_ACCOUNT_SID || "AC86b70352ccc2023f8cfa305712b474cd"
+const apiKey = process.env.TWILIO_API_KEY || "SK0745de76832af1b501e871e36bc467ae"
+const apiSecret = process.env.TWILIO_API_SECRET || "Ge1LcneXSoJmREekmK7wmoqsn4E1qOz9"
+const appSid = process.env.TWILIO_TWIML_APP_SID || "APe32c170c79e356138bd267904ffc6814"
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const accountSid = process.env.TWILIO_ACCOUNT_SID || "AC86b70352ccc2023f8cfa305712b474cd"
-    const apiKey = process.env.TWILIO_API_KEY || "SK0745de76832af1b501e871e36bc467ae"
-    const apiSecret = process.env.TWILIO_API_SECRET || "Ge1LcneXSoJmREekmK7wmoqsn4E1qOz9"
-    const twimlAppSid = process.env.TWILIO_TWIML_APP_SID || "AP123456789"
+    if (!accountSid || !apiKey || !apiSecret || !appSid) {
+      return NextResponse.json({ success: false, error: "Twilio credentials not configured" }, { status: 500 })
+    }
 
-    // Create an access token
+    const identity = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+    const AccessToken = require("twilio").jwt.AccessToken
+    const VoiceGrant = AccessToken.VoiceGrant
+
     const accessToken = new AccessToken(accountSid, apiKey, apiSecret, {
-      identity: `user_${Date.now()}`,
-      ttl: 3600, // 1 hour
+      identity: identity,
     })
 
-    // Create a Voice grant and add to token
     const voiceGrant = new VoiceGrant({
-      outgoingApplicationSid: twimlAppSid,
+      outgoingApplicationSid: appSid, 
       incomingAllow: true,
     })
 
     accessToken.addGrant(voiceGrant)
 
+    const token = accessToken.toJwt()
+
     return NextResponse.json({
       success: true,
-      token: accessToken.toJwt(),
-      identity: accessToken.identity,
+      token: token,
+      identity: identity,
     })
   } catch (error) {
-    console.error("Token generation error:", error)
+    console.error("Error generating access token:", error)
     return NextResponse.json({ success: false, error: "Failed to generate access token" }, { status: 500 })
   }
 }
