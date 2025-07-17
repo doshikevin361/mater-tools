@@ -8,9 +8,7 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December"
 ]
 
-// MASSIVE User Agents Pool for Maximum Variety
 const USER_AGENTS = [
-  // Chrome Windows
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
@@ -37,22 +35,17 @@ const USER_AGENTS = [
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Safari/605.1.15',
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
   
-  // Edge Windows
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0',
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36 Edg/119.0.0.0',
   
-  // Chrome Linux
   'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
   
-  // Chrome Mobile (for variation)
   'Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
   'Mozilla/5.0 (iPhone; CPU iPhone OS 17_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
 ]
 
-// Enhanced Screen Resolutions with Real Device Profiles
 const SCREEN_PROFILES = [
-  // Desktop Common
   { width: 1920, height: 1080, mobile: false, deviceType: 'desktop', name: 'Full HD' },
   { width: 1366, height: 768, mobile: false, deviceType: 'desktop', name: 'HD Laptop' },
   { width: 1440, height: 900, mobile: false, deviceType: 'desktop', name: 'MacBook Pro' },
@@ -64,17 +57,14 @@ const SCREEN_PROFILES = [
   { width: 1280, height: 800, mobile: false, deviceType: 'desktop', name: 'WXGA' },
   { width: 1024, height: 768, mobile: false, deviceType: 'desktop', name: 'XGA' },
   
-  // Laptop/Tablet
   { width: 1024, height: 1366, mobile: true, deviceType: 'tablet', name: 'iPad Portrait' },
   { width: 768, height: 1024, mobile: true, deviceType: 'tablet', name: 'iPad Mini' },
   { width: 820, height: 1180, mobile: true, deviceType: 'tablet', name: 'iPad Air' },
   
-  // Mobile (occasionally for variation)
   { width: 390, height: 844, mobile: true, deviceType: 'mobile', name: 'iPhone 12' },
   { width: 414, height: 896, mobile: true, deviceType: 'mobile', name: 'iPhone 11' }
 ]
 
-// Enhanced Operating Systems and Platform Data
 const OS_PROFILES = [
   {
     platform: 'Win32',
@@ -106,20 +96,16 @@ const OS_PROFILES = [
   }
 ]
 
-// Enhanced Stealth Configuration
 const STEALTH_CONFIG = {
-  // Timing Strategy
   maxAccountsPerDay: 5,
-  minDelayBetweenAccounts: 30 * 60 * 1000, // 30 minutes minimum
-  maxDelayBetweenAccounts: 4 * 60 * 60 * 1000, // 4 hours maximum
+  minDelayBetweenAccounts: 30 * 60 * 1000, 
+  maxDelayBetweenAccounts: 4 * 60 * 60 * 1000, 
   sessionVariation: true,
   
-  // Browser Strategy  
   randomizeFingerprints: true,
   simulateHumanBehavior: true,
-  preBrowsingChance: 0.7, // 70% chance of pre-browsing
+  preBrowsingChance: 0.7, 
   
-  // Anti-Detection
   removeAutomationTraces: true,
   spoofHardwareSpecs: true,
   randomizePlugins: true,
@@ -127,25 +113,21 @@ const STEALTH_CONFIG = {
   spoofCanvas: true,
   fakeAudio: true,
   
-  // Session Behavior
   simulateTypos: true,
   humanMouseMovements: true,
   realTimingPatterns: true,
-  headlessMode: true // Set to true for production
+  headlessMode: 'new', 
 }
 
-// Debug logging
 function log(level, message, data = null) {
   const timestamp = new Date().toLocaleTimeString()
   console.log(`[${timestamp}] [${level.toUpperCase()}] ${message}`)
   if (data) console.log(`[${timestamp}] [DATA]`, data)
 }
 
-// Enhanced human-like wait with realistic patterns
 const humanWait = (minMs = 1500, maxMs = 4000) => {
-  // More realistic human delay patterns
   const patterns = [
-    () => minMs + Math.random() * (maxMs - minMs), // Normal
+    () => minMs + Math.random() * (maxMs - minMs), 
     () => minMs + Math.random() * (maxMs - minMs) * 1.5, // Slower (thinking)
     () => minMs * 0.7 + Math.random() * (maxMs - minMs) * 0.8, // Faster (confident)
     () => minMs + Math.random() * (maxMs - minMs) + Math.random() * 2000 // Distracted
@@ -158,13 +140,11 @@ const humanWait = (minMs = 1500, maxMs = 4000) => {
   return new Promise(resolve => setTimeout(resolve, delay))
 }
 
-// Generate realistic device profile
 function generateDeviceProfile() {
   const screenProfile = SCREEN_PROFILES[Math.floor(Math.random() * SCREEN_PROFILES.length)]
   const osProfile = OS_PROFILES[Math.floor(Math.random() * OS_PROFILES.length)]
   const userAgent = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)]
   
-  // Hardware specs based on device type
   const hardwareSpecs = {
     cores: screenProfile.deviceType === 'mobile' ? [4, 6, 8][Math.floor(Math.random() * 3)] : [4, 6, 8, 12, 16][Math.floor(Math.random() * 5)],
     memory: screenProfile.deviceType === 'mobile' ? [4, 6, 8][Math.floor(Math.random() * 3)] : [8, 16, 32][Math.floor(Math.random() * 3)],
@@ -255,7 +235,6 @@ function generateAudioNoise() {
   }
 }
 
-// MAXIMUM STEALTH BROWSER - No Proxy Required
 async function createMaximumStealthBrowser() {
   log('info', '🎭 Creating MAXIMUM stealth browser (No Proxy Strategy)...')
   
@@ -273,7 +252,6 @@ async function createMaximumStealthBrowser() {
       '--no-zygote',
       '--disable-gpu',
       
-      // MAXIMUM Anti-detection flags
       '--disable-blink-features=AutomationControlled',
       '--disable-web-security',
       '--disable-features=VizDisplayCompositor',
@@ -302,7 +280,6 @@ async function createMaximumStealthBrowser() {
       '--disable-password-generation',
       '--disable-password-manager-reauthentication',
       
-      // Additional stealth
       '--metrics-recording-only',
       '--no-default-browser-check',
       '--safebrowsing-disable-auto-update',
@@ -323,11 +300,9 @@ async function createMaximumStealthBrowser() {
       '--hide-scrollbars',
       '--mute-audio',
       
-      // Memory optimization
       '--memory-pressure-off',
       '--max_old_space_size=4096',
       
-      // Disable automation indicators
       '--disable-blink-features=AutomationControlled',
       '--exclude-switches=enable-automation',
       '--disable-extensions-http-throttling',
@@ -375,7 +350,6 @@ async function createMaximumStealthBrowser() {
       } catch (e) {}
     })
 
-    // === ENHANCED CHROME OBJECT ===
     window.chrome = {
       runtime: {
         onConnect: null,
@@ -492,7 +466,6 @@ async function createMaximumStealthBrowser() {
       })
     })
 
-    // === ENHANCED PERMISSIONS ===
     const originalQuery = window.navigator.permissions.query
     window.navigator.permissions.query = (parameters) => {
       const permissionStates = {
@@ -508,7 +481,6 @@ async function createMaximumStealthBrowser() {
       })
     }
 
-    // === BATTERY API SPOOFING ===
     if (navigator.getBattery) {
       navigator.getBattery = () => Promise.resolve({
         charging: Math.random() > 0.3,
@@ -520,14 +492,12 @@ async function createMaximumStealthBrowser() {
       })
     }
 
-    // === CREDENTIALS API SPOOFING ===
     if (navigator.credentials) {
       navigator.credentials.store = () => Promise.resolve()
       navigator.credentials.create = () => Promise.resolve()
       navigator.credentials.get = () => Promise.resolve(null)
     }
 
-    // === ENHANCED GEOLOCATION SPOOFING ===
     if (navigator.geolocation) {
       const originalGetCurrentPosition = navigator.geolocation.getCurrentPosition
       navigator.geolocation.getCurrentPosition = function(success, error, options) {
@@ -549,7 +519,7 @@ async function createMaximumStealthBrowser() {
       navigator.geolocation.clearWatch = function(id) {}
     }
 
-    // === WEBGL FINGERPRINT SPOOFING ===
+
     const getParameter = WebGLRenderingContext.prototype.getParameter
     WebGLRenderingContext.prototype.getParameter = function(parameter) {
       if (parameter === 37445) return profile.webgl.vendor // UNMASKED_VENDOR_WEBGL
@@ -559,7 +529,6 @@ async function createMaximumStealthBrowser() {
       return getParameter.apply(this, arguments)
     }
 
-    // === CANVAS FINGERPRINT PROTECTION ===
     const originalToDataURL = HTMLCanvasElement.prototype.toDataURL
     const originalGetImageData = CanvasRenderingContext2D.prototype.getImageData
     
@@ -593,7 +562,6 @@ async function createMaximumStealthBrowser() {
       return imageData
     }
 
-    // === AUDIO CONTEXT FINGERPRINT PROTECTION ===
     const originalAudioContext = window.AudioContext || window.webkitAudioContext
     if (originalAudioContext) {
       window.AudioContext = function() {
@@ -647,7 +615,7 @@ async function createMaximumStealthBrowser() {
       }
     }
 
-    // === SCREEN SPOOFING ===
+
     Object.defineProperty(screen, 'width', {
       get: () => profile.screen.width
     })
@@ -679,7 +647,6 @@ async function createMaximumStealthBrowser() {
       }
     })
 
-    // === ENHANCED MOUSE ENTROPY ===
     let mouseEntropyData = []
     let isMouseMoving = false
     
@@ -697,7 +664,6 @@ async function createMaximumStealthBrowser() {
       setTimeout(() => { isMouseMoving = false }, 100)
     })
 
-    // === ENHANCED KEYBOARD ENTROPY ===
     let keyEntropyData = []
     let keyTimings = []
     
@@ -734,7 +700,6 @@ async function createMaximumStealthBrowser() {
       }
     })
 
-    // === REALISTIC SCROLL BEHAVIOR ===
     let scrollBehavior = {
       lastScrollTime: 0,
       scrollDirection: 1,
@@ -768,7 +733,6 @@ async function createMaximumStealthBrowser() {
       }
     })
 
-    // === REALISTIC PAGE VISIBILITY CHANGES ===
     let pageVisibilityState = 'visible'
     let lastVisibilityChange = Date.now()
     
@@ -780,7 +744,6 @@ async function createMaximumStealthBrowser() {
       get: () => pageVisibilityState === 'hidden'
     })
 
-    // === REALISTIC NETWORK INFORMATION ===
     if (navigator.connection || navigator.mozConnection || navigator.webkitConnection) {
       const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection
       

@@ -35,7 +35,7 @@ const STEALTH_CONFIG = {
   maxAccountsPerDay: 20,
   minDelayBetweenAccounts: 30 * 60 * 1000, // 30 minutes
   maxDelayBetweenAccounts: 2 * 60 * 60 * 1000, // 2 hours
-  headlessMode: false, // Set to true for production
+  headlessMode: 'new', // Set to true for production
   simulateHumanBehavior: true,
   maxRetries: 3
 }
