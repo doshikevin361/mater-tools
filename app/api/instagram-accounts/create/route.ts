@@ -140,13 +140,11 @@ const humanWait = (minMs = 1500, maxMs = 4000) => {
   return new Promise(resolve => setTimeout(resolve, delay))
 }
 
-// Generate realistic device profile
 function generateDeviceProfile() {
   const screenProfile = SCREEN_PROFILES[Math.floor(Math.random() * SCREEN_PROFILES.length)]
   const osProfile = OS_PROFILES[Math.floor(Math.random() * OS_PROFILES.length)]
   const userAgent = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)]
   
-  // Hardware specs based on device type
   const hardwareSpecs = {
     cores: screenProfile.deviceType === 'mobile' ? [4, 6, 8][Math.floor(Math.random() * 3)] : [4, 6, 8, 12, 16][Math.floor(Math.random() * 5)],
     memory: screenProfile.deviceType === 'mobile' ? [4, 6, 8][Math.floor(Math.random() * 3)] : [8, 16, 32][Math.floor(Math.random() * 3)],
@@ -237,7 +235,6 @@ function generateAudioNoise() {
   }
 }
 
-// MAXIMUM STEALTH BROWSER - No Proxy Required
 async function createMaximumStealthBrowser() {
   log('info', '🎭 Creating MAXIMUM stealth browser (No Proxy Strategy)...')
   
@@ -255,7 +252,6 @@ async function createMaximumStealthBrowser() {
       '--no-zygote',
       '--disable-gpu',
       
-      // MAXIMUM Anti-detection flags
       '--disable-blink-features=AutomationControlled',
       '--disable-web-security',
       '--disable-features=VizDisplayCompositor',
@@ -284,7 +280,6 @@ async function createMaximumStealthBrowser() {
       '--disable-password-generation',
       '--disable-password-manager-reauthentication',
       
-      // Additional stealth
       '--metrics-recording-only',
       '--no-default-browser-check',
       '--safebrowsing-disable-auto-update',
@@ -305,11 +300,9 @@ async function createMaximumStealthBrowser() {
       '--hide-scrollbars',
       '--mute-audio',
       
-      // Memory optimization
       '--memory-pressure-off',
       '--max_old_space_size=4096',
       
-      // Disable automation indicators
       '--disable-blink-features=AutomationControlled',
       '--exclude-switches=enable-automation',
       '--disable-extensions-http-throttling',
@@ -329,9 +322,12 @@ async function createMaximumStealthBrowser() {
 
   log('info', '🛡️ Applying MAXIMUM stealth measures...')
 
+  // COMPREHENSIVE stealth injection
   await page.evaluateOnNewDocument((profile) => {
+    // === COMPLETE AUTOMATION TRACE REMOVAL ===
     Object.defineProperty(navigator, 'webdriver', { get: () => undefined })
     
+    // Remove ALL possible automation indicators
     const automationProps = [
       '__webdriver_script_fn', '__webdriver_script_func', '__webdriver_script_function',
       '__fxdriver_id', '__driver_evaluate', '__webdriver_evaluate', '__selenium_evaluate',
@@ -354,7 +350,6 @@ async function createMaximumStealthBrowser() {
       } catch (e) {}
     })
 
-    // === ENHANCED CHROME OBJECT ===
     window.chrome = {
       runtime: {
         onConnect: null,
@@ -471,7 +466,6 @@ async function createMaximumStealthBrowser() {
       })
     })
 
-    // === ENHANCED PERMISSIONS ===
     const originalQuery = window.navigator.permissions.query
     window.navigator.permissions.query = (parameters) => {
       const permissionStates = {
@@ -487,7 +481,6 @@ async function createMaximumStealthBrowser() {
       })
     }
 
-    // === BATTERY API SPOOFING ===
     if (navigator.getBattery) {
       navigator.getBattery = () => Promise.resolve({
         charging: Math.random() > 0.3,
@@ -499,14 +492,12 @@ async function createMaximumStealthBrowser() {
       })
     }
 
-    // === CREDENTIALS API SPOOFING ===
     if (navigator.credentials) {
       navigator.credentials.store = () => Promise.resolve()
       navigator.credentials.create = () => Promise.resolve()
       navigator.credentials.get = () => Promise.resolve(null)
     }
 
-    // === ENHANCED GEOLOCATION SPOOFING ===
     if (navigator.geolocation) {
       const originalGetCurrentPosition = navigator.geolocation.getCurrentPosition
       navigator.geolocation.getCurrentPosition = function(success, error, options) {
@@ -528,7 +519,7 @@ async function createMaximumStealthBrowser() {
       navigator.geolocation.clearWatch = function(id) {}
     }
 
-    // === WEBGL FINGERPRINT SPOOFING ===
+
     const getParameter = WebGLRenderingContext.prototype.getParameter
     WebGLRenderingContext.prototype.getParameter = function(parameter) {
       if (parameter === 37445) return profile.webgl.vendor // UNMASKED_VENDOR_WEBGL
@@ -538,7 +529,6 @@ async function createMaximumStealthBrowser() {
       return getParameter.apply(this, arguments)
     }
 
-    // === CANVAS FINGERPRINT PROTECTION ===
     const originalToDataURL = HTMLCanvasElement.prototype.toDataURL
     const originalGetImageData = CanvasRenderingContext2D.prototype.getImageData
     
@@ -572,7 +562,6 @@ async function createMaximumStealthBrowser() {
       return imageData
     }
 
-    // === AUDIO CONTEXT FINGERPRINT PROTECTION ===
     const originalAudioContext = window.AudioContext || window.webkitAudioContext
     if (originalAudioContext) {
       window.AudioContext = function() {
@@ -626,7 +615,7 @@ async function createMaximumStealthBrowser() {
       }
     }
 
-    // === SCREEN SPOOFING ===
+
     Object.defineProperty(screen, 'width', {
       get: () => profile.screen.width
     })
@@ -658,7 +647,6 @@ async function createMaximumStealthBrowser() {
       }
     })
 
-    // === ENHANCED MOUSE ENTROPY ===
     let mouseEntropyData = []
     let isMouseMoving = false
     
@@ -676,7 +664,6 @@ async function createMaximumStealthBrowser() {
       setTimeout(() => { isMouseMoving = false }, 100)
     })
 
-    // === ENHANCED KEYBOARD ENTROPY ===
     let keyEntropyData = []
     let keyTimings = []
     
@@ -713,7 +700,6 @@ async function createMaximumStealthBrowser() {
       }
     })
 
-    // === REALISTIC SCROLL BEHAVIOR ===
     let scrollBehavior = {
       lastScrollTime: 0,
       scrollDirection: 1,
@@ -747,7 +733,6 @@ async function createMaximumStealthBrowser() {
       }
     })
 
-    // === REALISTIC PAGE VISIBILITY CHANGES ===
     let pageVisibilityState = 'visible'
     let lastVisibilityChange = Date.now()
     
@@ -759,7 +744,6 @@ async function createMaximumStealthBrowser() {
       get: () => pageVisibilityState === 'hidden'
     })
 
-    // === REALISTIC NETWORK INFORMATION ===
     if (navigator.connection || navigator.mozConnection || navigator.webkitConnection) {
       const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection
       
