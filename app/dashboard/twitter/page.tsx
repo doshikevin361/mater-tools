@@ -21,11 +21,12 @@ import {
   Repeat2,
   TrendingUp,
   Target,
-  Play,
-  Pause,
   Hash,
   Activity,
+  RefreshCw,
+  Zap,
 } from "lucide-react"
+import { toast } from "@/hooks/use-toast"
 
 interface TwitterCampaign {
   id: string
@@ -37,8 +38,18 @@ interface TwitterCampaign {
   currentCount: number
   status: "active" | "paused" | "completed" | "failed"
   cost: number
+  smmOrderId?: number
   createdAt: string
   completedAt?: string
+}
+
+interface SMMService {
+  service: number
+  name: string
+  rate: string
+  min: string
+  max: string
+  description?: string
 }
 
 interface KeywordTrend {
@@ -51,8 +62,10 @@ interface KeywordTrend {
 
 export default function TwitterPage() {
   const [campaigns, setCampaigns] = useState<TwitterCampaign[]>([])
+  const [services, setServices] = useState<SMMService[]>([])
   const [keywordTrends, setKeywordTrends] = useState<KeywordTrend[]>([])
   const [loading, setLoading] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
   const [user, setUser] = useState<any>(null)
 
   // Form states
@@ -83,18 +96,29 @@ export default function TwitterPage() {
     const userInfo = getUserInfo()
     if (userInfo) {
       setUser(userInfo)
-      loadCampaigns()
+      loadCampaigns(userInfo._id || userInfo.id)
+      fetchServices()
       loadKeywordTrends()
     }
   }, [])
 
-  // Load existing campaigns
-  const loadCampaigns = async () => {
+  const fetchServices = async () => {
     try {
-      const userInfo = getUserInfo()
-      if (!userInfo?._id) return
+      const response = await fetch("/api/smm/services?platform=twitter")
+      const data = await response.json()
 
-      const response = await fetch(`/api/twitter/campaigns?userId=${userInfo._id}`)
+      if (data.success) {
+        setServices(data.services)
+      }
+    } catch (error) {
+      console.error("Error fetching services:", error)
+    }
+  }
+
+  // Load existing campaigns
+  const loadCampaigns = async (userId: string) => {
+    try {
+      const response = await fetch(`/api/twitter/campaigns?userId=${userId}`)
       const result = await response.json()
 
       if (result.success) {
@@ -119,6 +143,34 @@ export default function TwitterPage() {
     }
   }
 
+  const refreshCampaignStatus = async (campaignId: string) => {
+    if (!user) return
+
+    setRefreshing(true)
+    try {
+      const response = await fetch(`/api/smm/status?campaignId=${campaignId}&userId=${user._id || user.id}`)
+      const data = await response.json()
+
+      if (data.success) {
+        setCampaigns((prev) => prev.map((c) => (c.id === campaignId ? { ...c, ...data.campaign } : c)))
+
+        toast({
+          title: "Status Updated",
+          description: "Campaign status has been refreshed successfully.",
+        })
+      }
+    } catch (error) {
+      console.error("Error refreshing status:", error)
+      toast({
+        title: "Error",
+        description: "Failed to refresh campaign status.",
+        variant: "destructive",
+      })
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
   // Create new campaign
   const handleCreateCampaign = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -126,82 +178,95 @@ export default function TwitterPage() {
 
     setLoading(true)
     try {
-      const campaignData: any = {
-        userId: user._id,
-        name: campaignName,
-        type: campaignType,
-        targetCount: Number.parseInt(targetCount),
-      }
-
-      if (campaignType === "keyword_trading") {
-        campaignData.keywords = keywords
-          .split(",")
-          .map((k) => k.trim())
-          .filter((k) => k)
-      } else {
-        campaignData.targetUrl = targetUrl
-      }
-
-      const response = await fetch("/api/twitter/campaigns", {
+      const response = await fetch("/api/smm/order", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(campaignData),
+        body: JSON.stringify({
+          userId: user._id || user.id,
+          platform: "twitter",
+          serviceType: campaignType,
+          targetUrl: campaignType === "keyword_trading" ? undefined : targetUrl,
+          quantity: Number.parseInt(targetCount),
+          campaignName,
+          keywords:
+            campaignType === "keyword_trading"
+              ? keywords
+                  .split(",")
+                  .map((k) => k.trim())
+                  .filter((k) => k)
+              : undefined,
+        }),
       })
 
-      const result = await response.json()
+      const data = await response.json()
 
-      if (result.success) {
-        setCampaigns([result.campaign, ...campaigns])
+      if (data.success) {
+        setCampaigns([data.campaign, ...campaigns])
+
+        // Update user balance
+        const updatedUser = { ...user, balance: user.balance - data.campaign.cost }
+        localStorage.setItem("user", JSON.stringify(updatedUser))
+        setUser(updatedUser)
+
         // Reset form
         setCampaignName("")
         setTargetUrl("")
         setTargetCount("")
         setKeywords("")
-        alert("Campaign created successfully!")
+
+        toast({
+          title: "Campaign Created!",
+          description: "Your Twitter campaign has been started successfully.",
+        })
       } else {
-        alert(result.message || "Failed to create campaign")
+        toast({
+          title: "Error",
+          description: data.message || "Failed to create campaign",
+          variant: "destructive",
+        })
       }
     } catch (error) {
       console.error("Error creating campaign:", error)
-      alert("Failed to create campaign")
+      toast({
+        title: "Error",
+        description: "Failed to create campaign",
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
   }
 
-  // Toggle campaign status
-  const toggleCampaign = async (campaignId: string, action: "pause" | "resume") => {
-    try {
-      const response = await fetch(`/api/twitter/campaigns/${campaignId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ action }),
-      })
+  const getServiceForType = (type: string): SMMService | null => {
+    return (
+      services.find((service) => {
+        const serviceName = service.name.toLowerCase()
+        const typeKeywords = {
+          followers: ["followers", "follow"],
+          likes: ["likes", "like"],
+          retweets: ["retweets", "retweet", "rt"],
+          comments: ["comments", "comment", "reply"],
+          keyword_trading: ["keyword", "trend", "trading"],
+        }
 
-      const result = await response.json()
-
-      if (result.success) {
-        loadCampaigns() // Reload campaigns
-      }
-    } catch (error) {
-      console.error("Error toggling campaign:", error)
-    }
+        const keywords = typeKeywords[type] || [type]
+        return keywords.some((keyword) => serviceName.includes(keyword))
+      }) || null
+    )
   }
 
-  // Calculate pricing
-  const calculatePrice = (type: string, count: number) => {
-    const rates = {
-      followers: 0.1, // ₹0.10 per follower
-      likes: 0.03, // ₹0.03 per like
-      retweets: 0.08, // ₹0.08 per retweet
-      comments: 0.15, // ₹0.15 per comment
-      keyword_trading: 1.0, // ₹1.00 per keyword per day
+  const calculateCost = (type: string, quantity: number): number => {
+    if (type === "keyword_trading") {
+      return quantity * 1.0 // ₹1.00 per keyword per day
     }
-    return (rates[type as keyof typeof rates] * count).toFixed(2)
+
+    const service = getServiceForType(type)
+    if (!service) return 0
+
+    const rate = Number.parseFloat(service.rate)
+    return Math.max((rate * quantity) / 1000, 0.01)
   }
 
   const getTypeIcon = (type: string) => {
@@ -247,6 +312,9 @@ export default function TwitterPage() {
     }
   }
 
+  const currentService = getServiceForType(campaignType)
+  const estimatedCost = targetCount ? calculateCost(campaignType, Number.parseInt(targetCount)) : 0
+
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -273,7 +341,7 @@ export default function TwitterPage() {
         </div>
         <div className="text-right">
           <p className="text-sm text-muted-foreground">Account Balance</p>
-          <p className="text-2xl font-bold text-green-600">₹{user.balance}</p>
+          <p className="text-2xl font-bold text-green-600">₹{user?.balance?.toFixed(2) || "0.00"}</p>
         </div>
       </div>
 
@@ -289,7 +357,10 @@ export default function TwitterPage() {
         <TabsContent value="create" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Create Twitter Campaign</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="h-5 w-5" />
+                Create Twitter Campaign
+              </CardTitle>
               <CardDescription>
                 Boost your Twitter presence with followers, engagement, or start keyword trading
               </CardDescription>
@@ -390,34 +461,64 @@ export default function TwitterPage() {
                       onChange={(e) => setTargetCount(e.target.value)}
                       required
                       min="1"
+                      max={currentService?.max || "100000"}
                     />
+                    {currentService && campaignType !== "keyword_trading" && (
+                      <p className="text-xs text-gray-600">
+                        Min: {currentService.min} | Max: {currentService.max}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
                     <Label>Estimated Cost</Label>
                     <div className="flex items-center space-x-2">
-                      <span className="text-2xl font-bold text-green-600">
-                        ₹{targetCount ? calculatePrice(campaignType, Number.parseInt(targetCount)) : "0.00"}
-                      </span>
+                      <span className="text-2xl font-bold text-green-600">₹{estimatedCost.toFixed(2)}</span>
                       <span className="text-sm text-muted-foreground">
-                        (₹
-                        {campaignType === "followers"
-                          ? "0.10"
-                          : campaignType === "likes"
-                            ? "0.03"
-                            : campaignType === "retweets"
-                              ? "0.08"
-                              : campaignType === "comments"
-                                ? "0.15"
-                                : "1.00"}{" "}
-                        per {campaignType === "keyword_trading" ? "keyword/day" : campaignType.slice(0, -1)})
+                        {campaignType === "keyword_trading"
+                          ? "(₹1.00 per keyword/day)"
+                          : currentService
+                            ? `(₹${currentService.rate} per 1000)`
+                            : ""}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <Button type="submit" disabled={loading} className="w-full">
-                  {loading ? "Creating Campaign..." : "Create Campaign"}
+                {currentService && campaignType !== "keyword_trading" && (
+                  <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-4 rounded-lg border border-blue-200">
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-gray-900">Service Details</h4>
+                      <p className="text-sm text-gray-600">{currentService.name}</p>
+                      <div className="text-sm text-gray-600">
+                        Rate: ₹{currentService.rate} per 1000 | Estimated delivery: 1-3 days
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  disabled={
+                    loading ||
+                    (campaignType !== "keyword_trading" && !currentService) ||
+                    (user?.balance || 0) < estimatedCost
+                  }
+                  className="w-full"
+                >
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Creating Campaign...
+                    </>
+                  ) : (user?.balance || 0) < estimatedCost ? (
+                    "Insufficient Balance"
+                  ) : (
+                    <>
+                      <Zap className="mr-2 h-4 w-4" />
+                      Create Campaign (₹{estimatedCost.toFixed(2)})
+                    </>
+                  )}
                 </Button>
               </form>
             </CardContent>
@@ -479,25 +580,14 @@ export default function TwitterPage() {
                           </TableCell>
                           <TableCell>₹{campaign.cost.toFixed(2)}</TableCell>
                           <TableCell>
-                            <div className="flex space-x-2">
-                              {campaign.status === "active" ? (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => toggleCampaign(campaign.id, "pause")}
-                                >
-                                  <Pause className="h-4 w-4" />
-                                </Button>
-                              ) : campaign.status === "paused" ? (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => toggleCampaign(campaign.id, "resume")}
-                                >
-                                  <Play className="h-4 w-4" />
-                                </Button>
-                              ) : null}
-                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => refreshCampaignStatus(campaign.id)}
+                              disabled={refreshing}
+                            >
+                              <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}

@@ -7,12 +7,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { postUrl, postContent, commentStyle, sentiment, platforms, accountCount } = body
 
-    // Validate required fields
     if (!postUrl || !platforms || platforms.length === 0) {
       return NextResponse.json({ error: "Post URL and platforms are required" }, { status: 400 })
     }
 
-    // Detect platform from URL if not specified
     let detectedPlatform = "instagram"
     if (postUrl.includes("facebook.com")) detectedPlatform = "facebook"
     else if (postUrl.includes("twitter.com") || postUrl.includes("x.com")) detectedPlatform = "twitter"

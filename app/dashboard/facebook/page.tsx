@@ -14,15 +14,14 @@ import {
   Users,
   TrendingUp,
   DollarSign,
-  Play,
-  Pause,
   BarChart3,
   Target,
   Zap,
   Plus,
-  Eye,
   Heart,
   MessageCircle,
+  Share2,
+  RefreshCw,
 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 
@@ -30,24 +29,36 @@ interface FacebookCampaign {
   id: string
   name: string
   type: string
+  targetUrl: string
   targetCount: number
   currentCount: number
-  status: "active" | "paused" | "completed"
+  status: "active" | "paused" | "completed" | "failed"
   cost: number
-  engagement: number
-  reach: number
+  smmOrderId?: number
   createdAt: string
+  estimatedDelivery?: string
+}
+
+interface SMMService {
+  service: number
+  name: string
+  rate: string
+  min: string
+  max: string
+  description?: string
 }
 
 export default function FacebookPage() {
   const [campaigns, setCampaigns] = useState<FacebookCampaign[]>([])
+  const [services, setServices] = useState<SMMService[]>([])
   const [loading, setLoading] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
   const [stats, setStats] = useState({
     totalCampaigns: 0,
-    totalFollowers: 12500,
-    totalEngagement: 8750,
+    totalFollowers: 0,
+    totalEngagement: 0,
     totalSpent: 0,
-    growthRate: 15.2,
+    growthRate: 0,
   })
 
   // Form state
@@ -55,36 +66,87 @@ export default function FacebookPage() {
   const [growthType, setGrowthType] = useState("followers")
   const [targetCount, setTargetCount] = useState("")
   const [pageUrl, setPageUrl] = useState("")
+  const [selectedService, setSelectedService] = useState<SMMService | null>(null)
+
+  const [user, setUser] = useState<any>(null)
 
   useEffect(() => {
-    fetchCampaigns()
+    const userData = localStorage.getItem("user")
+    if (userData) {
+      const parsedUser = JSON.parse(userData)
+      setUser(parsedUser)
+      fetchCampaigns(parsedUser._id || parsedUser.id)
+      fetchServices()
+    }
   }, [])
 
-  const fetchCampaigns = async () => {
+  const fetchServices = async () => {
     try {
-      const userData = localStorage.getItem("user")
-      if (!userData) return
+      const response = await fetch("/api/smm/services?platform=facebook")
+      const data = await response.json()
 
-      const user = JSON.parse(userData)
-      const userId = user._id || user.id
+      if (data.success) {
+        setServices(data.services)
+      }
+    } catch (error) {
+      console.error("Error fetching services:", error)
+    }
+  }
 
+  const fetchCampaigns = async (userId: string) => {
+    try {
       const response = await fetch(`/api/facebook/campaigns?userId=${userId}`)
       if (response.ok) {
         const data = await response.json()
         setCampaigns(data.campaigns || [])
-        setStats((prev) => ({
-          ...prev,
-          totalCampaigns: data.campaigns?.length || 0,
-          totalSpent: data.campaigns?.reduce((sum: number, c: FacebookCampaign) => sum + c.cost, 0) || 0,
-        }))
+
+        // Calculate stats
+        const campaigns = data.campaigns || []
+        setStats({
+          totalCampaigns: campaigns.length,
+          totalFollowers: campaigns.filter((c) => c.type === "followers").reduce((sum, c) => sum + c.currentCount, 0),
+          totalEngagement: campaigns
+            .filter((c) => ["likes", "comments", "shares"].includes(c.type))
+            .reduce((sum, c) => sum + c.currentCount, 0),
+          totalSpent: campaigns.reduce((sum, c) => sum + c.cost, 0),
+          growthRate: campaigns.length > 0 ? 15.2 : 0,
+        })
       }
     } catch (error) {
       console.error("Error fetching campaigns:", error)
     }
   }
 
+  const refreshCampaignStatus = async (campaignId: string) => {
+    if (!user) return
+
+    setRefreshing(true)
+    try {
+      const response = await fetch(`/api/smm/status?campaignId=${campaignId}&userId=${user._id || user.id}`)
+      const data = await response.json()
+
+      if (data.success) {
+        setCampaigns((prev) => prev.map((c) => (c.id === campaignId ? { ...c, ...data.campaign } : c)))
+
+        toast({
+          title: "Status Updated",
+          description: "Campaign status has been refreshed successfully.",
+        })
+      }
+    } catch (error) {
+      console.error("Error refreshing status:", error)
+      toast({
+        title: "Error",
+        description: "Failed to refresh campaign status.",
+        variant: "destructive",
+      })
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
   const createCampaign = async () => {
-    if (!campaignName || !targetCount || !pageUrl) {
+    if (!campaignName || !targetCount || !pageUrl || !user) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields",
@@ -95,25 +157,22 @@ export default function FacebookPage() {
 
     setLoading(true)
     try {
-      const userData = localStorage.getItem("user")
-      if (!userData) throw new Error("User not logged in")
-
-      const user = JSON.parse(userData)
-      const userId = user._id || user.id
-
-      const response = await fetch("/api/facebook/campaigns", {
+      const response = await fetch("/api/smm/order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId,
-          name: campaignName,
-          type: growthType,
-          targetCount: Number.parseInt(targetCount),
-          pageUrl,
+          userId: user._id || user.id,
+          platform: "facebook",
+          serviceType: growthType,
+          targetUrl: pageUrl,
+          quantity: Number.parseInt(targetCount),
+          campaignName,
         }),
       })
 
-      if (response.ok) {
+      const data = await response.json()
+
+      if (data.success) {
         toast({
           title: "Campaign Created!",
           description: "Your Facebook growth campaign has been started successfully.",
@@ -124,15 +183,20 @@ export default function FacebookPage() {
         setTargetCount("")
         setPageUrl("")
 
-        // Refresh campaigns
-        fetchCampaigns()
+        // Refresh campaigns and user balance
+        fetchCampaigns(user._id || user.id)
+
+        // Update user balance in localStorage
+        const updatedUser = { ...user, balance: user.balance - data.campaign.cost }
+        localStorage.setItem("user", JSON.stringify(updatedUser))
+        setUser(updatedUser)
       } else {
-        throw new Error("Failed to create campaign")
+        throw new Error(data.message || "Failed to create campaign")
       }
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to create campaign. Please try again.",
+        description: error.message || "Failed to create campaign. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -140,32 +204,33 @@ export default function FacebookPage() {
     }
   }
 
-  const toggleCampaign = async (campaignId: string, currentStatus: string) => {
-    try {
-      const newStatus = currentStatus === "active" ? "paused" : "active"
+  const getServiceForType = (type: string): SMMService | null => {
+    return (
+      services.find((service) => {
+        const serviceName = service.name.toLowerCase()
+        const typeKeywords = {
+          followers: ["followers", "follow", "fan"],
+          likes: ["likes", "like"],
+          comments: ["comments", "comment"],
+          shares: ["shares", "share"],
+        }
 
-      const response = await fetch(`/api/facebook/campaigns/${campaignId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
-      })
-
-      if (response.ok) {
-        setCampaigns((prev) => prev.map((c) => (c.id === campaignId ? { ...c, status: newStatus as any } : c)))
-
-        toast({
-          title: "Campaign Updated",
-          description: `Campaign ${newStatus === "active" ? "resumed" : "paused"} successfully.`,
-        })
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update campaign status.",
-        variant: "destructive",
-      })
-    }
+        const keywords = typeKeywords[type] || [type]
+        return keywords.some((keyword) => serviceName.includes(keyword))
+      }) || null
+    )
   }
+
+  const calculateCost = (type: string, quantity: number): number => {
+    const service = getServiceForType(type)
+    if (!service) return 0
+
+    const rate = Number.parseFloat(service.rate)
+    return Math.max((rate * quantity) / 1000, 0.01)
+  }
+
+  const currentService = getServiceForType(growthType)
+  const estimatedCost = targetCount ? calculateCost(growthType, Number.parseInt(targetCount)) : 0
 
   return (
     <div className="space-y-6">
@@ -177,8 +242,12 @@ export default function FacebookPage() {
           </div>
           <div>
             <h1 className="text-3xl font-bold text-brand-gradient">Facebook Growth</h1>
-            <p className="text-gray-600 mt-1">Boost your Facebook presence with targeted campaigns</p>
+            <p className="text-gray-600 mt-1">Boost your Facebook presence with real followers and engagement</p>
           </div>
+        </div>
+        <div className="text-right">
+          <p className="text-sm text-gray-600">Account Balance</p>
+          <p className="text-2xl font-bold text-green-600">₹{user?.balance?.toFixed(2) || "0.00"}</p>
         </div>
       </div>
 
@@ -231,7 +300,10 @@ export default function FacebookPage() {
           <CardContent>
             <div className="text-2xl font-bold text-brand-gradient">₹{stats.totalSpent.toFixed(2)}</div>
             <p className="text-xs text-gray-600 mt-1">
-              <span className="text-blue-600 font-medium">₹0.05</span> per follower
+              <span className="text-blue-600 font-medium">
+                ₹{stats.totalFollowers > 0 ? (stats.totalSpent / stats.totalFollowers).toFixed(3) : "0.000"}
+              </span>{" "}
+              per follower
             </p>
           </CardContent>
         </Card>
@@ -267,7 +339,7 @@ export default function FacebookPage() {
                 <Zap className="h-5 w-5" />
                 Create Facebook Growth Campaign
               </CardTitle>
-              <CardDescription>Start growing your Facebook presence with our advanced targeting system</CardDescription>
+              <CardDescription>Start growing your Facebook presence with our premium SMM services</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-4 md:grid-cols-2">
@@ -301,16 +373,16 @@ export default function FacebookPage() {
                           Page Likes
                         </div>
                       </SelectItem>
-                      <SelectItem value="engagement">
+                      <SelectItem value="comments">
                         <div className="flex items-center gap-2">
                           <MessageCircle className="h-4 w-4 text-green-600" />
-                          Engagement
+                          Comments
                         </div>
                       </SelectItem>
-                      <SelectItem value="reach">
+                      <SelectItem value="shares">
                         <div className="flex items-center gap-2">
-                          <Eye className="h-4 w-4 text-purple-600" />
-                          Reach
+                          <Share2 className="h-4 w-4 text-purple-600" />
+                          Shares
                         </div>
                       </SelectItem>
                     </SelectContent>
@@ -337,28 +409,39 @@ export default function FacebookPage() {
                     value={targetCount}
                     onChange={(e) => setTargetCount(e.target.value)}
                     className="border-purple-200 focus:border-purple-400"
+                    min={currentService?.min || "1"}
+                    max={currentService?.max || "100000"}
                   />
+                  {currentService && (
+                    <p className="text-xs text-gray-600">
+                      Min: {currentService.min} | Max: {currentService.max}
+                    </p>
+                  )}
                 </div>
               </div>
 
-              <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg border border-purple-200">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium text-gray-900">Estimated Cost</h4>
-                    <p className="text-sm text-gray-600">Based on current market rates</p>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-2xl font-bold text-brand-gradient">
-                      ₹{targetCount ? (Number.parseInt(targetCount) * 0.05).toFixed(2) : "0.00"}
+              {currentService && (
+                <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg border border-purple-200">
+                  <div className="space-y-2">
+                    <h4 className="font-medium text-gray-900">Service Details</h4>
+                    <p className="text-sm text-gray-600">{currentService.name}</p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm text-gray-600">Rate: ₹{currentService.rate} per 1000</div>
+                        <div className="text-sm text-gray-600">Estimated delivery: 1-3 days</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-brand-gradient">₹{estimatedCost.toFixed(2)}</div>
+                        <p className="text-sm text-gray-600">Total cost</p>
+                      </div>
                     </div>
-                    <p className="text-sm text-gray-600">(₹0.05 per {growthType.slice(0, -1)})</p>
                   </div>
                 </div>
-              </div>
+              )}
 
               <Button
                 onClick={createCampaign}
-                disabled={loading}
+                disabled={loading || !currentService || (user?.balance || 0) < estimatedCost}
                 className="w-full btn-gradient text-white shadow-brand"
               >
                 {loading ? (
@@ -366,10 +449,12 @@ export default function FacebookPage() {
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                     Creating Campaign...
                   </>
+                ) : (user?.balance || 0) < estimatedCost ? (
+                  <>Insufficient Balance</>
                 ) : (
                   <>
                     <Zap className="mr-2 h-4 w-4" />
-                    Create Campaign
+                    Create Campaign (₹{estimatedCost.toFixed(2)})
                   </>
                 )}
               </Button>
@@ -412,9 +497,11 @@ export default function FacebookPage() {
                             className={
                               campaign.status === "active"
                                 ? "bg-green-100 text-green-700"
-                                : campaign.status === "paused"
-                                  ? "bg-yellow-100 text-yellow-700"
-                                  : "bg-gray-100 text-gray-700"
+                                : campaign.status === "completed"
+                                  ? "bg-blue-100 text-blue-700"
+                                  : campaign.status === "paused"
+                                    ? "bg-yellow-100 text-yellow-700"
+                                    : "bg-gray-100 text-gray-700"
                             }
                           >
                             {campaign.status}
@@ -422,14 +509,11 @@ export default function FacebookPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => toggleCampaign(campaign.id, campaign.status)}
+                            onClick={() => refreshCampaignStatus(campaign.id)}
+                            disabled={refreshing}
                             className="border-purple-200 hover:border-purple-300"
                           >
-                            {campaign.status === "active" ? (
-                              <Pause className="h-4 w-4" />
-                            ) : (
-                              <Play className="h-4 w-4" />
-                            )}
+                            <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
                           </Button>
                         </div>
                       </div>
@@ -444,8 +528,10 @@ export default function FacebookPage() {
                           <div className="text-xs text-gray-600">Target</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-lg font-bold text-brand-gradient">{campaign.engagement}</div>
-                          <div className="text-xs text-gray-600">Engagement</div>
+                          <div className="text-lg font-bold text-brand-gradient">
+                            {Math.round((campaign.currentCount / campaign.targetCount) * 100)}%
+                          </div>
+                          <div className="text-xs text-gray-600">Progress</div>
                         </div>
                         <div className="text-center">
                           <div className="text-lg font-bold text-brand-gradient">₹{campaign.cost.toFixed(2)}</div>
@@ -460,6 +546,10 @@ export default function FacebookPage() {
                         </div>
                         <Progress value={(campaign.currentCount / campaign.targetCount) * 100} className="h-2" />
                       </div>
+
+                      {campaign.smmOrderId && (
+                        <div className="mt-2 text-xs text-gray-500">Order ID: {campaign.smmOrderId}</div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -519,9 +609,23 @@ export default function FacebookPage() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Average Success Rate</span>
-                    <span className="text-green-600 font-medium">87%</span>
+                    <span className="text-green-600 font-medium">
+                      {campaigns.length > 0
+                        ? Math.round(
+                            (campaigns.filter((c) => c.status === "completed").length / campaigns.length) * 100,
+                          )
+                        : 0}
+                      %
+                    </span>
                   </div>
-                  <Progress value={87} className="h-2" />
+                  <Progress
+                    value={
+                      campaigns.length > 0
+                        ? (campaigns.filter((c) => c.status === "completed").length / campaigns.length) * 100
+                        : 0
+                    }
+                    className="h-2"
+                  />
                 </div>
               </CardContent>
             </Card>

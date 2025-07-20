@@ -12,7 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Progress } from "@/components/ui/progress"
-import { Instagram, Users, Heart, MessageCircle, Eye, TrendingUp, Target, Play, Pause, Camera } from "lucide-react"
+import { Instagram, Users, Heart, MessageCircle, Eye, TrendingUp, Target, Camera, RefreshCw, Zap } from "lucide-react"
+import { toast } from "@/hooks/use-toast"
 
 interface InstagramCampaign {
   id: string
@@ -23,13 +24,25 @@ interface InstagramCampaign {
   currentCount: number
   status: "active" | "paused" | "completed" | "failed"
   cost: number
+  smmOrderId?: number
   createdAt: string
   completedAt?: string
 }
 
+interface SMMService {
+  service: number
+  name: string
+  rate: string
+  min: string
+  max: string
+  description?: string
+}
+
 export default function InstagramPage() {
   const [campaigns, setCampaigns] = useState<InstagramCampaign[]>([])
+  const [services, setServices] = useState<SMMService[]>([])
   const [loading, setLoading] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
   const [user, setUser] = useState<any>(null)
 
   // Form states
@@ -59,17 +72,28 @@ export default function InstagramPage() {
     const userInfo = getUserInfo()
     if (userInfo) {
       setUser(userInfo)
-      loadCampaigns()
+      loadCampaigns(userInfo._id || userInfo.id)
+      fetchServices()
     }
   }, [])
 
-  // Load existing campaigns
-  const loadCampaigns = async () => {
+  const fetchServices = async () => {
     try {
-      const userInfo = getUserInfo()
-      if (!userInfo?._id) return
+      const response = await fetch("/api/smm/services?platform=instagram")
+      const data = await response.json()
 
-      const response = await fetch(`/api/instagram/campaigns?userId=${userInfo._id}`)
+      if (data.success) {
+        setServices(data.services)
+      }
+    } catch (error) {
+      console.error("Error fetching services:", error)
+    }
+  }
+
+  // Load existing campaigns
+  const loadCampaigns = async (userId: string) => {
+    try {
+      const response = await fetch(`/api/instagram/campaigns?userId=${userId}`)
       const result = await response.json()
 
       if (result.success) {
@@ -80,6 +104,34 @@ export default function InstagramPage() {
     }
   }
 
+  const refreshCampaignStatus = async (campaignId: string) => {
+    if (!user) return
+
+    setRefreshing(true)
+    try {
+      const response = await fetch(`/api/smm/status?campaignId=${campaignId}&userId=${user._id || user.id}`)
+      const data = await response.json()
+
+      if (data.success) {
+        setCampaigns((prev) => prev.map((c) => (c.id === campaignId ? { ...c, ...data.campaign } : c)))
+
+        toast({
+          title: "Status Updated",
+          description: "Campaign status has been refreshed successfully.",
+        })
+      }
+    } catch (error) {
+      console.error("Error refreshing status:", error)
+      toast({
+        title: "Error",
+        description: "Failed to refresh campaign status.",
+        variant: "destructive",
+      })
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
   // Create new campaign
   const handleCreateCampaign = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -87,71 +139,83 @@ export default function InstagramPage() {
 
     setLoading(true)
     try {
-      const response = await fetch("/api/instagram/campaigns", {
+      const response = await fetch("/api/smm/order", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          userId: user._id,
-          name: campaignName,
-          type: campaignType,
+          userId: user._id || user.id,
+          platform: "instagram",
+          serviceType: campaignType,
           targetUrl,
-          targetCount: Number.parseInt(targetCount),
+          quantity: Number.parseInt(targetCount),
+          campaignName,
         }),
       })
 
-      const result = await response.json()
+      const data = await response.json()
 
-      if (result.success) {
-        setCampaigns([result.campaign, ...campaigns])
+      if (data.success) {
+        setCampaigns([data.campaign, ...campaigns])
+
+        // Update user balance
+        const updatedUser = { ...user, balance: user.balance - data.campaign.cost }
+        localStorage.setItem("user", JSON.stringify(updatedUser))
+        setUser(updatedUser)
+
         // Reset form
         setCampaignName("")
         setTargetUrl("")
         setTargetCount("")
-        alert("Campaign created successfully!")
+
+        toast({
+          title: "Campaign Created!",
+          description: "Your Instagram growth campaign has been started successfully.",
+        })
       } else {
-        alert(result.message || "Failed to create campaign")
+        toast({
+          title: "Error",
+          description: data.message || "Failed to create campaign",
+          variant: "destructive",
+        })
       }
     } catch (error) {
       console.error("Error creating campaign:", error)
-      alert("Failed to create campaign")
+      toast({
+        title: "Error",
+        description: "Failed to create campaign",
+        variant: "destructive",
+      })
     } finally {
       setLoading(false)
     }
   }
 
-  // Toggle campaign status
-  const toggleCampaign = async (campaignId: string, action: "pause" | "resume") => {
-    try {
-      const response = await fetch(`/api/instagram/campaigns/${campaignId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ action }),
-      })
+  const getServiceForType = (type: string): SMMService | null => {
+    return (
+      services.find((service) => {
+        const serviceName = service.name.toLowerCase()
+        const typeKeywords = {
+          followers: ["followers", "follow"],
+          likes: ["likes", "like"],
+          comments: ["comments", "comment"],
+          views: ["views", "view"],
+          story_views: ["story", "stories"],
+        }
 
-      const result = await response.json()
-
-      if (result.success) {
-        loadCampaigns() // Reload campaigns
-      }
-    } catch (error) {
-      console.error("Error toggling campaign:", error)
-    }
+        const keywords = typeKeywords[type] || [type]
+        return keywords.some((keyword) => serviceName.includes(keyword))
+      }) || null
+    )
   }
 
-  // Calculate pricing
-  const calculatePrice = (type: string, count: number) => {
-    const rates = {
-      followers: 0.08, // ₹0.08 per follower
-      likes: 0.03, // ₹0.03 per like
-      comments: 0.12, // ₹0.12 per comment
-      views: 0.01, // ₹0.01 per view
-      story_views: 0.02, // ₹0.02 per story view
-    }
-    return (rates[type as keyof typeof rates] * count).toFixed(2)
+  const calculateCost = (type: string, quantity: number): number => {
+    const service = getServiceForType(type)
+    if (!service) return 0
+
+    const rate = Number.parseFloat(service.rate)
+    return Math.max((rate * quantity) / 1000, 0.01)
   }
 
   const getTypeIcon = (type: string) => {
@@ -186,6 +250,9 @@ export default function InstagramPage() {
     }
   }
 
+  const currentService = getServiceForType(campaignType)
+  const estimatedCost = targetCount ? calculateCost(campaignType, Number.parseInt(targetCount)) : 0
+
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -212,7 +279,7 @@ export default function InstagramPage() {
         </div>
         <div className="text-right">
           <p className="text-sm text-muted-foreground">Account Balance</p>
-          <p className="text-2xl font-bold text-green-600">₹{user.balance}</p>
+          <p className="text-2xl font-bold text-green-600">₹{user?.balance?.toFixed(2) || "0.00"}</p>
         </div>
       </div>
 
@@ -227,7 +294,10 @@ export default function InstagramPage() {
         <TabsContent value="create" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Create Instagram Growth Campaign</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="h-5 w-5" />
+                Create Instagram Growth Campaign
+              </CardTitle>
               <CardDescription>
                 Boost your Instagram profile with real followers, likes, comments, and views
               </CardDescription>
@@ -309,35 +379,57 @@ export default function InstagramPage() {
                       value={targetCount}
                       onChange={(e) => setTargetCount(e.target.value)}
                       required
-                      min="1"
+                      min={currentService?.min || "1"}
+                      max={currentService?.max || "100000"}
                     />
+                    {currentService && (
+                      <p className="text-xs text-gray-600">
+                        Min: {currentService.min} | Max: {currentService.max}
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
                     <Label>Estimated Cost</Label>
                     <div className="flex items-center space-x-2">
-                      <span className="text-2xl font-bold text-green-600">
-                        ₹{targetCount ? calculatePrice(campaignType, Number.parseInt(targetCount)) : "0.00"}
-                      </span>
-                      <span className="text-sm text-muted-foreground">
-                        (₹
-                        {campaignType === "followers"
-                          ? "0.08"
-                          : campaignType === "likes"
-                            ? "0.03"
-                            : campaignType === "comments"
-                              ? "0.12"
-                              : campaignType === "views"
-                                ? "0.01"
-                                : "0.02"}{" "}
-                        per {campaignType === "story_views" ? "story view" : campaignType.slice(0, -1)})
-                      </span>
+                      <span className="text-2xl font-bold text-green-600">₹{estimatedCost.toFixed(2)}</span>
+                      {currentService && (
+                        <span className="text-sm text-muted-foreground">(₹{currentService.rate} per 1000)</span>
+                      )}
                     </div>
                   </div>
                 </div>
 
-                <Button type="submit" disabled={loading} className="w-full">
-                  {loading ? "Creating Campaign..." : "Create Campaign"}
+                {currentService && (
+                  <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg border border-purple-200">
+                    <div className="space-y-2">
+                      <h4 className="font-medium text-gray-900">Service Details</h4>
+                      <p className="text-sm text-gray-600">{currentService.name}</p>
+                      <div className="text-sm text-gray-600">
+                        Rate: ₹{currentService.rate} per 1000 | Estimated delivery: 1-3 days
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  disabled={loading || !currentService || (user?.balance || 0) < estimatedCost}
+                  className="w-full"
+                >
+                  {loading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Creating Campaign...
+                    </>
+                  ) : (user?.balance || 0) < estimatedCost ? (
+                    "Insufficient Balance"
+                  ) : (
+                    <>
+                      <Zap className="mr-2 h-4 w-4" />
+                      Create Campaign (₹{estimatedCost.toFixed(2)})
+                    </>
+                  )}
                 </Button>
               </form>
             </CardContent>
@@ -399,25 +491,14 @@ export default function InstagramPage() {
                           </TableCell>
                           <TableCell>₹{campaign.cost.toFixed(2)}</TableCell>
                           <TableCell>
-                            <div className="flex space-x-2">
-                              {campaign.status === "active" ? (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => toggleCampaign(campaign.id, "pause")}
-                                >
-                                  <Pause className="h-4 w-4" />
-                                </Button>
-                              ) : campaign.status === "paused" ? (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => toggleCampaign(campaign.id, "resume")}
-                                >
-                                  <Play className="h-4 w-4" />
-                                </Button>
-                              ) : null}
-                            </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => refreshCampaignStatus(campaign.id)}
+                              disabled={refreshing}
+                            >
+                              <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}
