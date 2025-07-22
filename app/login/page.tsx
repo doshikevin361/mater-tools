@@ -50,11 +50,9 @@ export default function LoginPage() {
       const result = await response.json()
 
       if (result.success) {
-        // Store user info in localStorage
         localStorage.setItem("user", JSON.stringify(result.user))
         localStorage.setItem("userId", result.user._id)
 
-        // Redirect to dashboard
         router.push("/dashboard")
       } else {
         setError(result.message || "Login failed")

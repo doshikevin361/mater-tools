@@ -8,7 +8,6 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December"
 ]
 
-// FACEBOOK MONTH ABBREVIATIONS (as shown in the form)
 const FB_MONTHS = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"

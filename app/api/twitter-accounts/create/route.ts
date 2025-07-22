@@ -1,12 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
 import axios from "axios"
+import { GoogleGenerativeAI } from '@google/generative-ai'
 import puppeteer from "puppeteer"
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"
 ]
+const genAI = new GoogleGenerativeAI('AIzaSyDXYs8TsJP4g8yF62tVHzHeeGtYDiGXNX4')
 
 // Enhanced User Agents for 2024/2025
 const USER_AGENTS = [
@@ -33,9 +35,9 @@ const SCREEN_PROFILES = [
 
 const STEALTH_CONFIG = {
   maxAccountsPerDay: 20,
-  minDelayBetweenAccounts: 30 * 60 * 1000, // 30 minutes
-  maxDelayBetweenAccounts: 2 * 60 * 60 * 1000, // 2 hours
-  headlessMode: 'new', // Set to true for production
+  minDelayBetweenAccounts: 30 * 60 * 1000, 
+  maxDelayBetweenAccounts: 2 * 60 * 60 * 1000, 
+  headlessMode: false,
   simulateHumanBehavior: true,
   maxRetries: 3
 }
@@ -52,7 +54,6 @@ const humanWait = (minMs = 1500, maxMs = 4000) => {
   return new Promise(resolve => setTimeout(resolve, delay))
 }
 
-// Generate realistic device profile
 function generateDeviceProfile() {
   const screenProfile = SCREEN_PROFILES[Math.floor(Math.random() * SCREEN_PROFILES.length)]
   const userAgent = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)]
@@ -71,7 +72,6 @@ function generateDeviceProfile() {
   }
 }
 
-// Create maximum stealth browser
 async function createMaximumStealthBrowser() {
   log('info', '🎭 Creating stealth browser for X.com...')
   
@@ -135,12 +135,9 @@ async function createMaximumStealthBrowser() {
 
   log('info', '🛡️ Applying stealth measures...')
 
-  // Enhanced stealth injection
   await page.evaluateOnNewDocument(() => {
-    // Remove webdriver property
     Object.defineProperty(navigator, 'webdriver', { get: () => undefined })
     
-    // Remove automation indicators
     const automationProps = [
       '__webdriver_script_fn', '__webdriver_script_func', '__webdriver_script_function',
       '__fxdriver_id', '__driver_evaluate', '__webdriver_evaluate', '__selenium_evaluate',
@@ -207,13 +204,11 @@ async function createMaximumStealthBrowser() {
       }
     }
 
-    // Mock permissions
     const originalQuery = navigator.permissions.query
     navigator.permissions.query = (parameters) => {
       return Promise.resolve({ state: 'denied' })
     }
 
-    // Mock plugins
     Object.defineProperty(navigator, 'plugins', {
       get: () => [
         { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer' },
@@ -231,7 +226,6 @@ async function createMaximumStealthBrowser() {
       get: () => 'en-US'
     })
 
-    // Enhanced WebGL spoofing
     const getParameter = WebGLRenderingContext.prototype.getParameter
     WebGLRenderingContext.prototype.getParameter = function(parameter) {
       if (parameter === 37445) return 'Intel Inc.' // UNMASKED_VENDOR_WEBGL
@@ -240,11 +234,9 @@ async function createMaximumStealthBrowser() {
     }
   })
 
-  // Set user agent and viewport
   await page.setUserAgent(deviceProfile.userAgent)
   await page.setViewport(deviceProfile.viewport)
   
-  // Set realistic headers
   await page.setExtraHTTPHeaders({
     'Accept-Language': 'en-US,en;q=0.9',
     'Accept-Encoding': 'gzip, deflate, br',
@@ -260,6 +252,729 @@ async function createMaximumStealthBrowser() {
 
   log('success', '✅ Stealth browser created successfully')
   return { browser, page, deviceProfile }
+}
+async function solveCaptchaWithGemini(page) {
+  log('info', '🤖 Solving CAPTCHA with Gemini AI...')
+  
+  try {
+    // First, try to detect CAPTCHA elements
+    const captchaDetection = await page.evaluate(() => {
+      const possibleCaptchaSelectors = [
+        'iframe[src*="recaptcha"]',
+        'iframe[src*="captcha"]', 
+        '[data-testid*="captcha"]',
+        '[aria-label*="captcha"]',
+        '.captcha',
+        '#captcha',
+        'canvas',
+        'img[alt*="captcha"]',
+        'img[src*="captcha"]',
+        '.puzzle',
+        '[data-callback]',
+        '.challenge-image'
+      ]
+      
+      const results = []
+      
+      for (const selector of possibleCaptchaSelectors) {
+        const elements = document.querySelectorAll(selector)
+        for (const element of elements) {
+          if (element.offsetParent !== null) {
+            const rect = element.getBoundingClientRect()
+            if (rect.width > 50 && rect.height > 50) {
+              results.push({
+                selector: selector,
+                tagName: element.tagName,
+                src: element.src || '',
+                className: element.className || '',
+                id: element.id || '',
+                rect: {
+                  x: rect.x,
+                  y: rect.y,
+                  width: rect.width,
+                  height: rect.height
+                }
+              })
+            }
+          }
+        }
+      }
+      
+      return {
+        found: results.length > 0,
+        elements: results,
+        pageContent: document.body.textContent?.toLowerCase().includes('captcha') || 
+                    document.body.textContent?.toLowerCase().includes('verify') ||
+                    document.body.textContent?.toLowerCase().includes('challenge')
+      }
+    })
+    
+    if (!captchaDetection.found && !captchaDetection.pageContent) {
+      return {
+        success: false,
+        error: 'No CAPTCHA detected on page'
+      }
+    }
+    
+    log('info', `🔍 Detected ${captchaDetection.elements.length} potential CAPTCHA elements`)
+    
+    // Take full page screenshot for analysis
+    await humanWait(2000, 3000)
+    const fullScreenshot = await page.screenshot({ 
+      type: 'png',
+      quality: 100,
+      fullPage: false
+    })
+    
+    // Use Gemini Vision API to analyze the CAPTCHA
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro-vision-latest" })
+    
+    const prompt = `Analyze this screenshot from X.com (Twitter) account verification process. I need to solve any CAPTCHA or verification challenge present.
+
+Please examine the image carefully and identify:
+
+1. **Text-based CAPTCHA**: If there's distorted text/numbers to read, return only the exact text
+2. **Image selection CAPTCHA**: If it asks to "select all images with [object]", list the grid positions (like "1,3,5,7")  
+3. **Puzzle CAPTCHA**: If there's a sliding puzzle or rotation needed, describe the solution
+4. **reCAPTCHA**: If it's a "I'm not a robot" checkbox, indicate if it needs clicking
+5. **No CAPTCHA**: If no verification challenge is visible, say "NO_CAPTCHA_FOUND"
+
+Look for:
+- Distorted text or numbers in a box
+- Grid of images with selection instructions  
+- Puzzle pieces or rotation arrows
+- "I'm not a robot" checkbox
+- Any verification challenge elements
+
+Respond with ONLY the solution needed (text to type, grid numbers to click, or action to take). Be precise and concise.`
+    
+    const imagePart = {
+      inlineData: {
+        data: fullScreenshot.toString('base64'),
+        mimeType: 'image/png'
+      }
+    }
+    
+    const result = await model.generateContent([prompt, imagePart])
+    const captchaSolution = result.response.text().trim()
+    
+    log('info', `🎯 Gemini analysis: ${captchaSolution}`)
+    
+    // Process the solution based on type
+    if (captchaSolution === 'NO_CAPTCHA_FOUND') {
+      return {
+        success: true,
+        type: 'none',
+        message: 'No CAPTCHA verification needed'
+      }
+    }
+    
+    // Handle different CAPTCHA types
+    if (captchaSolution.includes(',') && /^\d+,[\d,]+$/.test(captchaSolution)) {
+      // Grid-based image selection CAPTCHA
+      return await handleImageSelectionCaptcha(page, captchaSolution)
+    }
+    
+    if (captchaSolution.toLowerCase().includes('click') && captchaSolution.toLowerCase().includes('checkbox')) {
+      // reCAPTCHA checkbox
+      return await handleRecaptchaCheckbox(page)
+    }
+    
+    if (/^[A-Z0-9]+$/i.test(captchaSolution) && captchaSolution.length >= 4) {
+      // Text-based CAPTCHA
+      return await handleTextCaptcha(page, captchaSolution)
+    }
+    
+    // Default: try to handle as text input
+    return await handleTextCaptcha(page, captchaSolution)
+    
+  } catch (error) {
+    log('error', `❌ Gemini CAPTCHA solving failed: ${error.message}`)
+    return {
+      success: false,
+      error: error.message,
+      fallback: true
+    }
+  }
+}
+
+// Handle image selection CAPTCHA
+async function handleImageSelectionCaptcha(page, gridPositions) {
+  log('info', `🖼️ Handling image selection CAPTCHA: ${gridPositions}`)
+  
+  try {
+    const positions = gridPositions.split(',').map(pos => parseInt(pos.trim()))
+    
+    // Find CAPTCHA grid elements
+    const clickResult = await page.evaluate((positions) => {
+      // Look for clickable grid elements
+      const gridSelectors = [
+        '[role="button"] img',
+        '.captcha-grid img', 
+        '[data-testid*="captcha"] img',
+        '.challenge-image',
+        '[onclick] img'
+      ]
+      
+      let gridElements = []
+      
+      for (const selector of gridSelectors) {
+        const elements = document.querySelectorAll(selector)
+        if (elements.length >= 4) { // Minimum grid size
+          gridElements = Array.from(elements)
+          break
+        }
+      }
+      
+      if (gridElements.length === 0) {
+        return { success: false, error: 'No grid elements found' }
+      }
+      
+      let clickedCount = 0
+      
+      // Click specified positions (1-indexed)
+      for (const position of positions) {
+        const index = position - 1 // Convert to 0-indexed
+        if (index >= 0 && index < gridElements.length) {
+          const element = gridElements[index]
+          element.click()
+          clickedCount++
+        }
+      }
+      
+      return { 
+        success: true, 
+        clicked: clickedCount, 
+        total: gridElements.length 
+      }
+      
+    }, positions)
+    
+    if (clickResult.success) {
+      await humanWait(1000, 2000)
+      log('success', `✅ Clicked ${clickResult.clicked} grid positions`)
+      return { success: true, type: 'image_selection', clicked: clickResult.clicked }
+    }
+    
+    return { success: false, error: clickResult.error }
+    
+  } catch (error) {
+    log('error', `❌ Image selection CAPTCHA failed: ${error.message}`)
+    return { success: false, error: error.message }
+  }
+}
+
+// Handle reCAPTCHA checkbox
+async function handleRecaptchaCheckbox(page) {
+  log('info', '☑️ Handling reCAPTCHA checkbox...')
+  
+  try {
+    const checkboxResult = await page.evaluate(() => {
+      // Look for reCAPTCHA checkbox
+      const checkboxSelectors = [
+        '.recaptcha-checkbox',
+        '#recaptcha-anchor',
+        '[role="checkbox"]',
+        '.g-recaptcha'
+      ]
+      
+      for (const selector of checkboxSelectors) {
+        const checkbox = document.querySelector(selector)
+        if (checkbox && checkbox.offsetParent !== null) {
+          checkbox.click()
+          return { success: true, selector }
+        }
+      }
+      
+      return { success: false, error: 'Checkbox not found' }
+    })
+    
+    if (checkboxResult.success) {
+      await humanWait(2000, 4000)
+      log('success', '✅ reCAPTCHA checkbox clicked')
+      return { success: true, type: 'recaptcha_checkbox' }
+    }
+    
+    return { success: false, error: checkboxResult.error }
+    
+  } catch (error) {
+    log('error', `❌ reCAPTCHA checkbox failed: ${error.message}`)
+    return { success: false, error: error.message }
+  }
+}
+
+// Handle text-based CAPTCHA
+async function handleTextCaptcha(page, captchaText) {
+  log('info', `📝 Handling text CAPTCHA: ${captchaText}`)
+  
+  try {
+    // Find CAPTCHA input field
+    const inputResult = await page.evaluate((text) => {
+      const inputSelectors = [
+        'input[placeholder*="captcha"]',
+        'input[name*="captcha"]',
+        'input[id*="captcha"]',
+        'input[data-testid*="captcha"]',
+        'input[type="text"]',
+        'input[placeholder*="code"]',
+        'input[placeholder*="verify"]'
+      ]
+      
+      for (const selector of inputSelectors) {
+        const input = document.querySelector(selector)
+        if (input && input.offsetParent !== null && !input.disabled) {
+          input.focus()
+          input.value = text
+          input.dispatchEvent(new Event('input', { bubbles: true }))
+          input.dispatchEvent(new Event('change', { bubbles: true }))
+          return { success: true, selector }
+        }
+      }
+      
+      return { success: false, error: 'CAPTCHA input not found' }
+    }, captchaText)
+    
+    if (inputResult.success) {
+      await humanWait(500, 1000)
+      log('success', '✅ Text CAPTCHA filled')
+      return { success: true, type: 'text_captcha', text: captchaText }
+    }
+    
+    return { success: false, error: inputResult.error }
+    
+  } catch (error) {
+    log('error', `❌ Text CAPTCHA failed: ${error.message}`)
+    return { success: false, error: error.message }
+  }
+}
+async function handleAuthenticationSteps(page, accountData) {
+  log('info', '🔐 Checking for authentication challenges...')
+  
+  try {
+    await humanWait(4000, 5000)
+    console.log("🔍 Waiting for authentication elements to load...")
+    
+    // Search the entire page body for authentication elements
+    const authButtonResult = await page.evaluate(() => {
+      // First, let's see the overall page structure
+      const pageInfo = {
+        title: document.title,
+        url: window.location.href,
+        bodyChildren: document.body.children.length,
+        allDialogs: document.querySelectorAll('[role="dialog"]').length,
+        allModals: document.querySelectorAll('[aria-modal="true"]').length
+      }
+      
+      console.log('📄 Page Info:', pageInfo)
+      
+      // Look for authentication elements in multiple ways
+      const authContainerSelectors = [
+        '[role="dialog"][aria-modal="true"]',  // Modal dialogs
+        '[role="dialog"]',                     // Any dialog
+        '.auth-dialog',                        // Class-based
+        '.authentication',
+        '.verify',
+        '.challenge',
+        '[data-testid*="auth"]',
+        '[data-testid*="verify"]',
+        '[id*="auth"]',
+        '[class*="auth"]',
+        'div:has(button:contains("Authenticate"))', // CSS4 selector (if supported)
+        'body'  // Fallback to entire body
+      ]
+      
+      let authContainer = null
+      let containerSelector = null
+      
+      // Find the authentication container
+      for (const selector of authContainerSelectors) {
+        try {
+          const element = document.querySelector(selector)
+          if (element) {
+            // Check if this container has authentication-related content
+            const text = element.textContent?.toLowerCase() || ''
+            if (text.includes('authenticate') || text.includes('verify') || text.includes('challenge') || selector === 'body') {
+              authContainer = element
+              containerSelector = selector
+              break
+            }
+          }
+        } catch (e) {
+          console.log(`Selector failed: ${selector}`, e.message)
+        }
+      }
+      
+      console.log(`🎯 Using container: ${containerSelector}`)
+      
+      if (!authContainer) {
+        return {
+          success: false,
+          error: 'No authentication container found',
+          pageInfo
+        }
+      }
+      
+      // Find ALL possible button elements in the container
+      const buttonSelectors = [
+        'button',
+        'div[role="button"]',
+        'span[role="button"]',
+        'a[role="button"]',
+        'input[type="button"]',
+        'input[type="submit"]',
+        '[onclick]',
+        '[data-testid*="button"]',
+        '[data-testid*="auth"]',
+        '[data-testid*="continue"]',
+        '[data-testid*="verify"]',
+        '.btn',
+        '.button',
+        '[class*="button"]',
+        '[class*="btn"]'
+      ]
+      
+      const allButtons = []
+      
+      buttonSelectors.forEach(selector => {
+        try {
+          const elements = authContainer.querySelectorAll(selector)
+          elements.forEach((el, index) => {
+            const rect = el.getBoundingClientRect()
+            allButtons.push({
+              element: el,
+              tagName: el.tagName,
+              textContent: el.textContent?.trim() || '',
+              innerHTML: el.innerHTML?.substring(0, 100) || '',
+              className: el.className || '',
+              id: el.id || '',
+              role: el.getAttribute('role') || '',
+              dataTestId: el.getAttribute('data-testid') || '',
+              onclick: el.getAttribute('onclick') || '',
+              selector: selector,
+              index: index,
+              visible: rect.width > 0 && rect.height > 0,
+              position: { x: rect.x, y: rect.y, width: rect.width, height: rect.height }
+            })
+          })
+        } catch (e) {
+          console.log(`Button selector failed: ${selector}`, e.message)
+        }
+      })
+      
+      console.log(`🔍 Found ${allButtons.length} potential buttons:`)
+      allButtons.forEach((btn, i) => {
+        console.log(`  ${i + 1}. [${btn.tagName}] "${btn.textContent}" (${btn.className}) - Visible: ${btn.visible}`)
+      })
+      
+      // Try to find and click authentication buttons with various text patterns
+      const authTextPatterns = [
+        /^authenticate$/i,
+        /^continue$/i,
+        /^verify$/i,
+        /^submit$/i,
+        /^confirm$/i,
+        /^proceed$/i,
+        /^next$/i,
+        /authenticate/i,
+        /continue/i,
+        /verify/i,
+        /challenge/i
+      ]
+      
+      let clickedButton = null
+      
+      // Try exact matches first, then partial matches
+      for (const pattern of authTextPatterns) {
+        for (const button of allButtons) {
+          const buttonText = button.textContent.trim()
+          
+          if (pattern.test(buttonText) && button.visible) {
+            console.log(`🎯 Attempting to click button: "${buttonText}"`)
+            
+            try {
+              const element = button.element
+              
+              // Multiple click strategies
+              const clickStrategies = [
+                () => element.click(),
+                () => element.dispatchEvent(new MouseEvent('click', { 
+                  bubbles: true, 
+                  cancelable: true,
+                  view: window 
+                })),
+                () => {
+                  element.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
+                  element.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }))
+                  element.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+                },
+                () => {
+                  // Focus and trigger Enter key
+                  element.focus()
+                  element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }))
+                  element.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter' }))
+                }
+              ]
+              
+              for (const strategy of clickStrategies) {
+                try {
+                  strategy()
+                  console.log(`✅ Click strategy succeeded`)
+                  break
+                } catch (strategyError) {
+                  console.log(`❌ Click strategy failed:`, strategyError.message)
+                }
+              }
+              
+              clickedButton = {
+                text: buttonText,
+                pattern: pattern.source,
+                selector: button.selector,
+                success: true
+              }
+              
+              break
+              
+            } catch (clickError) {
+              console.log(`❌ Failed to click button "${buttonText}":`, clickError.message)
+            }
+          }
+        }
+        
+        if (clickedButton) break
+      }
+      
+      return {
+        success: !!clickedButton,
+        clickedButton,
+        totalButtons: allButtons.length,
+        visibleButtons: allButtons.filter(b => b.visible).length,
+        allButtons: allButtons.map(b => ({
+          text: b.textContent,
+          tag: b.tagName,
+          class: b.className,
+          visible: b.visible
+        })),
+        containerUsed: containerSelector,
+        pageInfo
+      }
+    })
+    
+    // Log detailed results
+    console.log('🔍 Authentication Search Results:', JSON.stringify(authButtonResult, null, 2))
+    
+    if (authButtonResult.success) {
+      log('success', `✅ Successfully clicked: "${authButtonResult.clickedButton.text}" using pattern: ${authButtonResult.clickedButton.pattern}`)
+      
+      // Wait for page changes after clicking
+      await humanWait(6000, 8000)
+      
+      // Check what happened after the click
+      const postClickCheck = await page.evaluate(() => {
+        return {
+          url: window.location.href,
+          title: document.title,
+          hasAuthDialog: !!document.querySelector('[role="dialog"][aria-modal="true"]'),
+          totalIframes: document.querySelectorAll('iframe').length,
+          bodyText: document.body.textContent?.substring(0, 500) || '',
+          arkosePresent: !!document.querySelector('iframe[src*="arkoselabs"], iframe[id*="arkose"], iframe[src*="2CB16598-CB82-4CF7-B332-5990DB66F3AB"]')
+        }
+      })
+      
+      console.log('📄 Post-click page state:', postClickCheck)
+      
+      // Look for Arkose CAPTCHA
+      if (postClickCheck.arkosePresent) {
+        const arkoseDetails = await page.evaluate(() => {
+          const arkoseSelectors = [
+            'iframe[id="arkoseFrame"]',
+            'iframe[title="arkoseFrame"]',
+            'iframe[src*="arkoselabs"]',
+            'iframe[src*="2CB16598-CB82-4CF7-B332-5990DB66F3AB"]',
+            'iframe[src*="arkose"]',
+            'iframe[name*="arkose"]'
+          ]
+          
+          for (const selector of arkoseSelectors) {
+            const iframe = document.querySelector(selector)
+            if (iframe) {
+              return {
+                found: true,
+                id: iframe.id,
+                src: iframe.src,
+                title: iframe.title,
+                selector: selector
+              }
+            }
+          }
+          return { found: false }
+        })
+        
+        if (arkoseDetails.found) {
+          log('success', `🛡️ Arkose CAPTCHA detected: ${arkoseDetails.selector}`)
+          return {
+            success: true,
+            step: 'arkose_captcha_detected',
+            arkoseInfo: arkoseDetails
+          }
+        }
+      }
+      
+      return {
+        success: true,
+        step: 'authenticate_button_clicked',
+        postClickState: postClickCheck
+      }
+      
+    } else {
+      log('warning', `❌ No authentication button found. Checked ${authButtonResult.totalButtons} buttons (${authButtonResult.visibleButtons} visible)`)
+      log('info', `📋 Available buttons: ${authButtonResult.allButtons.map(b => `"${b.text}"`).join(', ')}`)
+      
+      return {
+        success: false,
+        reason: 'no_auth_button_found',
+        debugInfo: authButtonResult
+      }
+    }
+    
+  } catch (error) {
+    log('error', `❌ Authentication step failed: ${error.message}`)
+    console.error('Full error:', error)
+    return { success: false, error: error.message }
+  }
+}
+// Helper function for checking email verification (already exists in your code)
+async function checkEmailVerification(page) {
+  log('info', '🔍 Checking for email verification...')
+  
+  try {
+    const verificationCheck = await page.evaluate(() => {
+      const pageContent = document.body.textContent?.toLowerCase() || ''
+      const currentUrl = window.location.href
+      
+      const emailKeywords = [
+        'check your email',
+        'we sent you a code',
+        'verification code',
+        'confirm your email',
+        'email verification',
+        'enter the code'
+      ]
+      
+      const hasEmailVerification = emailKeywords.some(keyword => pageContent.includes(keyword))
+      
+      const verificationInputs = document.querySelectorAll(
+        'input[data-testid*="verification"], input[placeholder*="code"], input[placeholder*="verification"]'
+      )
+      
+      return {
+        hasEmailVerification: hasEmailVerification || verificationInputs.length > 0,
+        inputCount: verificationInputs.length,
+        currentUrl,
+        pageContent: pageContent.substring(0, 200)
+      }
+    })
+    
+    return verificationCheck
+    
+  } catch (error) {
+    log('error', `❌ Email verification check failed: ${error.message}`)
+    return { hasEmailVerification: false }
+  }
+}
+// ALSO ADD THIS SPECIALIZED ARKOSE SOLVER FUNCTION:
+
+async function solveArkoseCaptcha(page) {
+  log('info', '🎯 Attempting to solve Arkose CAPTCHA...')
+  
+  try {
+    // Wait for Arkose iframe to be fully loaded
+    await page.waitForSelector('iframe[id*="arkose"], iframe[src*="arkoselabs"]', { timeout: 10000 })
+    await humanWait(4000, 6000)
+    
+    // Get iframe element
+    const arkoseFrame = await page.$('iframe[id*="arkose"], iframe[src*="arkoselabs"]')
+    
+    if (!arkoseFrame) {
+      return { success: false, error: 'Arkose iframe not found' }
+    }
+    
+    // Get iframe bounds for interaction
+    const frameBox = await arkoseFrame.boundingBox()
+    
+    if (!frameBox) {
+      return { success: false, error: 'Could not get iframe bounds' }
+    }
+    
+    log('info', `🖼️ Arkose frame bounds: ${JSON.stringify(frameBox)}`)
+    
+    // Try to interact with common Arkose challenge elements
+    const interactions = [
+      // Click center of iframe (common for loading/starting challenge)
+      {
+        x: frameBox.x + frameBox.width * 0.5,
+        y: frameBox.y + frameBox.height * 0.5,
+        description: 'Center click'
+      },
+      // Click bottom area (submit/continue buttons)
+      {
+        x: frameBox.x + frameBox.width * 0.5,
+        y: frameBox.y + frameBox.height * 0.8,
+        description: 'Bottom button area'
+      },
+      // Click common puzzle areas
+      {
+        x: frameBox.x + frameBox.width * 0.3,
+        y: frameBox.y + frameBox.height * 0.4,
+        description: 'Left puzzle area'
+      },
+      {
+        x: frameBox.x + frameBox.width * 0.7,
+        y: frameBox.y + frameBox.height * 0.4,
+        description: 'Right puzzle area'
+      }
+    ]
+    
+    for (const interaction of interactions) {
+      log('info', `🖱️ Trying ${interaction.description} at (${Math.round(interaction.x)}, ${Math.round(interaction.y)})`)
+      
+      await page.mouse.click(interaction.x, interaction.y)
+      await humanWait(1000, 2000)
+      
+      // Check if challenge changed/completed
+      const stillPresent = await page.evaluate(() => {
+        const iframe = document.querySelector('iframe[id*="arkose"], iframe[src*="arkoselabs"]')
+        return iframe && iframe.offsetParent !== null
+      })
+      
+      if (!stillPresent) {
+        log('success', `✅ Arkose challenge completed after ${interaction.description}`)
+        return { success: true, method: interaction.description }
+      }
+    }
+    
+    // If direct clicks don't work, try keyboard interactions
+    await page.keyboard.press('Tab')
+    await humanWait(500, 1000)
+    await page.keyboard.press('Enter')
+    await humanWait(2000, 3000)
+    
+    const finalCheck = await page.evaluate(() => {
+      const iframe = document.querySelector('iframe[id*="arkose"], iframe[src*="arkoselabs"]')
+      return iframe && iframe.offsetParent !== null
+    })
+    
+    if (!finalCheck) {
+      log('success', '✅ Arkose challenge completed after keyboard interaction')
+      return { success: true, method: 'keyboard_interaction' }
+    }
+    
+    log('warning', '⚠️ Arkose challenge still active after all attempts')
+    return { success: false, error: 'Challenge still active after all interaction attempts' }
+    
+  } catch (error) {
+    log('error', `❌ Arkose solving failed: ${error.message}`)
+    return { success: false, error: error.message }
+  }
 }
 
 // Create temporary email
@@ -381,7 +1096,6 @@ async function humanType(page, selector, text, timeout = 30000) {
         const char = word[charIndex]
         const baseDelay = 80 + Math.random() * 120
         
-        // Occasional typos (2% chance)
         if (Math.random() < 0.02 && charIndex > 0) {
           const wrongChar = 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 26)]
           await page.keyboard.type(wrongChar, { delay: baseDelay })
@@ -392,13 +1106,11 @@ async function humanType(page, selector, text, timeout = 30000) {
         
         await page.keyboard.type(char, { delay: baseDelay })
         
-        // Thinking pauses (15% chance)
         if (Math.random() < 0.15) {
           await humanWait(200, 800)
         }
       }
       
-      // Space between words
       if (wordIndex < words.length - 1) {
         await page.keyboard.type(' ', { delay: 100 })
         await humanWait(150, 400)
@@ -414,7 +1126,6 @@ async function humanType(page, selector, text, timeout = 30000) {
   }
 }
 
-// Enhanced human clicking with realistic mouse movement
 async function humanClick(page, selector, timeout = 30000) {
   log('detailed', `🖱️ Clicking: ${selector}`)
   
@@ -452,7 +1163,6 @@ async function humanClick(page, selector, timeout = 30000) {
   }
 }
 
-// Debug function to identify available buttons
 async function debugAvailableButtons(page, context = "unknown") {
   try {
     const buttonInfo = await page.evaluate(() => {
@@ -544,13 +1254,15 @@ async function findAndClick(page, possibleSelectors, elementName, timeout = 3000
   // Strategy 2: Search by text content with enhanced X.com structure detection
   try {
     const found = await page.evaluate((elementName) => {
-      const searchTexts = {
-        'Create account': ['Create account', 'Sign up', 'Join X', 'Get started', 'Join now'],
-        'Next': ['Next', 'Continue', 'Proceed', 'Submit'],
-        'Sign up': ['Sign up', 'Create account', 'Register', 'Join'],
-        'Verify': ['Verify', 'Confirm', 'Check'],
-        'Done': ['Done', 'Finish', 'Complete']
-      }
+   const searchTexts = {
+  'Create account': ['Create account', 'Sign up', 'Join X', 'Get started', 'Join now'],
+  'Next': ['Next', 'Continue', 'Proceed', 'Submit'],
+  'Sign up': ['Sign up', 'Create account', 'Register', 'Join'],
+  'Verify': ['Verify', 'Confirm', 'Check'],
+  'Done': ['Done', 'Finish', 'Complete'],
+  'Authenticate': ['Authenticate', 'Verify account', 'Security check', 'Continue', 'Verify'],  // ENHANCED
+  'Submit': ['Submit', 'Continue', 'Verify', 'Confirm', 'Next']  // ENHANCED
+}
       
       const textsToFind = searchTexts[elementName] || [elementName]
       
@@ -918,64 +1630,76 @@ async function handleBirthdaySelection(page, profile) {
   log('info', '📅 Handling birthday selection...')
   
   try {
-    await humanWait(2000, 3000)
+    await humanWait(3000, 5000)
     
     const monthName = MONTHS[profile.birthMonth - 1]
     
-    // Month selection with enhanced detection
+    // Enhanced month selection with current X.com structure
+    log('info', `🗓️ Selecting month: ${monthName}`)
+    
     const monthResult = await page.evaluate((targetMonth, targetMonthIndex) => {
-      // Look for month-related elements
-      const monthSelectors = [
-        'select[name*="month"]',
-        'select[aria-label*="Month"]',
-        'div[data-testid*="month"]',
-        'button[aria-label*="Month"]',
-        'div[role="button"][aria-label*="Month"]'
-      ]
-      
-      // Try select elements first
-      for (const selector of monthSelectors) {
-        const elements = document.querySelectorAll(selector)
-        for (const element of elements) {
-          if (element.tagName === 'SELECT') {
-            const options = element.querySelectorAll('option')
+      // Method 1: Direct select element approach
+      const monthSelects = document.querySelectorAll('select[aria-labelledby*="LABEL"], select[id*="SELECTOR"]')
+      for (const select of monthSelects) {
+        const label = select.getAttribute('aria-labelledby')
+        if (label) {
+          const labelElement = document.getElementById(label)
+          if (labelElement && labelElement.textContent?.includes('Month')) {
+            const options = select.querySelectorAll('option')
             for (const option of options) {
-              if (option.textContent?.trim() === targetMonth || 
-                  option.value === targetMonth ||
-                  option.value === targetMonthIndex.toString()) {
-                element.value = option.value
-                element.dispatchEvent(new Event('change', { bubbles: true }))
-                return { success: true, method: 'select', value: option.value }
+              if (option.textContent?.trim() === targetMonth || option.value === targetMonthIndex.toString()) {
+                select.value = option.value
+                select.dispatchEvent(new Event('change', { bubbles: true }))
+                select.dispatchEvent(new Event('input', { bubbles: true }))
+                return { success: true, method: 'direct_select', value: option.value }
               }
             }
           }
         }
       }
       
-      // Try button-based dropdowns
-      const monthButtons = Array.from(document.querySelectorAll('div[role="button"], button'))
-      for (const button of monthButtons) {
-        const text = button.textContent?.trim() || ''
-        const ariaLabel = button.getAttribute('aria-label') || ''
+      // Method 2: Look for select with month options
+      const allSelects = document.querySelectorAll('select')
+      for (const select of allSelects) {
+        const options = select.querySelectorAll('option')
+        let hasMonths = false
         
-        if (text.toLowerCase().includes('month') || 
-            ariaLabel.toLowerCase().includes('month') || 
-            text === 'Month') {
-          button.click()
-          
-          // Wait for dropdown and select month
-          setTimeout(() => {
-            const options = Array.from(document.querySelectorAll('div[role="option"], div[data-testid*="month"]'))
-            for (const option of options) {
-              const optionText = option.textContent?.trim() || ''
-              if (optionText === targetMonth || optionText === targetMonthIndex.toString()) {
-                option.click()
-                return true
-              }
+        // Check if this select contains month names
+        for (const option of options) {
+          const text = option.textContent?.trim() || ''
+          if (['January', 'February', 'March', 'April', 'May', 'June'].includes(text)) {
+            hasMonths = true
+            break
+          }
+        }
+        
+        if (hasMonths) {
+          for (const option of options) {
+            if (option.textContent?.trim() === targetMonth || option.value === targetMonthIndex.toString()) {
+              select.value = option.value
+              select.dispatchEvent(new Event('change', { bubbles: true }))
+              select.dispatchEvent(new Event('input', { bubbles: true }))
+              select.focus()
+              select.blur()
+              return { success: true, method: 'month_detection', value: option.value }
             }
-          }, 500)
-          
-          return { success: true, method: 'dropdown', trigger: text }
+          }
+        }
+      }
+      
+      // Method 3: CSS class based approach for X.com
+      const xcomSelects = document.querySelectorAll('select.r-30o5oe, select[class*="r-"]')
+      for (const select of xcomSelects) {
+        if (select.offsetParent !== null && !select.disabled) {
+          const options = select.querySelectorAll('option')
+          for (const option of options) {
+            if (option.textContent?.trim() === targetMonth) {
+              select.value = option.value
+              select.dispatchEvent(new Event('change', { bubbles: true }))
+              select.dispatchEvent(new Event('input', { bubbles: true }))
+              return { success: true, method: 'css_class', value: option.value }
+            }
+          }
         }
       }
       
@@ -983,46 +1707,95 @@ async function handleBirthdaySelection(page, profile) {
     }, monthName, profile.birthMonth)
     
     if (monthResult && monthResult.success) {
-      await humanWait(1000, 2000)
-      log('verbose', `Month selection: ${monthName} (${monthResult.method})`)
+      await humanWait(1500, 2500)
+      log('success', `✅ Month selected: ${monthName} (${monthResult.method})`)
+    } else {
+      log('warning', '⚠️ Month selection failed, trying alternative approach...')
+      
+      // Alternative approach: Click-based month selection
+      const monthClickResult = await page.evaluate((targetMonth) => {
+        // Look for month dropdown trigger
+        const labels = document.querySelectorAll('label')
+        for (const label of labels) {
+          if (label.textContent?.includes('Month')) {
+            const select = label.querySelector('select')
+            if (select) {
+              select.click()
+              select.focus()
+              
+              // Try to set value directly
+              const options = select.querySelectorAll('option')
+              for (const option of options) {
+                if (option.textContent?.trim() === targetMonth) {
+                  select.value = option.value
+                  const event = new Event('change', { bubbles: true })
+                  select.dispatchEvent(event)
+                  return { success: true, method: 'click_alternative' }
+                }
+              }
+            }
+          }
+        }
+        return { success: false }
+      }, monthName)
+      
+      if (monthClickResult && monthClickResult.success) {
+        await humanWait(1000, 2000)
+        log('success', '✅ Month selected via alternative method')
+      }
     }
     
-    // Day selection
+    // Enhanced day selection
+    log('info', `📅 Selecting day: ${profile.birthDay}`)
+    
     const dayResult = await page.evaluate((targetDay) => {
-      // Try select elements
-      const daySelects = document.querySelectorAll('select[name*="day"], select[aria-label*="Day"]')
+      // Method 1: Look for day select by label
+      const daySelects = document.querySelectorAll('select[aria-labelledby*="LABEL"], select[id*="SELECTOR"]')
       for (const select of daySelects) {
-        const options = select.querySelectorAll('option')
-        for (const option of options) {
-          if (option.value === targetDay.toString() || option.textContent?.trim() === targetDay.toString()) {
-            select.value = option.value
-            select.dispatchEvent(new Event('change', { bubbles: true }))
-            return { success: true, method: 'select' }
+        const label = select.getAttribute('aria-labelledby')
+        if (label) {
+          const labelElement = document.getElementById(label)
+          if (labelElement && labelElement.textContent?.includes('Day')) {
+            const options = select.querySelectorAll('option')
+            for (const option of options) {
+              if (option.value === targetDay.toString() || option.textContent?.trim() === targetDay.toString()) {
+                select.value = option.value
+                select.dispatchEvent(new Event('change', { bubbles: true }))
+                select.dispatchEvent(new Event('input', { bubbles: true }))
+                return { success: true, method: 'label_based', value: option.value }
+              }
+            }
           }
         }
       }
       
-      // Try button-based dropdowns
-      const dayButtons = Array.from(document.querySelectorAll('div[role="button"], button'))
-      for (const button of dayButtons) {
-        const text = button.textContent?.trim() || ''
-        const ariaLabel = button.getAttribute('aria-label') || ''
+      // Method 2: Look for select with day numbers (1-31)
+      const allSelects = document.querySelectorAll('select')
+      for (const select of allSelects) {
+        const options = select.querySelectorAll('option')
+        let hasDays = false
         
-        if (text.toLowerCase().includes('day') || ariaLabel.toLowerCase().includes('day') || text === 'Day') {
-          button.click()
-          
-          setTimeout(() => {
-            const options = Array.from(document.querySelectorAll('div[role="option"], div[data-testid*="day"]'))
-            for (const option of options) {
-              const optionText = option.textContent?.trim() || ''
-              if (optionText === targetDay.toString()) {
-                option.click()
-                return true
-              }
+        // Check if this select contains day numbers
+        for (const option of options) {
+          const text = option.textContent?.trim() || ''
+          const num = parseInt(text)
+          if (num >= 1 && num <= 31 && text === num.toString()) {
+            hasDays = true
+            break
+          }
+        }
+        
+        if (hasDays) {
+          for (const option of options) {
+            if (option.value === targetDay.toString() || option.textContent?.trim() === targetDay.toString()) {
+              select.value = option.value
+              select.dispatchEvent(new Event('change', { bubbles: true }))
+              select.dispatchEvent(new Event('input', { bubbles: true }))
+              select.focus()
+              select.blur()
+              return { success: true, method: 'day_detection', value: option.value }
             }
-          }, 500)
-          
-          return { success: true, method: 'dropdown' }
+          }
         }
       }
       
@@ -1030,46 +1803,61 @@ async function handleBirthdaySelection(page, profile) {
     }, profile.birthDay)
     
     if (dayResult && dayResult.success) {
-      await humanWait(1000, 2000)
-      log('verbose', `Day selection: ${profile.birthDay}`)
+      await humanWait(1500, 2500)
+      log('success', `✅ Day selected: ${profile.birthDay} (${dayResult.method})`)
     }
     
-    // Year selection
+    // Enhanced year selection
+    log('info', `🗓️ Selecting year: ${profile.birthYear}`)
+    
     const yearResult = await page.evaluate((targetYear) => {
-      // Try select elements
-      const yearSelects = document.querySelectorAll('select[name*="year"], select[aria-label*="Year"]')
+      // Method 1: Look for year select by label
+      const yearSelects = document.querySelectorAll('select[aria-labelledby*="LABEL"], select[id*="SELECTOR"]')
       for (const select of yearSelects) {
-        const options = select.querySelectorAll('option')
-        for (const option of options) {
-          if (option.value === targetYear.toString() || option.textContent?.trim() === targetYear.toString()) {
-            select.value = option.value
-            select.dispatchEvent(new Event('change', { bubbles: true }))
-            return { success: true, method: 'select' }
+        const label = select.getAttribute('aria-labelledby')
+        if (label) {
+          const labelElement = document.getElementById(label)
+          if (labelElement && labelElement.textContent?.includes('Year')) {
+            const options = select.querySelectorAll('option')
+            for (const option of options) {
+              if (option.value === targetYear.toString() || option.textContent?.trim() === targetYear.toString()) {
+                select.value = option.value
+                select.dispatchEvent(new Event('change', { bubbles: true }))
+                select.dispatchEvent(new Event('input', { bubbles: true }))
+                return { success: true, method: 'label_based', value: option.value }
+              }
+            }
           }
         }
       }
       
-      // Try button-based dropdowns
-      const yearButtons = Array.from(document.querySelectorAll('div[role="button"], button'))
-      for (const button of yearButtons) {
-        const text = button.textContent?.trim() || ''
-        const ariaLabel = button.getAttribute('aria-label') || ''
+      // Method 2: Look for select with year values (1900-2025)
+      const allSelects = document.querySelectorAll('select')
+      for (const select of allSelects) {
+        const options = select.querySelectorAll('option')
+        let hasYears = false
         
-        if (text.toLowerCase().includes('year') || ariaLabel.toLowerCase().includes('year') || text === 'Year') {
-          button.click()
-          
-          setTimeout(() => {
-            const options = Array.from(document.querySelectorAll('div[role="option"], div[data-testid*="year"]'))
-            for (const option of options) {
-              const optionText = option.textContent?.trim() || ''
-              if (optionText === targetYear.toString()) {
-                option.click()
-                return true
-              }
+        // Check if this select contains years
+        for (const option of options) {
+          const text = option.textContent?.trim() || ''
+          const num = parseInt(text)
+          if (num >= 1900 && num <= 2025) {
+            hasYears = true
+            break
+          }
+        }
+        
+        if (hasYears) {
+          for (const option of options) {
+            if (option.value === targetYear.toString() || option.textContent?.trim() === targetYear.toString()) {
+              select.value = option.value
+              select.dispatchEvent(new Event('change', { bubbles: true }))
+              select.dispatchEvent(new Event('input', { bubbles: true }))
+              select.focus()
+              select.blur()
+              return { success: true, method: 'year_detection', value: option.value }
             }
-          }, 500)
-          
-          return { success: true, method: 'dropdown' }
+          }
         }
       }
       
@@ -1077,16 +1865,136 @@ async function handleBirthdaySelection(page, profile) {
     }, profile.birthYear)
     
     if (yearResult && yearResult.success) {
-      await humanWait(1000, 2000)
-      log('verbose', `Year selection: ${profile.birthYear}`)
+      await humanWait(1500, 2500)
+      log('success', `✅ Year selected: ${profile.birthYear} (${yearResult.method})`)
     }
     
-    log('success', '✅ Birthday selection completed')
+    // Final validation and form submission trigger
+    await humanWait(2000, 3000)
+    
+    // Trigger form validation by clicking outside or pressing tab
+    await page.evaluate(() => {
+      const selects = document.querySelectorAll('select')
+      if (selects.length > 0) {
+        selects[selects.length - 1].blur()
+      }
+      
+      // Trigger any form validation
+      const form = document.querySelector('form')
+      if (form) {
+        form.dispatchEvent(new Event('change', { bubbles: true }))
+      }
+    })
+    
+    await humanWait(1000, 2000)
+    
+    log('success', `✅ Birthday selection completed: ${monthName} ${profile.birthDay}, ${profile.birthYear}`)
     return { success: true }
     
   } catch (error) {
-    log('verbose', `Birthday selection failed: ${error.message}`)
-    return { success: false, error: error.message }
+    log('error', `❌ Birthday selection failed: ${error.message}`)
+    
+    // Fallback: Try to interact with any visible selects
+    try {
+      await page.evaluate((month, day, year) => {
+        const selects = document.querySelectorAll('select')
+        const visibleSelects = Array.from(selects).filter(s => s.offsetParent !== null && !s.disabled)
+        
+        if (visibleSelects.length >= 3) {
+          // Assume first three visible selects are month, day, year
+          const [monthSelect, daySelect, yearSelect] = visibleSelects
+          
+          // Set month
+          const monthOptions = monthSelect.querySelectorAll('option')
+          for (const option of monthOptions) {
+            if (option.value === month.toString() || option.textContent?.includes(MONTHS[month - 1])) {
+              monthSelect.value = option.value
+              monthSelect.dispatchEvent(new Event('change', { bubbles: true }))
+              break
+            }
+          }
+          
+          // Set day
+          const dayOptions = daySelect.querySelectorAll('option')
+          for (const option of dayOptions) {
+            if (option.value === day.toString()) {
+              daySelect.value = option.value
+              daySelect.dispatchEvent(new Event('change', { bubbles: true }))
+              break
+            }
+          }
+          
+          // Set year
+          const yearOptions = yearSelect.querySelectorAll('option')
+          for (const option of yearOptions) {
+            if (option.value === year.toString()) {
+              yearSelect.value = option.value
+              yearSelect.dispatchEvent(new Event('change', { bubbles: true }))
+              break
+            }
+          }
+        }
+      }, profile.birthMonth, profile.birthDay, profile.birthYear)
+      
+      await humanWait(2000, 3000)
+      log('warning', '⚠️ Used fallback birthday selection method')
+      return { success: true, method: 'fallback' }
+      
+    } catch (fallbackError) {
+      log('error', `❌ Fallback birthday selection also failed: ${fallbackError.message}`)
+      return { success: false, error: error.message }
+    }
+  }
+}
+
+// Enhanced debugging function for birthday selection
+async function debugBirthdaySelectors(page) {
+  try {
+    const selectorInfo = await page.evaluate(() => {
+      const selects = Array.from(document.querySelectorAll('select'))
+      const selectInfo = selects.map((select, index) => {
+        const label = select.getAttribute('aria-labelledby')
+        const labelText = label ? document.getElementById(label)?.textContent : ''
+        const options = Array.from(select.querySelectorAll('option')).slice(0, 5).map(opt => ({
+          value: opt.value,
+          text: opt.textContent?.trim()
+        }))
+        
+        return {
+          index,
+          id: select.id,
+          name: select.name,
+          className: select.className,
+          ariaLabelledby: label,
+          labelText: labelText,
+          visible: select.offsetParent !== null,
+          disabled: select.disabled,
+          optionCount: select.options.length,
+          sampleOptions: options
+        }
+      })
+      
+      return {
+        totalSelects: selects.length,
+        visibleSelects: selects.filter(s => s.offsetParent !== null).length,
+        selectDetails: selectInfo
+      }
+    })
+    
+    log('debug', '🔍 Birthday selector debug info:')
+    log('debug', `Total selects: ${selectorInfo.totalSelects}, Visible: ${selectorInfo.visibleSelects}`)
+    
+    selectorInfo.selectDetails.forEach((select, i) => {
+      log('debug', `Select ${i + 1}: ${select.labelText || 'No Label'} (visible: ${select.visible}, options: ${select.optionCount})`)
+      if (select.sampleOptions.length > 0) {
+        log('debug', `  Sample options: ${select.sampleOptions.map(opt => `"${opt.text}"`).join(', ')}`)
+      }
+    })
+    
+    return selectorInfo
+  } catch (error) {
+    log('debug', `Birthday selector debug failed: ${error.message}`)
+    return null
   }
 }
 
@@ -1281,7 +2189,7 @@ async function checkEmailForOTP(email, maxWaitMinutes = 3, browser) {
   }
 }
 
-// Main X.com account creation function
+// Complete createXAccount function with proper authentication handling
 async function createXAccount(accountData) {
   let browser, page, deviceProfile
   
@@ -1384,7 +2292,38 @@ async function createXAccount(accountData) {
     await findAndClick(page, nextSelectors, 'Next')
     await humanWait(4000, 7000)
 
-    // Step 5: Handle email verification if required
+    // Step 5: Handle authentication challenges (NEW - PROPERLY POSITIONED)
+    log('info', '🔐 Checking for authentication challenges...')
+    
+    const authResult = await handleAuthenticationSteps(page, accountData)
+    
+    if (!authResult.success && authResult.step === 'phone_verification') {
+      return {
+        success: false,
+        platform: "x",
+        error: "Phone verification required - cannot proceed automatically",
+        step: authResult.step,
+        finalUrl: page.url()
+      }
+    }
+    
+    if (authResult.step === 'authentication_complete') {
+      log('success', '🎉 Authentication completed, account creation successful!')
+      
+      const finalUrl = page.url()
+      return {
+        success: true,
+        platform: "x",
+        message: "X.com account created successfully",
+        username: accountData.profile.usernames[0],
+        email: accountData.email,
+        finalUrl: finalUrl,
+        authenticationPassed: true,
+        method: "full_auth_flow"
+      }
+    }
+
+    // Step 6: Handle email verification if required
     log('info', '🔍 Checking for email verification...')
     
     try {
@@ -1469,7 +2408,7 @@ async function createXAccount(accountData) {
       log('verbose', `Email verification step failed: ${emailError.message}`)
     }
 
-    // Step 6: Handle password creation
+    // Step 7: Handle password creation
     try {
       log('info', '🔒 Looking for password field...')
       
@@ -1518,7 +2457,7 @@ async function createXAccount(accountData) {
       log('verbose', `Password creation failed: ${passwordError.message}`)
     }
 
-    // Step 7: Handle username selection
+    // Step 8: Handle username selection
     try {
       log('info', '👤 Looking for username field...')
       
@@ -1599,7 +2538,7 @@ async function createXAccount(accountData) {
       log('verbose', `Username selection failed: ${usernameError.message}`)
     }
 
-    // Step 8: Final success check
+    // Step 9: Final success check
     await humanWait(5000, 8000)
     
     const finalUrl = page.url()
@@ -1669,6 +2608,7 @@ async function createXAccount(accountData) {
           email: accountData.email,
           finalUrl: laterUrl,
           positiveIndicators: positiveIndicators + 1,
+          authenticationPassed: true,
           method: "additional_check"
         }
       }
@@ -1684,6 +2624,7 @@ async function createXAccount(accountData) {
         email: accountData.email,
         finalUrl: finalUrl,
         positiveIndicators: positiveIndicators,
+        authenticationPassed: true,
         method: "primary_check"
       }
     } else {
@@ -1694,6 +2635,7 @@ async function createXAccount(accountData) {
         error: "Account creation status unclear - may need manual verification",
         finalUrl: finalUrl,
         positiveIndicators: positiveIndicators,
+        authenticationPassed: false,
         debugInfo: {
           urlValid: finalUrl.includes('x.com') || finalUrl.includes('twitter.com'),
           hasSignupInUrl: finalUrl.includes('/signup') || finalUrl.includes('/flow/'),
@@ -1710,6 +2652,7 @@ async function createXAccount(accountData) {
       success: false,
       platform: "x",
       error: error.message,
+      authenticationPassed: false,
       stack: error.stack
     }
   } finally {

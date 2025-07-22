@@ -536,7 +536,7 @@ export default function DashboardLayout({
                 Accounts
                 <span className="ml-auto rounded-full bg-white/20 px-2 py-0.5 text-xs font-semibold">New</span>
               </a>
-              <a
+              {/* <a
                 href="/dashboard/social-accounts"
                 className={cn(
                   "flex items-center rounded-md px-2 py-2 text-sm font-medium",
@@ -562,7 +562,7 @@ export default function DashboardLayout({
                 </svg>
                 Social Accounts
                 <span className="ml-auto rounded-full bg-white/20 px-2 py-0.5 text-xs font-semibold">New</span>
-              </a>
+              </a> */}
               <a
                 href="/dashboard/billing"
                 className={cn(

@@ -54,14 +54,11 @@ export default function SignupPage() {
       const data = await response.json()
 
       if (data.success) {
-        // Store user data in localStorage
         localStorage.setItem("user", JSON.stringify(data.user))
-        localStorage.setItem("token", data.token)
+        localStorage.setItem("userId", data.user._id)
 
-        // Show success toast
         toast.success(data.message || "Account created successfully!")
 
-        // Redirect to dashboard
         router.push("/dashboard")
       } else {
         toast.error(data.message || "Failed to create account")
