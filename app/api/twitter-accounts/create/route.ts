@@ -253,595 +253,7 @@ async function createMaximumStealthBrowser() {
   log('success', '✅ Stealth browser created successfully')
   return { browser, page, deviceProfile }
 }
-async function solveCaptchaWithGemini(page) {
-  log('info', '🤖 Solving CAPTCHA with Gemini AI...')
-  
-  try {
-    // First, try to detect CAPTCHA elements
-    const captchaDetection = await page.evaluate(() => {
-      const possibleCaptchaSelectors = [
-        'iframe[src*="recaptcha"]',
-        'iframe[src*="captcha"]', 
-        '[data-testid*="captcha"]',
-        '[aria-label*="captcha"]',
-        '.captcha',
-        '#captcha',
-        'canvas',
-        'img[alt*="captcha"]',
-        'img[src*="captcha"]',
-        '.puzzle',
-        '[data-callback]',
-        '.challenge-image'
-      ]
-      
-      const results = []
-      
-      for (const selector of possibleCaptchaSelectors) {
-        const elements = document.querySelectorAll(selector)
-        for (const element of elements) {
-          if (element.offsetParent !== null) {
-            const rect = element.getBoundingClientRect()
-            if (rect.width > 50 && rect.height > 50) {
-              results.push({
-                selector: selector,
-                tagName: element.tagName,
-                src: element.src || '',
-                className: element.className || '',
-                id: element.id || '',
-                rect: {
-                  x: rect.x,
-                  y: rect.y,
-                  width: rect.width,
-                  height: rect.height
-                }
-              })
-            }
-          }
-        }
-      }
-      
-      return {
-        found: results.length > 0,
-        elements: results,
-        pageContent: document.body.textContent?.toLowerCase().includes('captcha') || 
-                    document.body.textContent?.toLowerCase().includes('verify') ||
-                    document.body.textContent?.toLowerCase().includes('challenge')
-      }
-    })
-    
-    if (!captchaDetection.found && !captchaDetection.pageContent) {
-      return {
-        success: false,
-        error: 'No CAPTCHA detected on page'
-      }
-    }
-    
-    log('info', `🔍 Detected ${captchaDetection.elements.length} potential CAPTCHA elements`)
-    
-    // Take full page screenshot for analysis
-    await humanWait(2000, 3000)
-    const fullScreenshot = await page.screenshot({ 
-      type: 'png',
-      quality: 100,
-      fullPage: false
-    })
-    
-    // Use Gemini Vision API to analyze the CAPTCHA
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro-vision-latest" })
-    
-    const prompt = `Analyze this screenshot from X.com (Twitter) account verification process. I need to solve any CAPTCHA or verification challenge present.
 
-Please examine the image carefully and identify:
-
-1. **Text-based CAPTCHA**: If there's distorted text/numbers to read, return only the exact text
-2. **Image selection CAPTCHA**: If it asks to "select all images with [object]", list the grid positions (like "1,3,5,7")  
-3. **Puzzle CAPTCHA**: If there's a sliding puzzle or rotation needed, describe the solution
-4. **reCAPTCHA**: If it's a "I'm not a robot" checkbox, indicate if it needs clicking
-5. **No CAPTCHA**: If no verification challenge is visible, say "NO_CAPTCHA_FOUND"
-
-Look for:
-- Distorted text or numbers in a box
-- Grid of images with selection instructions  
-- Puzzle pieces or rotation arrows
-- "I'm not a robot" checkbox
-- Any verification challenge elements
-
-Respond with ONLY the solution needed (text to type, grid numbers to click, or action to take). Be precise and concise.`
-    
-    const imagePart = {
-      inlineData: {
-        data: fullScreenshot.toString('base64'),
-        mimeType: 'image/png'
-      }
-    }
-    
-    const result = await model.generateContent([prompt, imagePart])
-    const captchaSolution = result.response.text().trim()
-    
-    log('info', `🎯 Gemini analysis: ${captchaSolution}`)
-    
-    // Process the solution based on type
-    if (captchaSolution === 'NO_CAPTCHA_FOUND') {
-      return {
-        success: true,
-        type: 'none',
-        message: 'No CAPTCHA verification needed'
-      }
-    }
-    
-    // Handle different CAPTCHA types
-    if (captchaSolution.includes(',') && /^\d+,[\d,]+$/.test(captchaSolution)) {
-      // Grid-based image selection CAPTCHA
-      return await handleImageSelectionCaptcha(page, captchaSolution)
-    }
-    
-    if (captchaSolution.toLowerCase().includes('click') && captchaSolution.toLowerCase().includes('checkbox')) {
-      // reCAPTCHA checkbox
-      return await handleRecaptchaCheckbox(page)
-    }
-    
-    if (/^[A-Z0-9]+$/i.test(captchaSolution) && captchaSolution.length >= 4) {
-      // Text-based CAPTCHA
-      return await handleTextCaptcha(page, captchaSolution)
-    }
-    
-    // Default: try to handle as text input
-    return await handleTextCaptcha(page, captchaSolution)
-    
-  } catch (error) {
-    log('error', `❌ Gemini CAPTCHA solving failed: ${error.message}`)
-    return {
-      success: false,
-      error: error.message,
-      fallback: true
-    }
-  }
-}
-
-// Handle image selection CAPTCHA
-async function handleImageSelectionCaptcha(page, gridPositions) {
-  log('info', `🖼️ Handling image selection CAPTCHA: ${gridPositions}`)
-  
-  try {
-    const positions = gridPositions.split(',').map(pos => parseInt(pos.trim()))
-    
-    // Find CAPTCHA grid elements
-    const clickResult = await page.evaluate((positions) => {
-      // Look for clickable grid elements
-      const gridSelectors = [
-        '[role="button"] img',
-        '.captcha-grid img', 
-        '[data-testid*="captcha"] img',
-        '.challenge-image',
-        '[onclick] img'
-      ]
-      
-      let gridElements = []
-      
-      for (const selector of gridSelectors) {
-        const elements = document.querySelectorAll(selector)
-        if (elements.length >= 4) { // Minimum grid size
-          gridElements = Array.from(elements)
-          break
-        }
-      }
-      
-      if (gridElements.length === 0) {
-        return { success: false, error: 'No grid elements found' }
-      }
-      
-      let clickedCount = 0
-      
-      // Click specified positions (1-indexed)
-      for (const position of positions) {
-        const index = position - 1 // Convert to 0-indexed
-        if (index >= 0 && index < gridElements.length) {
-          const element = gridElements[index]
-          element.click()
-          clickedCount++
-        }
-      }
-      
-      return { 
-        success: true, 
-        clicked: clickedCount, 
-        total: gridElements.length 
-      }
-      
-    }, positions)
-    
-    if (clickResult.success) {
-      await humanWait(1000, 2000)
-      log('success', `✅ Clicked ${clickResult.clicked} grid positions`)
-      return { success: true, type: 'image_selection', clicked: clickResult.clicked }
-    }
-    
-    return { success: false, error: clickResult.error }
-    
-  } catch (error) {
-    log('error', `❌ Image selection CAPTCHA failed: ${error.message}`)
-    return { success: false, error: error.message }
-  }
-}
-
-// Handle reCAPTCHA checkbox
-async function handleRecaptchaCheckbox(page) {
-  log('info', '☑️ Handling reCAPTCHA checkbox...')
-  
-  try {
-    const checkboxResult = await page.evaluate(() => {
-      // Look for reCAPTCHA checkbox
-      const checkboxSelectors = [
-        '.recaptcha-checkbox',
-        '#recaptcha-anchor',
-        '[role="checkbox"]',
-        '.g-recaptcha'
-      ]
-      
-      for (const selector of checkboxSelectors) {
-        const checkbox = document.querySelector(selector)
-        if (checkbox && checkbox.offsetParent !== null) {
-          checkbox.click()
-          return { success: true, selector }
-        }
-      }
-      
-      return { success: false, error: 'Checkbox not found' }
-    })
-    
-    if (checkboxResult.success) {
-      await humanWait(2000, 4000)
-      log('success', '✅ reCAPTCHA checkbox clicked')
-      return { success: true, type: 'recaptcha_checkbox' }
-    }
-    
-    return { success: false, error: checkboxResult.error }
-    
-  } catch (error) {
-    log('error', `❌ reCAPTCHA checkbox failed: ${error.message}`)
-    return { success: false, error: error.message }
-  }
-}
-
-// Handle text-based CAPTCHA
-async function handleTextCaptcha(page, captchaText) {
-  log('info', `📝 Handling text CAPTCHA: ${captchaText}`)
-  
-  try {
-    // Find CAPTCHA input field
-    const inputResult = await page.evaluate((text) => {
-      const inputSelectors = [
-        'input[placeholder*="captcha"]',
-        'input[name*="captcha"]',
-        'input[id*="captcha"]',
-        'input[data-testid*="captcha"]',
-        'input[type="text"]',
-        'input[placeholder*="code"]',
-        'input[placeholder*="verify"]'
-      ]
-      
-      for (const selector of inputSelectors) {
-        const input = document.querySelector(selector)
-        if (input && input.offsetParent !== null && !input.disabled) {
-          input.focus()
-          input.value = text
-          input.dispatchEvent(new Event('input', { bubbles: true }))
-          input.dispatchEvent(new Event('change', { bubbles: true }))
-          return { success: true, selector }
-        }
-      }
-      
-      return { success: false, error: 'CAPTCHA input not found' }
-    }, captchaText)
-    
-    if (inputResult.success) {
-      await humanWait(500, 1000)
-      log('success', '✅ Text CAPTCHA filled')
-      return { success: true, type: 'text_captcha', text: captchaText }
-    }
-    
-    return { success: false, error: inputResult.error }
-    
-  } catch (error) {
-    log('error', `❌ Text CAPTCHA failed: ${error.message}`)
-    return { success: false, error: error.message }
-  }
-}
-async function handleAuthenticationSteps(page, accountData) {
-  log('info', '🔐 Checking for authentication challenges...')
-  
-  try {
-    await humanWait(4000, 5000)
-    console.log("🔍 Waiting for authentication elements to load...")
-    
-    // Search the entire page body for authentication elements
-    const authButtonResult = await page.evaluate(() => {
-      // First, let's see the overall page structure
-      const pageInfo = {
-        title: document.title,
-        url: window.location.href,
-        bodyChildren: document.body.children.length,
-        allDialogs: document.querySelectorAll('[role="dialog"]').length,
-        allModals: document.querySelectorAll('[aria-modal="true"]').length
-      }
-      
-      console.log('📄 Page Info:', pageInfo)
-      
-      // Look for authentication elements in multiple ways
-      const authContainerSelectors = [
-        '[role="dialog"][aria-modal="true"]',  // Modal dialogs
-        '[role="dialog"]',                     // Any dialog
-        '.auth-dialog',                        // Class-based
-        '.authentication',
-        '.verify',
-        '.challenge',
-        '[data-testid*="auth"]',
-        '[data-testid*="verify"]',
-        '[id*="auth"]',
-        '[class*="auth"]',
-        'div:has(button:contains("Authenticate"))', // CSS4 selector (if supported)
-        'body'  // Fallback to entire body
-      ]
-      
-      let authContainer = null
-      let containerSelector = null
-      
-      // Find the authentication container
-      for (const selector of authContainerSelectors) {
-        try {
-          const element = document.querySelector(selector)
-          if (element) {
-            // Check if this container has authentication-related content
-            const text = element.textContent?.toLowerCase() || ''
-            if (text.includes('authenticate') || text.includes('verify') || text.includes('challenge') || selector === 'body') {
-              authContainer = element
-              containerSelector = selector
-              break
-            }
-          }
-        } catch (e) {
-          console.log(`Selector failed: ${selector}`, e.message)
-        }
-      }
-      
-      console.log(`🎯 Using container: ${containerSelector}`)
-      
-      if (!authContainer) {
-        return {
-          success: false,
-          error: 'No authentication container found',
-          pageInfo
-        }
-      }
-      
-      // Find ALL possible button elements in the container
-      const buttonSelectors = [
-        'button',
-        'div[role="button"]',
-        'span[role="button"]',
-        'a[role="button"]',
-        'input[type="button"]',
-        'input[type="submit"]',
-        '[onclick]',
-        '[data-testid*="button"]',
-        '[data-testid*="auth"]',
-        '[data-testid*="continue"]',
-        '[data-testid*="verify"]',
-        '.btn',
-        '.button',
-        '[class*="button"]',
-        '[class*="btn"]'
-      ]
-      
-      const allButtons = []
-      
-      buttonSelectors.forEach(selector => {
-        try {
-          const elements = authContainer.querySelectorAll(selector)
-          elements.forEach((el, index) => {
-            const rect = el.getBoundingClientRect()
-            allButtons.push({
-              element: el,
-              tagName: el.tagName,
-              textContent: el.textContent?.trim() || '',
-              innerHTML: el.innerHTML?.substring(0, 100) || '',
-              className: el.className || '',
-              id: el.id || '',
-              role: el.getAttribute('role') || '',
-              dataTestId: el.getAttribute('data-testid') || '',
-              onclick: el.getAttribute('onclick') || '',
-              selector: selector,
-              index: index,
-              visible: rect.width > 0 && rect.height > 0,
-              position: { x: rect.x, y: rect.y, width: rect.width, height: rect.height }
-            })
-          })
-        } catch (e) {
-          console.log(`Button selector failed: ${selector}`, e.message)
-        }
-      })
-      
-      console.log(`🔍 Found ${allButtons.length} potential buttons:`)
-      allButtons.forEach((btn, i) => {
-        console.log(`  ${i + 1}. [${btn.tagName}] "${btn.textContent}" (${btn.className}) - Visible: ${btn.visible}`)
-      })
-      
-      // Try to find and click authentication buttons with various text patterns
-      const authTextPatterns = [
-        /^authenticate$/i,
-        /^continue$/i,
-        /^verify$/i,
-        /^submit$/i,
-        /^confirm$/i,
-        /^proceed$/i,
-        /^next$/i,
-        /authenticate/i,
-        /continue/i,
-        /verify/i,
-        /challenge/i
-      ]
-      
-      let clickedButton = null
-      
-      // Try exact matches first, then partial matches
-      for (const pattern of authTextPatterns) {
-        for (const button of allButtons) {
-          const buttonText = button.textContent.trim()
-          
-          if (pattern.test(buttonText) && button.visible) {
-            console.log(`🎯 Attempting to click button: "${buttonText}"`)
-            
-            try {
-              const element = button.element
-              
-              // Multiple click strategies
-              const clickStrategies = [
-                () => element.click(),
-                () => element.dispatchEvent(new MouseEvent('click', { 
-                  bubbles: true, 
-                  cancelable: true,
-                  view: window 
-                })),
-                () => {
-                  element.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }))
-                  element.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }))
-                  element.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-                },
-                () => {
-                  // Focus and trigger Enter key
-                  element.focus()
-                  element.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }))
-                  element.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter' }))
-                }
-              ]
-              
-              for (const strategy of clickStrategies) {
-                try {
-                  strategy()
-                  console.log(`✅ Click strategy succeeded`)
-                  break
-                } catch (strategyError) {
-                  console.log(`❌ Click strategy failed:`, strategyError.message)
-                }
-              }
-              
-              clickedButton = {
-                text: buttonText,
-                pattern: pattern.source,
-                selector: button.selector,
-                success: true
-              }
-              
-              break
-              
-            } catch (clickError) {
-              console.log(`❌ Failed to click button "${buttonText}":`, clickError.message)
-            }
-          }
-        }
-        
-        if (clickedButton) break
-      }
-      
-      return {
-        success: !!clickedButton,
-        clickedButton,
-        totalButtons: allButtons.length,
-        visibleButtons: allButtons.filter(b => b.visible).length,
-        allButtons: allButtons.map(b => ({
-          text: b.textContent,
-          tag: b.tagName,
-          class: b.className,
-          visible: b.visible
-        })),
-        containerUsed: containerSelector,
-        pageInfo
-      }
-    })
-    
-    // Log detailed results
-    console.log('🔍 Authentication Search Results:', JSON.stringify(authButtonResult, null, 2))
-    
-    if (authButtonResult.success) {
-      log('success', `✅ Successfully clicked: "${authButtonResult.clickedButton.text}" using pattern: ${authButtonResult.clickedButton.pattern}`)
-      
-      // Wait for page changes after clicking
-      await humanWait(6000, 8000)
-      
-      // Check what happened after the click
-      const postClickCheck = await page.evaluate(() => {
-        return {
-          url: window.location.href,
-          title: document.title,
-          hasAuthDialog: !!document.querySelector('[role="dialog"][aria-modal="true"]'),
-          totalIframes: document.querySelectorAll('iframe').length,
-          bodyText: document.body.textContent?.substring(0, 500) || '',
-          arkosePresent: !!document.querySelector('iframe[src*="arkoselabs"], iframe[id*="arkose"], iframe[src*="2CB16598-CB82-4CF7-B332-5990DB66F3AB"]')
-        }
-      })
-      
-      console.log('📄 Post-click page state:', postClickCheck)
-      
-      // Look for Arkose CAPTCHA
-      if (postClickCheck.arkosePresent) {
-        const arkoseDetails = await page.evaluate(() => {
-          const arkoseSelectors = [
-            'iframe[id="arkoseFrame"]',
-            'iframe[title="arkoseFrame"]',
-            'iframe[src*="arkoselabs"]',
-            'iframe[src*="2CB16598-CB82-4CF7-B332-5990DB66F3AB"]',
-            'iframe[src*="arkose"]',
-            'iframe[name*="arkose"]'
-          ]
-          
-          for (const selector of arkoseSelectors) {
-            const iframe = document.querySelector(selector)
-            if (iframe) {
-              return {
-                found: true,
-                id: iframe.id,
-                src: iframe.src,
-                title: iframe.title,
-                selector: selector
-              }
-            }
-          }
-          return { found: false }
-        })
-        
-        if (arkoseDetails.found) {
-          log('success', `🛡️ Arkose CAPTCHA detected: ${arkoseDetails.selector}`)
-          return {
-            success: true,
-            step: 'arkose_captcha_detected',
-            arkoseInfo: arkoseDetails
-          }
-        }
-      }
-      
-      return {
-        success: true,
-        step: 'authenticate_button_clicked',
-        postClickState: postClickCheck
-      }
-      
-    } else {
-      log('warning', `❌ No authentication button found. Checked ${authButtonResult.totalButtons} buttons (${authButtonResult.visibleButtons} visible)`)
-      log('info', `📋 Available buttons: ${authButtonResult.allButtons.map(b => `"${b.text}"`).join(', ')}`)
-      
-      return {
-        success: false,
-        reason: 'no_auth_button_found',
-        debugInfo: authButtonResult
-      }
-    }
-    
-  } catch (error) {
-    log('error', `❌ Authentication step failed: ${error.message}`)
-    console.error('Full error:', error)
-    return { success: false, error: error.message }
-  }
-}
 // Helper function for checking email verification (already exists in your code)
 async function checkEmailVerification(page) {
   log('info', '🔍 Checking for email verification...')
@@ -1077,7 +489,7 @@ async function humanType(page, selector, text, timeout = 30000) {
     }
     
     // Click and focus
-    await element.click()
+    await (element as HTMLElement).click()
     await humanWait(200, 500)
     
     // Clear existing content
@@ -1132,7 +544,7 @@ async function humanClick(page, selector, timeout = 30000) {
   try {
     await page.waitForSelector(selector, { timeout, visible: true })
     const element = await page.$(selector)
-    
+    console.log(element, page, selector, "tetet")
     if (!element) {
       throw new Error(`Element not found: ${selector}`)
     }
@@ -1151,7 +563,7 @@ async function humanClick(page, selector, timeout = 30000) {
       await humanWait(50, 200)
       await page.mouse.click(endX, endY)
     } else {
-      await element.click()
+      await (element as HTMLElement).click()
     }
     
     await humanWait(200, 500)
@@ -1192,7 +604,7 @@ async function debugAvailableButtons(page, context = "unknown") {
 }
 
 // Enhanced element finder with multiple strategies
-async function findAndClick(page, possibleSelectors, elementName, timeout = 30000) {
+async function findAndClick(page, possibleSelectors, elementName, timeout = 3000) {
   log('info', `🔍 Looking for ${elementName}...`)
   
   // Strategy 0: Direct approach for X.com "Create account" button structure
@@ -1213,7 +625,7 @@ async function findAndClick(page, possibleSelectors, elementName, timeout = 3000
               (hasXcomClasses || hasDarkBackground) && 
               button.offsetParent !== null && 
               !button.disabled) {
-            button.click()
+            (button as HTMLElement).click()
             return { success: true, method: 'direct_xcom_structure' }
           }
         }
@@ -1222,7 +634,7 @@ async function findAndClick(page, possibleSelectors, elementName, timeout = 3000
         for (const button of buttons) {
           const buttonText = button.textContent?.trim() || ''
           if (buttonText === 'Create account' && button.offsetParent !== null && !button.disabled) {
-            button.click()
+            (button as HTMLElement).click()
             return { success: true, method: 'direct_text_match' }
           }
         }
@@ -1243,7 +655,7 @@ async function findAndClick(page, possibleSelectors, elementName, timeout = 3000
   // Strategy 1: Try each selector with short timeout
   for (const selector of possibleSelectors) {
     try {
-      await humanClick(page, selector, 3000)
+      await humanClick(page, selector, timeout ? timeout : 3000)
       log('success', `✅ Found ${elementName} with selector: ${selector}`)
       return true
     } catch (e) {
@@ -1260,7 +672,7 @@ async function findAndClick(page, possibleSelectors, elementName, timeout = 3000
   'Sign up': ['Sign up', 'Create account', 'Register', 'Join'],
   'Verify': ['Verify', 'Confirm', 'Check'],
   'Done': ['Done', 'Finish', 'Complete'],
-  'Authenticate': ['Authenticate', 'Verify account', 'Security check', 'Continue', 'Verify'],  // ENHANCED
+  'Authenticate': ['Authenticate', 'Verify account', 'Security check', 'Continue', 'Verify', 'Begin', 'Start'],  // EXPANDED
   'Submit': ['Submit', 'Continue', 'Verify', 'Confirm', 'Next']  // ENHANCED
 }
       
@@ -1270,12 +682,18 @@ async function findAndClick(page, possibleSelectors, elementName, timeout = 3000
         // First try: Look specifically for buttons with the X.com structure
         const buttons = Array.from(document.querySelectorAll('button[role="button"], button[type="button"]'))
         for (const button of buttons) {
+          // 0.a Check button's aria-label (accessibility label)
+          const aria = button.getAttribute('aria-label')?.trim() || ''
+          if (aria && textsToFind.includes(aria)) {
+            (button as HTMLElement).click()
+            return { success: true, text: aria, method: 'button_aria_exact' }
+          }
           // Check if button contains nested spans with our target text
           const spans = button.querySelectorAll('span')
           for (const span of spans) {
             const spanText = span.textContent?.trim() || ''
             if (spanText === text && button.offsetParent !== null && !button.disabled) {
-              button.click()
+              (button as HTMLElement).click()
               return { success: true, text, method: 'button_span_exact' }
             }
           }
@@ -1283,7 +701,7 @@ async function findAndClick(page, possibleSelectors, elementName, timeout = 3000
           // Check button's direct text content
           const buttonText = button.textContent?.trim() || ''
           if (buttonText === text && button.offsetParent !== null && !button.disabled) {
-            button.click()
+            (button as HTMLElement).click()
             return { success: true, text, method: 'button_text_exact' }
           }
         }
@@ -1291,6 +709,7 @@ async function findAndClick(page, possibleSelectors, elementName, timeout = 3000
         // Second try: Look for any interactive element with exact text
         const allElements = Array.from(document.querySelectorAll('*'))
         for (const element of allElements) {
+          const ariaLabel = element.getAttribute('aria-label')?.trim() || ''
           const elementText = element.textContent?.trim() || ''
           const isInteractive = element.tagName === 'BUTTON' || 
                                element.getAttribute('role') === 'button' ||
@@ -1298,9 +717,8 @@ async function findAndClick(page, possibleSelectors, elementName, timeout = 3000
                                element.style.cursor === 'pointer' ||
                                element.getAttribute('data-testid') ||
                                element.classList.contains('css-175oi2r') // X.com button class
-          
-          if (elementText === text && isInteractive && element.offsetParent !== null) {
-            element.click()
+          if ((elementText === text || ariaLabel === text) && isInteractive && element.offsetParent !== null) {
+            (element as HTMLElement).click()
             return { success: true, text, method: 'element_exact' }
           }
         }
@@ -1309,7 +727,7 @@ async function findAndClick(page, possibleSelectors, elementName, timeout = 3000
         for (const button of buttons) {
           const buttonText = button.textContent?.trim().toLowerCase() || ''
           if (buttonText.includes(text.toLowerCase()) && button.offsetParent !== null && !button.disabled) {
-            button.click()
+            (button as HTMLElement).click()
             return { success: true, text: button.textContent?.trim(), method: 'button_partial' }
           }
         }
@@ -1347,7 +765,7 @@ async function findAndClick(page, possibleSelectors, elementName, timeout = 3000
         
         for (const text of texts) {
           if (buttonText === text && button.offsetParent !== null && !button.disabled) {
-            button.click()
+            (button as HTMLElement).click()
             return { success: true, text, method: 'xcom_css_class' }
           }
         }
@@ -1361,7 +779,7 @@ async function findAndClick(page, possibleSelectors, elementName, timeout = 3000
         
         for (const text of texts) {
           if (buttonText === text && button.offsetParent !== null && !button.disabled) {
-            button.click()
+            (button as HTMLElement).click()
             return { success: true, text, method: 'styled_button' }
           }
         }
@@ -1409,7 +827,7 @@ async function findAndClick(page, possibleSelectors, elementName, timeout = 3000
           
           for (const text of texts) {
             if (buttonText === text && isPrimaryButton && button.offsetParent !== null && !button.disabled) {
-              button.click()
+              (button as HTMLElement).click()
               return { success: true, text, method: 'enhanced_xcom_primary' }
             }
           }
@@ -1446,7 +864,7 @@ async function findAndClick(page, possibleSelectors, elementName, timeout = 3000
           for (const text of texts) {
             if (buttonText === text && (button.tagName === 'BUTTON' || button.getAttribute('role') === 'button') && 
                 button.offsetParent !== null && !button.disabled) {
-              button.click()
+              (button as HTMLElement).click()
               return { success: true, text, method: 'xcom_css_classes' }
             }
           }
@@ -1488,7 +906,7 @@ async function findAndClick(page, possibleSelectors, elementName, timeout = 3000
                className.toLowerCase().includes(pattern) ||
                ariaLabel.toLowerCase().includes(pattern)) &&
               element.offsetParent !== null && !element.disabled) {
-            element.click()
+            (element as HTMLElement).click()
             return { success: true, method: 'attribute', pattern }
           }
         }
@@ -1505,6 +923,18 @@ async function findAndClick(page, possibleSelectors, elementName, timeout = 3000
   } catch (e) {
     log('verbose', `Attribute search failed for ${elementName}: ${e.message}`)
   }
+
+  // Fallback: click first visible button if only one is on screen
+  const genericClicked = await page.evaluate(() => {
+    const buttons = Array.from(document.querySelectorAll('button'))
+      .filter(b => b.offsetParent !== null && !b.disabled);
+    if (buttons.length === 1) {
+      (buttons[0] as HTMLElement).click();
+      return true;
+    }
+    return false;
+  });
+  if (genericClicked) return true;
   
   // If all strategies failed, debug what's available
   log('warning', `❌ Could not find ${elementName} with any strategy`)
@@ -2027,7 +1457,7 @@ async function checkEmailForOTP(email, maxWaitMinutes = 3, browser) {
         for (const element of editableElements) {
           const text = element.textContent?.trim() || ''
           if (text && text.length > 3 && !text.includes('@')) {
-            element.click()
+            (element as HTMLElement).click()
             return { success: true, clicked: text }
           }
         }
@@ -2062,7 +1492,7 @@ async function checkEmailForOTP(email, maxWaitMinutes = 3, browser) {
             for (const button of buttons) {
               const text = (button.textContent || button.value || '').trim().toLowerCase()
               if (text === 'set' && button.offsetParent !== null) {
-                button.click()
+                (button as HTMLElement).click()
                 return { success: true }
               }
             }
@@ -2189,6 +1619,304 @@ async function checkEmailForOTP(email, maxWaitMinutes = 3, browser) {
   }
 }
 
+// --- Helper: Solve captcha using Gemini AI ---
+async function solveCaptchaWithGemini(imageBase64: string): Promise<string | null> {
+  try {
+    // const apiKey = process.env.GEMINI_API_KEY
+    const apiKey = "AIzaSyDXYs8TsJP4g8yF62tVHzHeeGtYDiGXNX4"
+    // AIzaSyChTVLfLOdTCKux7Bpof39oUBNdMjobKiQ
+    if (!apiKey) {
+      log('warning', '⚠️ GEMINI_API_KEY not set; skipping captcha solve')
+      return null
+    }
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent?key=${apiKey}`
+    const payload = {
+      contents: [
+        {
+          parts: [
+            { mime_type: 'image/png', data: imageBase64 },
+            { text: 'Solve this captcha and return only the solution text.' }
+          ]
+        }
+      ]
+    }
+    const res = await axios.post(url, payload, { timeout: 30000 })
+    const text: string | undefined = res.data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim()
+    if (text) {
+      const solution = text.split(/\s+/)[0]
+      log('success', `🧠 Gemini solved captcha: ${solution}`)
+      return solution
+    }
+    return null
+  } catch (err: any) {
+    log('verbose', `Gemini captcha solve error: ${err.message}`)
+    return null
+  }
+}
+
+// --- Helper: Detect and solve captcha on current page ---
+async function detectAndSolveCaptcha(page): Promise<boolean> {
+  // Updated selectors for Arkose and other challenge types
+  const captchaSelectors = [
+    '#arkoseFrame', // Arkose challenge iframe (from your HTML)
+    'iframe[src*="arkoselabs" i]', // Arkose Labs iframe
+    'iframe[src*="captcha" i]',
+    'iframe[src*="hcaptcha" i]',
+    'iframe[src*="recaptcha" i]',
+    'img[alt*="captcha" i]',
+    'canvas[aria-label*="captcha" i]',
+    '.arkose-challenge', // Arkose challenge container
+    '[data-theme="arkose"]' // Arkose theme attribute
+  ]
+
+  for (const sel of captchaSelectors) {
+    try {
+      await page.waitForSelector(sel, { timeout: 10000 })
+      const element = await page.$(sel)
+      if (!element) continue
+      
+      log('info', '🧩 Challenge detected, attempting solve...')
+      
+      // Handle Arkose challenge specifically
+      if (sel === '#arkoseFrame' || sel.includes('arkoselabs')) {
+        return await handleArkoseChallenge(page, element)
+      }
+      
+      // Handle traditional captcha
+      const imgBase64 = await element.screenshot({ encoding: 'base64' }) as string
+      const answer = await solveCaptchaWithGemini(imgBase64)
+      if (!answer) return false
+      
+      const inputSelectors = [
+        'input[type="text"]',
+        'input[aria-label*="captcha" i]',
+        'input[name*="captcha" i]'
+      ]
+      
+      await findAndType(page, inputSelectors, answer, 'captcha')
+      await humanWait(800, 1500)
+      
+      const submitSelectors = [
+        'button[type="submit"]',
+        'button[role="button"]',
+        'div[role="button"]'
+      ]
+      
+      await findAndClick(page, submitSelectors, 'Submit captcha')
+      await humanWait(2000, 4000)
+      log('success', '✅ Captcha submitted')
+      return true
+      
+    } catch (error: any) {
+      console.log(`Selector ${sel} not found:`, error.message)
+      continue // Try next selector instead of logging full error
+    }
+  }
+  
+  log('info', 'ℹ️ No captcha/challenge detected')
+  return false
+}
+
+async function handleArkoseChallenge(page, arkoseElement): Promise<boolean> {
+  try {
+    log('info', '🔒 Arkose challenge detected')
+    
+    // Wait for the iframe to fully load
+    await page.waitForSelector(arkoseElement, { timeout: 3000 })
+    
+    // Get the iframe content
+    const frame = await arkoseElement.contentFrame()
+    if (!frame) {
+      log('error', '❌ Could not access Arkose iframe content')
+      return false
+    }
+    
+    // Wait for challenge to load inside iframe
+    await frame.waitForSelector(arkoseElement, { timeout: 2000 })
+    
+    // Look for authenticate/verify button inside the iframe
+    const buttonSelectors = [
+      'button:contains("authenticate")',
+      'button:contains("verify")',
+      'button:contains("continue")',
+      'button[type="submit"]',
+      'div[role="button"]',
+      '[data-theme*="button"]'
+    ]
+    
+    for (const selector of buttonSelectors) {
+      try {
+        if (selector.includes(':contains')) {
+          // Handle text-based selection
+          const buttonFound = await frame.evaluate((text) => {
+            const buttons = Array.from(document.querySelectorAll('button, div[role="button"], [role="button"]'))
+            const targetButton = buttons.find(button => {
+              const buttonText = button.textContent || button.innerHTML || ''
+              return buttonText.toLowerCase().includes(text.toLowerCase())
+            })
+            
+            if (targetButton) {
+              targetButton.click()
+              return true
+            }
+            return false
+          }, selector.split('"')[1]) // Extract text from :contains("text")
+          
+          if (buttonFound) {
+            log('success', '✅ Arkose authenticate button clicked')
+            await humanWait(2000, 4000)
+            return true
+          }
+        } else {
+          // Handle CSS selector
+          await frame.waitForSelector(selector, { timeout: 5000 })
+          await frame.click(selector)
+          log('success', '✅ Arkose challenge button clicked')
+          await humanWait(2000, 4000)
+          return true
+        }
+      } catch (selectorError) {
+        continue // Try next selector
+      }
+    }
+    
+    // If no button found, try to take screenshot of the challenge for manual review
+    const challengeScreenshot = await arkoseElement.screenshot({ encoding: 'base64' })
+    log('info', '📸 Arkose challenge screenshot captured for manual review')
+    
+    // You could save this screenshot or send it for manual solving
+    // fs.writeFileSync('arkose-challenge.png', challengeScreenshot, 'base64')
+    
+    return false
+    
+  } catch (error) {
+    log('error', `❌ Arkose challenge handling failed: ${error.message}`)
+    return false
+  }
+}
+
+// --- Helper: Handle authorization step ---
+async function handleAuthorizationStep(page) {
+  try {
+    // const currentUrl = page.url()
+    // if (currentUrl.includes('/authenticate') || currentUrl.includes('/account/access')) {
+      log('info', '🔑 Authorization page detected')
+      const approveSelectors = [
+        // Common confirmation buttons
+        'button[data-testid="confirmationSheetConfirm"]',
+        'button[name="authenticate"]',
+        // New Authenticate button variations detected on challenge screens
+        'button[data-theme="home.verifyButton"]',
+        "button[aria-label*='Visual challenge']",
+        // Generic fallbacks
+        'button[type="submit"]',
+        'div[role="button"]'
+      ]
+      await clickAuthenticateInIframe(page)
+      // await clickAuthenticateModern(page)
+      // await findAndClick(page, approveSelectors, 'Authenticate', 10000)
+      await detectAndSolveCaptcha(page)
+      await humanWait(3000, 5000)
+    // }
+  } catch (err: any) {
+    log('verbose', `Authorization handler error: ${err}`)
+  }
+}
+
+
+async function clickAuthenticateModern(page) {
+  
+  try {
+    // Modern Puppeteer approach
+    try {
+      // Try to find button by text content
+      await page.locator('button').filter(button => 
+        button.getProperty('textContent').then(text => 
+          text && text.toLowerCase().includes('authenticate')
+        )
+      ).click();
+      
+      console.log('Authenticate button clicked using modern locators');
+    } catch (locatorError) {
+      console.log('Modern locator failed, trying fallback method');
+      
+      // Fallback to evaluate method
+      await page.waitForFunction(
+        () => document.querySelector('button') !== null,
+        { timeout: 10000 }
+      );
+      
+      await page.evaluate(() => {
+        const buttons = Array.from(document.querySelectorAll('button, input[type="button"], input[type="submit"]'));
+        const authenticateBtn = buttons.find(button => {
+          const text = button.textContent || button.value || '';
+          return text.toLowerCase().includes('authenticate');
+        });
+        
+        if (authenticateBtn) {
+          authenticateBtn.click();
+        }
+      });
+    }
+    
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
+
+
+async function clickAuthenticateInIframe(page) {
+  
+  try {
+    // Wait for the iframe to load
+    await page.waitForSelector('#arkoseFrame', { timeout: 30000 });
+    
+    // Get all frames and find the one with authenticate button
+    const frames = await page.frames();
+    
+    for (const frame of frames) {
+      try {
+        // Check if this frame has the authenticate button
+        const hasButton = await frame.evaluate(() => {
+          const buttons = Array.from(document.querySelectorAll('button, input[type="button"], input[type="submit"], [role="button"]'));
+          return buttons.some(button => {
+            const text = button.textContent || button.value || button.getAttribute('aria-label') || '';
+            return text.toLowerCase().includes('authenticate');
+          });
+        });
+        
+        if (hasButton) {
+          // Click the button in this frame
+          const clicked = await frame.evaluate(() => {
+            const buttons = Array.from(document.querySelectorAll('button, input[type="button"], input[type="submit"], [role="button"]'));
+            const authenticateBtn = buttons.find(button => {
+              const text = button.textContent || button.value || button.getAttribute('aria-label') || '';
+              return text.toLowerCase().includes('authenticate');
+            });
+            
+            if (authenticateBtn) {
+              authenticateBtn.click();
+              return true;
+            }
+            return false;
+          });
+          
+          if (clicked) {
+            console.log('Authenticate button clicked in iframe');
+            break;
+          }
+        }
+      } catch (frameError) {
+        // Skip frames that can't be accessed (cross-origin)
+        continue;
+      }
+    }
+    
+  } catch (error) {
+    console.error('Error:', error);
+  }
+}
+
 // Complete createXAccount function with proper authentication handling
 async function createXAccount(accountData) {
   let browser, page, deviceProfile
@@ -2294,8 +2022,9 @@ async function createXAccount(accountData) {
 
     // Step 5: Handle authentication challenges (NEW - PROPERLY POSITIONED)
     log('info', '🔐 Checking for authentication challenges...')
-    
-    const authResult = await handleAuthenticationSteps(page, accountData)
+    const authResult: any = await handleAuthorizationStep(page)
+      
+    // const authResult = await handleAuthenticationSteps(page, accountData)
     
     if (!authResult.success && authResult.step === 'phone_verification') {
       return {
