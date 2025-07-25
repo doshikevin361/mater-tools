@@ -96,10 +96,11 @@ const OS_PROFILES = [
   }
 ]
 
+
 const STEALTH_CONFIG = {
   maxAccountsPerDay: 5,
-  minDelayBetweenAccounts: 30 * 60 * 1000, 
-  maxDelayBetweenAccounts: 4 * 60 * 60 * 1000, 
+  minDelayBetweenAccounts: 2000, // Changed to 2 seconds (2000ms)
+  maxDelayBetweenAccounts: 2000, // Changed to 2 seconds (2000ms)
   sessionVariation: true,
   
   randomizeFingerprints: true,
@@ -116,7 +117,7 @@ const STEALTH_CONFIG = {
   simulateTypos: true,
   humanMouseMovements: true,
   realTimingPatterns: true,
-  headlessMode: 'new', 
+  headlessMode: false, 
 }
 
 function log(level, message, data = null) {
@@ -1730,38 +1731,40 @@ async function createMaxStealthInstagramAccount(accountData) {
     }
   }
 }
-
-// Calculate optimal timing between accounts
 function calculateNextAccountDelay() {
-  const now = new Date()
-  const currentHour = now.getHours()
-  
-  // Avoid peak usage hours (9-11 AM, 2-4 PM, 7-9 PM)
-  const peakHours = [9, 10, 11, 14, 15, 16, 19, 20, 21]
-  const isPeakHour = peakHours.includes(currentHour)
-  
-  let baseDelay = STEALTH_CONFIG.minDelayBetweenAccounts
-  let maxDelay = STEALTH_CONFIG.maxDelayBetweenAccounts
-  
-  // Longer delays during peak hours
-  if (isPeakHour) {
-    baseDelay *= 1.5
-    maxDelay *= 2
-  }
-  
-  // Weekend vs weekday variation
-  const isWeekend = now.getDay() === 0 || now.getDay() === 6
-  if (isWeekend) {
-    baseDelay *= 0.8 // Slightly shorter on weekends
-    maxDelay *= 0.9
-  }
-  
-  const delay = baseDelay + Math.random() * (maxDelay - baseDelay)
-  
-  log('info', `⏰ Next account in ${Math.round(delay / 1000 / 60)} minutes (Peak hour: ${isPeakHour}, Weekend: ${isWeekend})`)
-  
-  return delay
+  return 2000 // Always return 2 seconds (2000ms)
 }
+// // Calculate optimal timing between accounts
+// function calculateNextAccountDelay() {
+//   const now = new Date()
+//   const currentHour = now.getHours()
+  
+//   // Avoid peak usage hours (9-11 AM, 2-4 PM, 7-9 PM)
+//   const peakHours = [9, 10, 11, 14, 15, 16, 19, 20, 21]
+//   const isPeakHour = peakHours.includes(currentHour)
+  
+//   let baseDelay = STEALTH_CONFIG.minDelayBetweenAccounts
+//   let maxDelay = STEALTH_CONFIG.maxDelayBetweenAccounts
+  
+//   // Longer delays during peak hours
+//   if (isPeakHour) {
+//     baseDelay *= 1.5
+//     maxDelay *= 2
+//   }
+  
+//   // Weekend vs weekday variation
+//   const isWeekend = now.getDay() === 0 || now.getDay() === 6
+//   if (isWeekend) {
+//     baseDelay *= 0.8 // Slightly shorter on weekends
+//     maxDelay *= 0.9
+//   }
+  
+//   const delay = baseDelay + Math.random() * (maxDelay - baseDelay)
+  
+//   log('info', `⏰ Next account in ${Math.round(delay / 1000 / 60)} minutes (Peak hour: ${isPeakHour}, Weekend: ${isWeekend})`)
+  
+//   return delay
+// }
 
 // API endpoints
 export async function POST(request) {

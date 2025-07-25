@@ -1716,6 +1716,94 @@ async function detectAndSolveCaptcha(page): Promise<boolean> {
   log('info', 'ℹ️ No captcha/challenge detected')
   return false
 }
+async function detectPuzzleAfterButtonClick(page) {
+  log('info', '🔍 Detecting puzzle after verification button click...')
+  
+  // Wait for page to load after button click
+  await humanWait(3000, 5000)
+  
+  let puzzleFound = false
+  let attempts = 0
+  const maxAttempts = 8
+  
+  while (!puzzleFound && attempts < maxAttempts) {
+    attempts++
+    log('verbose', `Puzzle detection attempt ${attempts}/${maxAttempts}`)
+    
+    try {
+      puzzleFound = await page.evaluate(() => {
+        // Check for multiple puzzle indicators
+        const indicators = [
+          // Arkose specific
+          document.querySelector('.arkose-2CB16598-CB82-4CF7-B332-5990DB66F3AB-wrapper'),
+          document.querySelector('iframe[title="Verification challenge"]'),
+          document.querySelector('iframe[src*="arkoselabs"]'),
+          
+          // General challenge elements
+          document.querySelector('iframe[title*="challenge"]'),
+          document.querySelector('iframe[title*="verification"]'),
+          document.querySelector('iframe[src*="captcha"]'),
+          
+          // Visual puzzle elements
+          document.querySelector('canvas'),
+          document.querySelector('[class*="puzzle"]'),
+          document.querySelector('[class*="challenge"]'),
+          
+          // Text-based detection
+          document.body.textContent?.toLowerCase().includes('using the arrows'),
+          document.body.textContent?.toLowerCase().includes('solve the puzzle'),
+          document.body.textContent?.toLowerCase().includes('complete the challenge')
+        ]
+        
+        // Return true if any indicator is found
+        return indicators.some(indicator => {
+          if (typeof indicator === 'boolean') return indicator
+          return indicator && indicator.offsetParent !== null
+        })
+      })
+      
+      if (puzzleFound) {
+        log('success', '🧩 Puzzle detected!')
+        return { success: true, attempts }
+      }
+      
+      // Check if we moved to a different page (success case)
+      const currentUrl = page.url()
+      if (currentUrl.includes('/home') || currentUrl.includes('/welcome')) {
+        log('success', '🏠 Moved to success page - no puzzle needed')
+        return { success: true, noPuzzleNeeded: true, url: currentUrl }
+      }
+      
+    } catch (error) {
+      log('verbose', `Detection attempt ${attempts} error: ${error.message}`)
+    }
+    
+    // Wait before next attempt
+    if (!puzzleFound && attempts < maxAttempts) {
+      await humanWait(2000, 3000)
+    }
+  }
+  
+  if (!puzzleFound) {
+    log('warning', '⚠️ Puzzle not detected after all attempts')
+    
+    // Debug current page state
+    try {
+      const pageInfo = await page.evaluate(() => ({
+        url: window.location.href,
+        title: document.title,
+        iframes: document.querySelectorAll('iframe').length,
+        content: document.body.textContent?.substring(0, 200) || 'No content'
+      }))
+      
+      log('debug', 'Current page:', JSON.stringify(pageInfo, null, 2))
+    } catch (e) {}
+    
+    return { success: false, attempts }
+  }
+  
+  return { success: true, attempts }
+}
 
 async function handleArkoseChallenge(page, arkoseElement): Promise<boolean> {
   try {
@@ -1812,6 +1900,29 @@ async function handleAuthorizationStep(page) {
         'button[type="submit"]',
         'div[role="button"]'
       ]
+      const puzzleDetection = await detectPuzzleAfterButtonClick(page)
+if (puzzleDetection.success) {
+  if (puzzleDetection.noPuzzleNeeded) {
+    log('success', '🎉 No puzzle needed - account creation completed!')
+    return { success: true, method: 'no_puzzle_needed' }
+  } else {
+    log('info', '🧩 Puzzle detected, solving...')
+    
+    // Now use your existing puzzle solving code
+    const solveResult = await solveArkoseCaptcha(page) // or handleArkoseChallenge(page)
+    
+    if (solveResult.success) {
+      log('success', '✅ Puzzle solved!')
+      return { success: true, method: 'puzzle_solved' }
+    } else {
+      log('error', '❌ Puzzle solving failed')
+      return { success: false, error: 'Puzzle solving failed' }
+    }
+  }
+} else {
+  log('error', '❌ Could not detect puzzle')
+  return { success: false, error: 'Puzzle detection failed' }
+}
       await clickAuthenticateInIframe(page)
       // await clickAuthenticateModern(page)
       // await findAndClick(page, approveSelectors, 'Authenticate', 10000)

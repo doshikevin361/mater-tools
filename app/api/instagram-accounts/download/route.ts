@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get("userId") || "demo_user"
 
     const { db } = await connectToDatabase()
-    const accounts = await db.collection("instagram_accounts").find({ userId }).sort({ createdAt: -1 }).toArray()
+    const accounts = await db.collection("social_accounts").find({ userId }).sort({ createdAt: -1 }).toArray()
 
     if (accounts.length === 0) {
       return NextResponse.json({ success: false, message: "No Instagram accounts found" }, { status: 404 })
