@@ -53,7 +53,7 @@ async function createStealthBrowser() {
   const randomUserAgent = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)]
   
   const browser = await puppeteer.launch({
-    headless: false, // Keep true for VPS
+    headless:  "shell", // Keep true for VPS
     args: [
       // Core security flags
       '--no-sandbox',
