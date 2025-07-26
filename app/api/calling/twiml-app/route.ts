@@ -3,8 +3,22 @@ import { type NextRequest, NextResponse } from "next/server"
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
-    const to = formData.get("To") as string
+    const rawTo = formData.get("To") as string
     const from = formData.get("From") as string
+
+    // Format the phone number to ensure E.164 format
+    const formatIndianNumber = (number: string): string => {
+      const cleaned = number.replace(/\D/g, "")
+      if (cleaned.length === 10) {
+        return `+91${cleaned}`
+      }
+      if (cleaned.startsWith("91") && cleaned.length === 12) {
+        return `+${cleaned}`
+      }
+      return `+91${cleaned}`
+    }
+
+    const to = formatIndianNumber(rawTo)
 
     console.log(`Outgoing call from ${from} to ${to}`)
 

@@ -9,7 +9,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "Phone number is required" }, { status: 400 })
     }
 
-    // Format Indian phone number
     const formatIndianNumber = (number: string): string => {
       const cleaned = number.replace(/\D/g, "")
       if (cleaned.length === 10) {
@@ -23,7 +22,6 @@ export async function POST(request: NextRequest) {
 
     const formattedNumber = formatIndianNumber(phoneNumber)
 
-    // Store call record in database
     const { db } = await connectToDatabase()
     const callRecord = {
       phoneNumber: formattedNumber,
