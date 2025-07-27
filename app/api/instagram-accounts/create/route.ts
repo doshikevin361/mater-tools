@@ -1955,7 +1955,6 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get("userId")
     let platform = searchParams.get("platform")
-    console.log(`Fetching social accounts for userId: ${userId}, platform: ${platform}`)
     if (!userId) {
       return NextResponse.json({ success: false, message: "User ID is required" }, { status: 400 })
     }

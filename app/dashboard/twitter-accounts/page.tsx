@@ -72,6 +72,7 @@ export default function TwitterAccountsPage() {
   const [count, setCount] = useState(3)
   const [showPasswords, setShowPasswords] = useState<{ [key: string]: boolean }>({})
   const [user, setUser] = useState<any>(null)
+  const [userLoaded, setUserLoaded] = useState(false)
   const [stats, setStats] = useState({
     total: 0,
     active: 0,
@@ -79,6 +80,7 @@ export default function TwitterAccountsPage() {
     failed: 0,
   })
 
+  // Load user data first
   useEffect(() => {
     const userData = localStorage.getItem("user")
     if (userData) {
@@ -89,43 +91,68 @@ export default function TwitterAccountsPage() {
         console.error("Error parsing user data:", error)
       }
     }
+    setUserLoaded(true)
+  }, [])
 
-    fetchAccounts()
-    fetchNotifications()
+  // Fetch accounts when user is loaded
+  useEffect(() => {
+    if (userLoaded) {
+      fetchAccounts()
+      fetchNotifications()
+    }
+  }, [userLoaded])
 
-    // Set up polling for real-time updates during account creation
-    const interval = setInterval(() => {
-      if (creating) {
+  // Polling during creation
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null
+    
+    if (creating && userLoaded) {
+      interval = setInterval(() => {
         fetchAccounts()
         fetchNotifications()
-      }
-    }, 5000)
+      }, 5000)
+    }
 
-    return () => clearInterval(interval)
-  }, [creating])
+    return () => {
+      if (interval) {
+        clearInterval(interval)
+      }
+    }
+  }, [creating, userLoaded])
 
   const fetchAccounts = async () => {
+    if (!userLoaded) return
+
     setLoading(true)
     try {
-      const userId = user?._id
+      const userId = user?._id || "demo_user"
       const response = await fetch(`/api/twitter-accounts/create?userId=${userId}`)
       const data = await response.json()
 
       if (data.success) {
         setAccounts(data.accounts)
         calculateStats(data.accounts)
+      } else {
+        console.error("Failed to fetch accounts:", data.message)
+        if (accounts.length > 0) {
+          toast.error("Failed to fetch accounts")
+        }
       }
     } catch (error) {
       console.error("Error fetching accounts:", error)
-      toast.error("Failed to fetch accounts")
+      if (accounts.length > 0) {
+        toast.error("Failed to fetch accounts")
+      }
     } finally {
       setLoading(false)
     }
   }
 
   const fetchNotifications = async () => {
+    if (!userLoaded) return
+
     try {
-      const userId = user?._id
+      const userId = user?._id || "demo_user"
       const response = await fetch(`/api/notifications?userId=${userId}&limit=10`)
       const data = await response.json()
 
@@ -153,8 +180,8 @@ export default function TwitterAccountsPage() {
       return
     }
 
-    if (!user) {
-      toast.error("Please login first")
+    if (!userLoaded) {
+      toast.error("Please wait for system to load")
       return
     }
 
@@ -167,7 +194,7 @@ export default function TwitterAccountsPage() {
         },
         body: JSON.stringify({
           count,
-          userId: user._id
+          userId: user?._id || "demo_user",
         }),
       })
 
@@ -175,8 +202,8 @@ export default function TwitterAccountsPage() {
 
       if (data.success) {
         toast.success(data.message)
-        fetchAccounts()
-        fetchNotifications()
+        await fetchAccounts()
+        await fetchNotifications()
       } else {
         toast.error(data.message || "Failed to create accounts")
       }
@@ -189,9 +216,14 @@ export default function TwitterAccountsPage() {
   }
 
   const downloadAccounts = async () => {
+    if (!userLoaded) {
+      toast.error("Please wait for data to load")
+      return
+    }
+
     setDownloading(true)
     try {
-      const userId = user?._id
+      const userId = user?._id || "demo_user"
       const response = await fetch(`/api/twitter-accounts/download?userId=${userId}`)
 
       if (response.ok) {
@@ -230,17 +262,25 @@ export default function TwitterAccountsPage() {
 
   const successRate = stats.total > 0 ? Math.round((stats.active / stats.total) * 100) : 0
 
+  if (!userLoaded) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-cyan-50 via-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="text-center">
+          <RefreshCw className="h-12 w-12 animate-spin mx-auto mb-4 text-cyan-500" />
+          <p className="text-lg font-medium text-slate-600">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-cyan-50 via-blue-50 to-indigo-100 relative overflow-hidden">
-      {/* Background Pattern */}
       <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width=60 height=60 viewBox=0 0 60 60 xmlns=http://www.w3.org/2000/svg%3E%3Cg fill=none fillRule=evenodd%3E%3Cg fill=%2306b6d4 fillOpacity=0.05%3E%3Ccircle cx=30 cy=30 r=2/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-40"></div>
 
-      {/* Floating Elements */}
       <div className="absolute top-20 left-20 w-72 h-72 bg-gradient-to-r from-cyan-400/20 to-blue-400/20 rounded-full blur-3xl animate-pulse"></div>
       <div className="absolute bottom-20 right-20 w-96 h-96 bg-gradient-to-r from-blue-400/20 to-indigo-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
 
       <div className="relative z-10 mx-auto max-w-7xl space-y-8 p-6">
-        {/* Header Section */}
         <div className="text-center py-12">
           <div className="inline-flex items-center gap-3 bg-white/80 backdrop-blur-sm border border-cyan-200 rounded-full px-6 py-3 mb-6">
             <Twitter className="h-5 w-5 text-cyan-600" />
@@ -273,7 +313,6 @@ export default function TwitterAccountsPage() {
           </div>
         </div>
 
-        {/* Stats Dashboard */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <Card className="bg-white/70 backdrop-blur-sm border border-cyan-200/50 hover:bg-white/80 transition-all duration-300 hover:scale-105 hover:shadow-lg">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -320,7 +359,6 @@ export default function TwitterAccountsPage() {
           </Card>
         </div>
 
-        {/* Notifications Panel */}
         {notifications.length > 0 && (
           <Card className="bg-white/80 backdrop-blur-sm border border-cyan-200/50 shadow-xl">
             <CardHeader>
@@ -358,7 +396,6 @@ export default function TwitterAccountsPage() {
           </Card>
         )}
 
-        {/* Account Creation Form */}
         <Card className="bg-white/80 backdrop-blur-sm border border-cyan-200/50 shadow-xl">
           <CardHeader className="bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-indigo-500/10 rounded-t-lg border-b border-cyan-200/50">
             <div className="flex items-center gap-3">
@@ -376,7 +413,6 @@ export default function TwitterAccountsPage() {
 
           <CardContent className="p-8">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Account Count */}
               <div className="space-y-4">
                 <Label className="text-slate-700 font-semibold text-base flex items-center gap-2">
                   <Users className="h-4 w-4 text-cyan-500" />
@@ -394,7 +430,6 @@ export default function TwitterAccountsPage() {
                 <p className="text-xs text-slate-500 text-center">Maximum 5 accounts per batch</p>
               </div>
 
-              {/* Create Button */}
               <div className="space-y-4">
                 <Label className="text-slate-700 font-semibold text-base flex items-center gap-2">
                   <Zap className="h-4 w-4 text-cyan-500" />
@@ -420,7 +455,6 @@ export default function TwitterAccountsPage() {
                 <p className="text-xs text-slate-500 text-center">Estimated time: {count * 60} seconds</p>
               </div>
 
-              {/* Download Button */}
               <div className="space-y-4">
                 <Label className="text-slate-700 font-semibold text-base flex items-center gap-2">
                   <Download className="h-4 w-4 text-cyan-500" />
@@ -448,7 +482,6 @@ export default function TwitterAccountsPage() {
               </div>
             </div>
 
-            {/* Features List */}
             <div className="mt-8 pt-8 border-t border-cyan-200">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="flex items-center gap-3">
@@ -483,7 +516,6 @@ export default function TwitterAccountsPage() {
           </CardContent>
         </Card>
 
-        {/* Accounts Table */}
         <Card className="bg-white/80 backdrop-blur-sm border border-cyan-200/50 shadow-xl">
           <CardHeader>
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -612,7 +644,11 @@ export default function TwitterAccountsPage() {
                               className={`${
                                 account.status === "active"
                                   ? "bg-green-50 text-green-700 border-green-200"
-                                  : "bg-red-50 text-red-700 border-red-200"
+                                  : account.status === "failed"
+                                    ? "bg-red-50 text-red-700 border-red-200"
+                                    : account.status === "pending"
+                                      ? "bg-yellow-50 text-yellow-700 border-yellow-200"
+                                      : "bg-gray-50 text-gray-700 border-gray-200"
                               } font-medium`}
                             >
                               {account.status === "active" ? (

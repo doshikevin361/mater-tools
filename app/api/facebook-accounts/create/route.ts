@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
 import axios from "axios"
 import puppeteer from "puppeteer"
+import { pl } from "date-fns/locale"
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -1611,7 +1612,7 @@ export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get("userId")
-    const platform = searchParams.get("platform")
+    const platform = "facebook";
 
     if (!userId) {
       return NextResponse.json({ success: false, message: "User ID is required" }, { status: 400 })
@@ -1620,7 +1621,7 @@ export async function GET(request) {
     const { db } = await connectToDatabase()
     const query = { userId }
 
-    if (platform && platform !== "all") {
+    if (platform) {
       query.platform = platform
     }
 

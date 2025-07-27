@@ -2741,13 +2741,20 @@ export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get("userId")
-
+    let platform = searchParams.get("platform")
     if (!userId) {
       return NextResponse.json({ success: false, message: "User ID is required" }, { status: 400 })
     }
+        const { db } = await connectToDatabase()
 
-    const { db } = await connectToDatabase()
-    const accounts = await db.collection("x_accounts").find({ userId }).sort({ createdAt: -1 }).toArray()
+    const query = { userId }
+    platform = platform ? platform.toLowerCase() : "x"
+
+    if (platform) {
+      query.platform = platform
+    }
+
+    const accounts = await db.collection("x_accounts").find({ query }).sort({ createdAt: -1 }).toArray()
 
     return NextResponse.json({
       success: true,
