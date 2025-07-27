@@ -94,7 +94,6 @@ export default function TwitterAccountsPage() {
     setUserLoaded(true)
   }, [])
 
-  // Fetch accounts when user is loaded
   useEffect(() => {
     if (userLoaded) {
       fetchAccounts()
@@ -102,7 +101,6 @@ export default function TwitterAccountsPage() {
     }
   }, [userLoaded])
 
-  // Polling during creation
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null
     
@@ -125,7 +123,7 @@ export default function TwitterAccountsPage() {
 
     setLoading(true)
     try {
-      const userId = user?._id || "demo_user"
+      const userId = user?._id 
       const response = await fetch(`/api/twitter-accounts/create?userId=${userId}`)
       const data = await response.json()
 
@@ -152,7 +150,7 @@ export default function TwitterAccountsPage() {
     if (!userLoaded) return
 
     try {
-      const userId = user?._id || "demo_user"
+      const userId = user?._id
       const response = await fetch(`/api/notifications?userId=${userId}&limit=10`)
       const data = await response.json()
 
@@ -194,7 +192,7 @@ export default function TwitterAccountsPage() {
         },
         body: JSON.stringify({
           count,
-          userId: user?._id || "demo_user",
+          userId: user?._id 
         }),
       })
 
@@ -223,7 +221,7 @@ export default function TwitterAccountsPage() {
 
     setDownloading(true)
     try {
-      const userId = user?._id || "demo_user"
+      const userId = user?._id
       const response = await fetch(`/api/twitter-accounts/download?userId=${userId}`)
 
       if (response.ok) {

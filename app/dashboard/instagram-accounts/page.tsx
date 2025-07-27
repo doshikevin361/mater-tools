@@ -102,7 +102,6 @@ export default function InstagramAccountsPage() {
     }
   }, [userLoaded])
 
-  // Polling during creation
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null
     
@@ -125,7 +124,7 @@ export default function InstagramAccountsPage() {
 
     setLoading(true)
     try {
-      const userId = user?._id || "demo_user"
+      const userId = user?._id
       const response = await fetch(`/api/instagram-accounts/create?userId=${userId}`)
       const data = await response.json()
 
@@ -152,7 +151,7 @@ export default function InstagramAccountsPage() {
     if (!userLoaded) return
 
     try {
-      const userId = user?._id || "demo_user"
+      const userId = user?._id 
       const response = await fetch(`/api/notifications?userId=${userId}&limit=10`)
       const data = await response.json()
 
@@ -194,7 +193,7 @@ export default function InstagramAccountsPage() {
         },
         body: JSON.stringify({
           count,
-          userId: user?._id || "demo_user",
+          userId: user?._id
         }),
       })
 
@@ -223,7 +222,7 @@ export default function InstagramAccountsPage() {
 
     setDownloading(true)
     try {
-      const userId = user?._id || "demo_user"
+      const userId = user?._id
       const response = await fetch(`/api/instagram-accounts/download?userId=${userId}`)
 
       if (response.ok) {

@@ -2542,7 +2542,6 @@ function calculateNextAccountDelay() {
   return delay
 }
 
-// Send notification helper
 async function sendNotification(userId, title, message, type = "info") {
   try {
     const { db } = await connectToDatabase()
