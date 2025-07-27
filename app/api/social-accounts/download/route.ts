@@ -5,7 +5,7 @@ import * as XLSX from "xlsx"
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get("userId") || "demo_user"
+    const userId = searchParams.get("userId")
     const platform = searchParams.get("platform") || "all"
     const realOnly = searchParams.get("realOnly") === "true"
 

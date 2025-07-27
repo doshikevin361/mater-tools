@@ -2698,7 +2698,6 @@ export async function POST(request) {
       }
     }
 
-    // Send completion notification
     await sendNotification(
       userId,
       "X.com Account Creation Completed",

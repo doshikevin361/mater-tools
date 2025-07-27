@@ -5,7 +5,7 @@ import * as XLSX from "xlsx"
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get("userId") || "demo_user"
+    const userId = searchParams.get("userId")
 
     const { db } = await connectToDatabase()
     const accounts = await db.collection("social_accounts").find({ userId }).sort({ createdAt: -1 }).toArray()

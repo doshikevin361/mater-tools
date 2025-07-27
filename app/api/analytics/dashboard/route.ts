@@ -5,7 +5,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const period = searchParams.get("period") || "30d"
-    const userId = searchParams.get("userId") || "demo-user-123"
+    const userId = searchParams.get("userId")
 
     console.log("Analytics request for userId:", userId, "period:", period)
 

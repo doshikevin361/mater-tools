@@ -107,7 +107,7 @@ export default function FacebookAccountsPage() {
   const fetchAccounts = async () => {
     setLoading(true)
     try {
-      const userId = user?._id || "demo_user"
+      const userId = user?._id,
       const response = await fetch(`/api/facebook-accounts/create?userId=${userId}`)
       const data = await response.json()
 
@@ -125,7 +125,7 @@ export default function FacebookAccountsPage() {
 
   const fetchNotifications = async () => {
     try {
-      const userId = user?._id || "demo_user"
+      const userId = user?._id
       const response = await fetch(`/api/notifications?userId=${userId}&limit=10`)
       const data = await response.json()
 
@@ -167,7 +167,7 @@ export default function FacebookAccountsPage() {
         },
         body: JSON.stringify({
           count,
-          userId: user._id || "demo_user",
+          userId: user._id
         }),
       })
 
@@ -191,7 +191,7 @@ export default function FacebookAccountsPage() {
   const downloadAccounts = async () => {
     setDownloading(true)
     try {
-      const userId = user?._id || "demo_user"
+      const userId = user?._id
       const response = await fetch(`/api/facebook-accounts/download?userId=${userId}`)
 
       if (response.ok) {

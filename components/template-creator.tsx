@@ -35,7 +35,6 @@ export function TemplateCreator({ platform, onTemplateCreated }: TemplateCreator
     variables: "",
   })
 
-  // Get userId from localStorage
   const getUserId = () => {
     if (typeof window !== "undefined") {
       let userId = localStorage.getItem("userId")

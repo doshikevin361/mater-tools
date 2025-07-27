@@ -156,7 +156,7 @@ export default function SocialAccountsPage() {
         body: JSON.stringify({
           count,
           platform,
-          userId: user._id || "demo_user",
+          userId: user._id,
           useRealCreation: true,
         }),
       })
@@ -180,7 +180,7 @@ export default function SocialAccountsPage() {
   const downloadAccounts = async (downloadPlatform = "all") => {
     setDownloading(true)
     try {
-      const userId = user?._id || "demo_user"
+      const userId = user?._id
       const response = await fetch(
         `/api/social-accounts/download?platform=${downloadPlatform}&userId=${userId}&realOnly=${realAccountsOnly}`,
       )

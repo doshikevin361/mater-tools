@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
 import axios from "axios"
 import puppeteer from "puppeteer"
+import { pl } from "date-fns/locale"
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -117,7 +118,7 @@ const STEALTH_CONFIG = {
   simulateTypos: true,
   humanMouseMovements: true,
   realTimingPatterns: true,
-  headlessMode: 'new', 
+  headlessMode: false, 
 }
 
 function log(level, message, data = null) {
@@ -996,13 +997,11 @@ async function humanTypeMaxStealth(page, selector, text) {
     
     await humanWait(200, 500)
     
-    // Type with MAXIMUM human realism
     const words = text.split(' ')
     
     for (let wordIndex = 0; wordIndex < words.length; wordIndex++) {
       const word = words[wordIndex]
       
-      // Typing burst patterns (some people type in bursts)
       const burstSize = Math.random() > 0.7 ? Math.floor(Math.random() * 3) + 2 : 1
       
       for (let charIndex = 0; charIndex < word.length; charIndex++) {
@@ -1424,7 +1423,6 @@ async function checkEmailForInstagramOTP(email, maxWaitMinutes = 3, browser) {
   }
 }
 
-// Enhanced birthday selection
 async function handleBirthdaySelection(page, profile) {
   log('info', '📅 Handling birthday selection...')
   
@@ -1956,16 +1954,16 @@ export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get("userId")
-    const platform = searchParams.get("platform")
-
+    let platform = searchParams.get("platform")
+    console.log(`Fetching social accounts for userId: ${userId}, platform: ${platform}`)
     if (!userId) {
       return NextResponse.json({ success: false, message: "User ID is required" }, { status: 400 })
     }
 
     const { db } = await connectToDatabase()
     const query = { userId }
-
-    if (platform && platform !== "all") {
+    platform = platform ? platform.toLowerCase() : "instagram"
+    if (platform) {
       query.platform = platform
     }
 

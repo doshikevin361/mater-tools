@@ -4,7 +4,7 @@ import { connectToDatabase } from "@/lib/mongodb"
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const userId = searchParams.get("userId") || "demo_user"
+    const userId = searchParams.get("userId")
     const platform = searchParams.get("platform")
     const realOnly = searchParams.get("realOnly") === "true"
 
