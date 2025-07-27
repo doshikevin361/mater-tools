@@ -359,7 +359,7 @@ export default function FacebookAccountsPage() {
           </Card>
         </div>
 
-        {notifications.length > 0 && (
+        {/* {notifications.length > 0 && (
           <Card className="bg-white/80 backdrop-blur-sm border border-blue-200/50 shadow-xl">
             <CardHeader>
               <CardTitle className="text-blue-600 flex items-center gap-2">
@@ -394,7 +394,7 @@ export default function FacebookAccountsPage() {
               </div>
             </CardContent>
           </Card>
-        )}
+        )} */}
 
         <Card className="bg-white/80 backdrop-blur-sm border border-blue-200/50 shadow-xl">
           <CardHeader className="bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-purple-500/10 rounded-t-lg border-b border-blue-200/50">

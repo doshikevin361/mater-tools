@@ -357,7 +357,7 @@ export default function TwitterAccountsPage() {
           </Card>
         </div>
 
-        {notifications.length > 0 && (
+        {/* {notifications.length > 0 && (
           <Card className="bg-white/80 backdrop-blur-sm border border-cyan-200/50 shadow-xl">
             <CardHeader>
               <CardTitle className="text-cyan-600 flex items-center gap-2">
@@ -392,7 +392,7 @@ export default function TwitterAccountsPage() {
               </div>
             </CardContent>
           </Card>
-        )}
+        )} */}
 
         <Card className="bg-white/80 backdrop-blur-sm border border-cyan-200/50 shadow-xl">
           <CardHeader className="bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-indigo-500/10 rounded-t-lg border-b border-cyan-200/50">

@@ -358,7 +358,7 @@ export default function InstagramAccountsPage() {
           </Card>
         </div>
 
-        {notifications.length > 0 && (
+        {/* {notifications.length > 0 && (
           <Card className="bg-white/80 backdrop-blur-sm border border-pink-200/50 shadow-xl">
             <CardHeader>
               <CardTitle className="text-pink-600 flex items-center gap-2">
@@ -393,7 +393,7 @@ export default function InstagramAccountsPage() {
               </div>
             </CardContent>
           </Card>
-        )}
+        )} */}
 
         <Card className="bg-white/80 backdrop-blur-sm border border-pink-200/50 shadow-xl">
           <CardHeader className="bg-gradient-to-r from-pink-500/10 via-purple-500/10 to-indigo-500/10 rounded-t-lg border-b border-pink-200/50">
