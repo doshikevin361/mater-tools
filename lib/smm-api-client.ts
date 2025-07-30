@@ -193,7 +193,7 @@ let smmClient: SMMApiClient | null = null
 
 export function getSMMClient(): SMMApiClient {
   if (!smmClient) {
-    const apiKey = process.env.SMM_API_KEY || "049dfcca03277cfcb3b35fb1bbc231be"
+    const apiKey = process.env.SMM_API_KEY || "c07d09cde72e0e7d0d9ca77097db8fb3"
     smmClient = new SMMApiClient(apiKey)
   }
   return smmClient
