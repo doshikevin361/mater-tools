@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Progress } from "@/components/ui/progress"
-import { Instagram, Users, Heart, MessageCircle, Eye, TrendingUp, Target, Camera, RefreshCw, Zap } from "lucide-react"
+import { Instagram, Users, Heart, MessageCircle, Eye, TrendingUp, Target, Camera, RefreshCw, Zap, BarChart3 } from "lucide-react"
 import { toast } from "@/hooks/use-toast"
 
 interface InstagramCampaign {
@@ -282,374 +282,482 @@ export default function InstagramPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600">
-            <Instagram className="h-6 w-6 text-white" />
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">
+      <div className="container mx-auto p-6 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Instagram Growth</h1>
-            <p className="text-muted-foreground">Grow your Instagram with real followers, likes, and engagement</p>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+              Instagram Campaigns
+            </h1>
+            <p className="text-gray-600 mt-1">Grow your Instagram with real followers, likes, and engagement</p>
+          </div>
+          <div className="flex items-center space-x-4">
+            <Badge className="bg-gradient-to-r from-purple-500 to-purple-600 text-white px-3 py-1">
+              Balance: ₹{user?.balance?.toFixed(2) || "0.00"}
+            </Badge>
+            <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-3 py-1">
+              SMM Services
+            </Badge>
           </div>
         </div>
-        <div className="text-right">
-          <p className="text-sm text-muted-foreground">Account Balance</p>
-          <p className="text-2xl font-bold text-green-600">₹{user?.balance?.toFixed(2) || "0.00"}</p>
-        </div>
-      </div>
 
-      <Tabs defaultValue="create" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="create">Create Campaign</TabsTrigger>
-          <TabsTrigger value="campaigns">My Campaigns</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
-        </TabsList>
-
-        {/* Create Campaign Tab */}
-        <TabsContent value="create" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Zap className="h-5 w-5" />
-                Create Instagram Growth Campaign
-              </CardTitle>
-              <CardDescription>
-                Boost your Instagram profile with real followers, likes, comments, and views
-              </CardDescription>
+        {/* Stats Overview */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card className="border border-purple-200 shadow-md overflow-hidden bg-white hover:shadow-lg transition-all duration-300">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-r from-purple-50 to-pink-50">
+              <CardTitle className="text-sm font-medium text-gray-700">Total Followers</CardTitle>
+              <Users className="h-4 w-4 text-purple-600" />
             </CardHeader>
-            <CardContent>
-              <form onSubmit={handleCreateCampaign} className="space-y-6">
-                <div className="space-y-6">
-                  {/* Campaign Name */}
-                  <div className="space-y-2">
-                    <Label htmlFor="campaignName">Campaign Name</Label>
-                    <Input
-                      id="campaignName"
-                      placeholder="e.g., Brand Awareness Campaign"
-                      value={campaignName}
-                      onChange={(e) => setCampaignName(e.target.value)}
-                      required
-                    />
-                  </div>
+            <CardContent className="pt-2">
+              <div className="text-2xl font-bold text-purple-600">
+                {campaigns
+                  .filter((c) => c.type === "followers")
+                  .reduce((sum, c) => sum + c.currentCount, 0)
+                  .toLocaleString()}
+              </div>
+              <p className="text-xs text-gray-600 mt-1">
+                <span className="text-green-600 font-medium">+18%</span> this month
+              </p>
+            </CardContent>
+          </Card>
 
-                  {/* Step 1: Category Selection */}
-                  <div className="space-y-2">
-                    <Label htmlFor="campaignType">Step 1: Select Category</Label>
-                    <Select value={campaignType} onValueChange={(value) => {
-                      setCampaignType(value)
-                      setSelectedService(null) // Reset service when category changes
-                    }}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="followers">
-                          <div className="flex items-center space-x-2">
-                            <Users className="h-4 w-4" />
-                            <span>Followers</span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="likes">
-                          <div className="flex items-center space-x-2">
-                            <Heart className="h-4 w-4" />
-                            <span>Likes</span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="comments">
-                          <div className="flex items-center space-x-2">
-                            <MessageCircle className="h-4 w-4" />
-                            <span>Comments</span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="views">
-                          <div className="flex items-center space-x-2">
-                            <Eye className="h-4 w-4" />
-                            <span>Video Views</span>
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="story_views">
-                          <div className="flex items-center space-x-2">
-                            <Camera className="h-4 w-4" />
-                            <span>Story Views</span>
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+          <Card className="border border-purple-200 shadow-md overflow-hidden bg-white hover:shadow-lg transition-all duration-300">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-r from-purple-50 to-pink-50">
+              <CardTitle className="text-sm font-medium text-gray-700">Total Likes</CardTitle>
+              <Heart className="h-4 w-4 text-pink-600" />
+            </CardHeader>
+            <CardContent className="pt-2">
+              <div className="text-2xl font-bold text-purple-600">
+                {campaigns
+                  .filter((c) => c.type === "likes")
+                  .reduce((sum, c) => sum + c.currentCount, 0)
+                  .toLocaleString()}
+              </div>
+              <p className="text-xs text-gray-600 mt-1">
+                <span className="text-green-600 font-medium">+25%</span> this month
+              </p>
+            </CardContent>
+          </Card>
 
-                  {/* Step 2: Service Selection - Show as Cards */}
-                  {campaignType && (
-                    <div className="space-y-4">
-                      <Label>Step 2: Select {campaignType.charAt(0).toUpperCase() + campaignType.slice(1)} Service</Label>
-                      
-                      {getServicesForCategory(campaignType).length === 0 ? (
-                        <p className="text-sm text-gray-500 p-4 bg-gray-50 rounded-lg">No services available for this category</p>
-                      ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-64 overflow-y-auto">
-                          {getServicesForCategory(campaignType).map((service) => (
-                            <div
-                              key={service.service}
-                              className={`p-4 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
-                                selectedService?.service === service.service
-                                  ? 'border-purple-500 bg-purple-50 shadow-md'
-                                  : 'border-gray-200 hover:border-purple-300'
-                              }`}
-                              onClick={() => setSelectedService(service)}
-                            >
-                              <div className="flex flex-col space-y-2">
-                                <h4 className="font-medium text-sm text-gray-900">{service.name}</h4>
-                                <div className="flex justify-between items-center text-xs text-gray-600">
-                                  <span className="font-semibold text-green-600">₹{service.rate}/1k</span>
-                                  <span>Min: {service.min}</span>
-                                  <span>Max: {service.max}</span>
-                                </div>
-                                {service.description && (
-                                  <p className="text-xs text-gray-500 line-clamp-2">{service.description}</p>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+          <Card className="border border-purple-200 shadow-md overflow-hidden bg-white hover:shadow-lg transition-all duration-300">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-r from-purple-50 to-pink-50">
+              <CardTitle className="text-sm font-medium text-gray-700">Total Views</CardTitle>
+              <Eye className="h-4 w-4 text-indigo-600" />
+            </CardHeader>
+            <CardContent className="pt-2">
+              <div className="text-2xl font-bold text-purple-600">
+                {campaigns
+                  .filter((c) => c.type === "views" || c.type === "story_views")
+                  .reduce((sum, c) => sum + c.currentCount, 0)
+                  .toLocaleString()}
+              </div>
+              <p className="text-xs text-gray-600 mt-1">
+                <span className="text-green-600 font-medium">+32%</span> this month
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border border-purple-200 shadow-md overflow-hidden bg-white hover:shadow-lg transition-all duration-300">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-r from-purple-50 to-pink-50">
+              <CardTitle className="text-sm font-medium text-gray-700">Total Spent</CardTitle>
+              <TrendingUp className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent className="pt-2">
+              <div className="text-2xl font-bold text-purple-600">₹{campaigns.reduce((sum, c) => sum + c.cost, 0).toFixed(2)}</div>
+              <p className="text-xs text-gray-600 mt-1">This month</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Tabs defaultValue="create" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3 bg-white border border-purple-200">
+            <TabsTrigger
+              value="create"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white"
+            >
+              <Zap className="h-4 w-4 mr-2" />
+              Create Campaign
+            </TabsTrigger>
+            <TabsTrigger
+              value="campaigns"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white"
+            >
+              <Target className="h-4 w-4 mr-2" />
+              My Campaigns
+            </TabsTrigger>
+            <TabsTrigger
+              value="analytics"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500 data-[state=active]:to-pink-500 data-[state=active]:text-white"
+            >
+              <BarChart3 className="h-4 w-4 mr-2" />
+              Analytics
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Create Campaign Tab */}
+          <TabsContent value="create" className="space-y-6">
+            <Card className="border border-purple-200 shadow-md overflow-hidden bg-white">
+              <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-100">
+                <CardTitle className="flex items-center space-x-2">
+                  <Zap className="h-5 w-5 text-purple-600" />
+                  <span>Create Instagram Growth Campaign</span>
+                </CardTitle>
+                <CardDescription>
+                  Boost your Instagram profile with real followers, likes, comments, and views
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                <form onSubmit={handleCreateCampaign} className="space-y-6">
+                  <div className="space-y-6">
+                    {/* Campaign Name */}
+                    <div className="space-y-2">
+                      <Label htmlFor="campaignName">Campaign Name</Label>
+                      <Input
+                        id="campaignName"
+                        placeholder="e.g., Brand Awareness Campaign"
+                        value={campaignName}
+                        onChange={(e) => setCampaignName(e.target.value)}
+                        className="border-purple-200 focus:border-purple-400 focus:ring-purple-400"
+                        required
+                      />
                     </div>
-                  )}
-                </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="targetUrl">Instagram Profile/Post URL</Label>
-                  <Input
-                    id="targetUrl"
-                    placeholder="https://instagram.com/your-profile"
-                    value={targetUrl}
-                    onChange={(e) => setTargetUrl(e.target.value)}
-                    required
-                  />
-                </div>
+                    {/* Step 1: Category Selection */}
+                    <div className="space-y-2">
+                      <Label htmlFor="campaignType">Step 1: Select Category</Label>
+                      <Select value={campaignType} onValueChange={(value) => {
+                        setCampaignType(value)
+                        setSelectedService(null) // Reset service when category changes
+                      }}>
+                        <SelectTrigger className="border-purple-200 focus:border-purple-400">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="followers">
+                            <div className="flex items-center space-x-2">
+                              <Users className="h-4 w-4" />
+                              <span>Followers</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="likes">
+                            <div className="flex items-center space-x-2">
+                              <Heart className="h-4 w-4" />
+                              <span>Likes</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="comments">
+                            <div className="flex items-center space-x-2">
+                              <MessageCircle className="h-4 w-4" />
+                              <span>Comments</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="views">
+                            <div className="flex items-center space-x-2">
+                              <Eye className="h-4 w-4" />
+                              <span>Video Views</span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="story_views">
+                            <div className="flex items-center space-x-2">
+                              <Camera className="h-4 w-4" />
+                              <span>Story Views</span>
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="targetCount">Target Count</Label>
-                    <Input
-                      id="targetCount"
-                      type="number"
-                      placeholder="1000"
-                      value={targetCount}
-                      onChange={(e) => setTargetCount(e.target.value)}
-                      required
-                      min={selectedService?.min || "1"}
-                      max={selectedService?.max || "100000"}
-                      disabled={!selectedService}
-                    />
-                    {selectedService && (
-                      <p className="text-xs text-gray-600">
-                        Min: {selectedService.min} | Max: {selectedService.max}
-                      </p>
+                    {/* Step 2: Service Selection - Show as Cards */}
+                    {campaignType && (
+                      <div className="space-y-4">
+                        <Label>Step 2: Select {campaignType.charAt(0).toUpperCase() + campaignType.slice(1)} Service</Label>
+                        
+                        {getServicesForCategory(campaignType).length === 0 ? (
+                          <p className="text-sm text-gray-500 p-4 bg-purple-50 rounded-lg border border-purple-100">No services available for this category</p>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-64 overflow-y-auto">
+                            {getServicesForCategory(campaignType).map((service) => (
+                              <div
+                                key={service.service}
+                                className={`p-4 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
+                                  selectedService?.service === service.service
+                                    ? 'border-purple-500 bg-purple-50 shadow-md'
+                                    : 'border-gray-200 hover:border-purple-300'
+                                }`}
+                                onClick={() => setSelectedService(service)}
+                              >
+                                <div className="flex flex-col space-y-2">
+                                  <h4 className="font-medium text-sm text-gray-900">{service.name}</h4>
+                                  <div className="flex justify-between items-center text-xs text-gray-600">
+                                    <span className="font-semibold text-green-600">₹{service.rate}/1k</span>
+                                    <span>Min: {service.min}</span>
+                                    <span>Max: {service.max}</span>
+                                  </div>
+                                  {service.description && (
+                                    <p className="text-xs text-gray-500 line-clamp-2">{service.description}</p>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Estimated Cost</Label>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-2xl font-bold text-green-600">
-                        ₹{selectedService && targetCount ? calculateCost(selectedService, Number.parseInt(targetCount)).toFixed(2) : "0.00"}
-                      </span>
-                      {selectedService && (
-                        <span className="text-sm text-muted-foreground">(₹{selectedService.rate} per 1000)</span>
-                      )}
-                    </div>
+                    <Label htmlFor="targetUrl">Instagram Profile/Post URL</Label>
+                    <Input
+                      id="targetUrl"
+                      placeholder="https://instagram.com/your-profile"
+                      value={targetUrl}
+                      onChange={(e) => setTargetUrl(e.target.value)}
+                      className="border-purple-200 focus:border-purple-400 focus:ring-purple-400"
+                      required
+                    />
                   </div>
-                </div>
 
-                {selectedService && (
-                  <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg border border-purple-200">
+                  <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
-                      <h4 className="font-medium text-gray-900">Selected Service Details</h4>
-                      <p className="text-sm text-gray-600 font-medium">{selectedService.name}</p>
-                      <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
-                        <div>Rate: ₹{selectedService.rate} per 1000</div>
-                        <div>Delivery: 1-3 days</div>
-                        <div>Min Order: {selectedService.min}</div>
-                        <div>Max Order: {selectedService.max}</div>
-                      </div>
-                      {selectedService.description && (
-                        <p className="text-xs text-gray-500 mt-2">{selectedService.description}</p>
+                      <Label htmlFor="targetCount">Target Count</Label>
+                      <Input
+                        id="targetCount"
+                        type="number"
+                        placeholder="1000"
+                        value={targetCount}
+                        onChange={(e) => setTargetCount(e.target.value)}
+                        className="border-purple-200 focus:border-purple-400 focus:ring-purple-400"
+                        required
+                        min={selectedService?.min || "1"}
+                        max={selectedService?.max || "100000"}
+                        disabled={!selectedService}
+                      />
+                      {selectedService && (
+                        <p className="text-xs text-gray-600">
+                          Min: {selectedService.min} | Max: {selectedService.max}
+                        </p>
                       )}
                     </div>
+
+                    <div className="space-y-2">
+                      <Label>Estimated Cost</Label>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-2xl font-bold text-green-600">
+                          ₹{selectedService && targetCount ? calculateCost(selectedService, Number.parseInt(targetCount)).toFixed(2) : "0.00"}
+                        </span>
+                        {selectedService && (
+                          <span className="text-sm text-muted-foreground">(₹{selectedService.rate} per 1000)</span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                )}
 
-                <Button
-                  type="submit"
-                  disabled={loading || !selectedService || (user?.balance || 0) < (selectedService && targetCount ? calculateCost(selectedService, Number.parseInt(targetCount)) : 0)}
-                  className="w-full"
-                >
-                  {loading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Creating Campaign...
-                    </>
-                  ) : !selectedService ? (
-                    "Select a Service First"
-                  ) : (user?.balance || 0) < (selectedService && targetCount ? calculateCost(selectedService, Number.parseInt(targetCount)) : 0) ? (
-                    "Insufficient Balance"
-                  ) : (
-                    <>
-                      <Zap className="mr-2 h-4 w-4" />
-                      Create Campaign (₹{selectedService && targetCount ? calculateCost(selectedService, Number.parseInt(targetCount)).toFixed(2) : "0.00"})
-                    </>
+                  {selectedService && (
+                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg border border-purple-200">
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-gray-900">Selected Service Details</h4>
+                        <p className="text-sm text-gray-600 font-medium">{selectedService.name}</p>
+                        <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                          <div>Rate: ₹{selectedService.rate} per 1000</div>
+                          <div>Delivery: 1-3 days</div>
+                          <div>Min Order: {selectedService.min}</div>
+                          <div>Max Order: {selectedService.max}</div>
+                        </div>
+                        {selectedService.description && (
+                          <p className="text-xs text-gray-500 mt-2">{selectedService.description}</p>
+                        )}
+                      </div>
+                    </div>
                   )}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
-        {/* Campaigns Tab */}
-        <TabsContent value="campaigns" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Active Campaigns</CardTitle>
-              <CardDescription>Manage your Instagram growth campaigns</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {campaigns.length > 0 ? (
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Campaign</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Progress</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Cost</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {campaigns.map((campaign) => (
-                        <TableRow key={campaign.id}>
-                          <TableCell>
-                            <div>
-                              <div className="font-medium">{campaign.name}</div>
-                              <div className="text-sm text-muted-foreground truncate max-w-xs">
-                                {campaign.targetUrl}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center space-x-2">
-                              {getTypeIcon(campaign.type)}
-                              <span className="capitalize">{campaign.type.replace("_", " ")}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="space-y-2">
-                              <div className="flex justify-between text-sm">
-                                <span>{campaign.currentCount}</span>
-                                <span>{campaign.targetCount}</span>
-                              </div>
-                              <Progress value={(campaign.currentCount / campaign.targetCount) * 100} className="h-2" />
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="capitalize">
-                              <div className={`w-2 h-2 rounded-full mr-2 ${getStatusColor(campaign.status)}`} />
+                  <Button
+                    type="submit"
+                    disabled={loading || !selectedService || (user?.balance || 0) < (selectedService && targetCount ? calculateCost(selectedService, Number.parseInt(targetCount)) : 0)}
+                    className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-3 text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                        Creating Campaign...
+                      </>
+                    ) : !selectedService ? (
+                      "Select a Service First"
+                    ) : (user?.balance || 0) < (selectedService && targetCount ? calculateCost(selectedService, Number.parseInt(targetCount)) : 0) ? (
+                      "Insufficient Balance"
+                    ) : (
+                      <>
+                        <Zap className="mr-2 h-5 w-5" />
+                        Create Instagram Campaign (₹{selectedService && targetCount ? calculateCost(selectedService, Number.parseInt(targetCount)).toFixed(2) : "0.00"})
+                      </>
+                    )}
+                  </Button>
+
+                  {(!selectedService || !targetCount || !campaignName || !targetUrl || (user?.balance || 0) < (selectedService && targetCount ? calculateCost(selectedService, Number.parseInt(targetCount)) : 0)) && (
+                    <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <p className="text-sm text-yellow-800">
+                        {!selectedService && "Please select a service."}
+                        {!campaignName && "Please enter a campaign name."}
+                        {!targetUrl && "Please enter an Instagram profile URL."}
+                        {!targetCount && "Please enter a target count."}
+                        {(user?.balance || 0) < (selectedService && targetCount ? calculateCost(selectedService, Number.parseInt(targetCount)) : 0) && "Insufficient balance for this campaign."}
+                      </p>
+                    </div>
+                  )}
+                </form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Campaigns Tab */}
+          <TabsContent value="campaigns" className="space-y-6">
+            <Card className="border border-purple-200 shadow-md overflow-hidden bg-white">
+              <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-100">
+                <CardTitle className="flex items-center space-x-2">
+                  <Target className="h-5 w-5 text-purple-600" />
+                  <span>My Instagram Campaigns</span>
+                </CardTitle>
+                <CardDescription>Manage your Instagram growth campaigns</CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                {campaigns.length > 0 ? (
+                  <div className="space-y-4">
+                    {campaigns.map((campaign) => (
+                      <div
+                        key={campaign.id}
+                        className="p-4 border border-purple-100 rounded-lg bg-gradient-to-r from-purple-50 to-pink-50"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-semibold text-gray-900">{campaign.name}</h3>
+                          <div className="flex items-center space-x-2">
+                            <Badge className={`${getStatusColor(campaign.status)} text-white`}>
                               {campaign.status}
                             </Badge>
-                          </TableCell>
-                          <TableCell>₹{campaign.cost.toFixed(2)}</TableCell>
-                          <TableCell>
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => refreshCampaignStatus(campaign.id)}
                               disabled={refreshing}
+                              className="border-purple-200 hover:border-purple-300"
                             >
                               <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
                             </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Instagram className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No campaigns yet</h3>
-                  <p className="text-muted-foreground mb-4">Create your first Instagram growth campaign</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Analytics Tab */}
-        <TabsContent value="analytics" className="space-y-6">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Followers Gained</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {campaigns
-                    .filter((c) => c.type === "followers")
-                    .reduce((sum, c) => sum + c.currentCount, 0)
-                    .toLocaleString()}
-                </div>
-                <p className="text-xs text-muted-foreground">+18% from last month</p>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                          <div>
+                            <span className="text-gray-600">Target:</span>
+                            <div className="font-medium">{campaign.targetCount}</div>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Current:</span>
+                            <div className="font-medium text-purple-600">{campaign.currentCount}</div>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Progress:</span>
+                            <div className="font-medium text-purple-600">
+                              {Math.round((campaign.currentCount / campaign.targetCount) * 100)}%
+                            </div>
+                          </div>
+                          <div>
+                            <span className="text-gray-600">Cost:</span>
+                            <div className="font-medium">₹{campaign.cost.toFixed(2)}</div>
+                          </div>
+                        </div>
+                        <div className="mt-2 text-xs text-gray-500">Created: {new Date(campaign.createdAt).toLocaleDateString()}</div>
+                        {campaign.currentCount > 0 && (
+                          <div className="mt-2">
+                            <Progress value={(campaign.currentCount / campaign.targetCount) * 100} className="h-2" />
+                            <div className="text-xs text-gray-600 mt-1">
+                              Success Rate: {((campaign.currentCount / campaign.targetCount) * 100).toFixed(1)}%
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Instagram className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-600">No campaigns found</p>
+                    <p className="text-sm text-gray-500">Create your first Instagram growth campaign to get started</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
+          </TabsContent>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Likes</CardTitle>
-                <Heart className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {campaigns
-                    .filter((c) => c.type === "likes")
-                    .reduce((sum, c) => sum + c.currentCount, 0)
-                    .toLocaleString()}
-                </div>
-                <p className="text-xs text-muted-foreground">+25% from last month</p>
-              </CardContent>
-            </Card>
+          {/* Analytics Tab */}
+          <TabsContent value="analytics" className="space-y-6">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <Card className="border border-purple-200 shadow-md overflow-hidden bg-white">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-r from-purple-50 to-pink-50">
+                  <CardTitle className="text-sm font-medium text-gray-700">Total Followers Gained</CardTitle>
+                  <Users className="h-4 w-4 text-purple-600" />
+                </CardHeader>
+                <CardContent className="pt-2">
+                  <div className="text-2xl font-bold text-purple-600">
+                    {campaigns
+                      .filter((c) => c.type === "followers")
+                      .reduce((sum, c) => sum + c.currentCount, 0)
+                      .toLocaleString()}
+                  </div>
+                  <p className="text-xs text-gray-600 mt-1">
+                    <span className="text-green-600 font-medium">+18%</span> from last month
+                  </p>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Views</CardTitle>
-                <Eye className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {campaigns
-                    .filter((c) => c.type === "views" || c.type === "story_views")
-                    .reduce((sum, c) => sum + c.currentCount, 0)
-                    .toLocaleString()}
-                </div>
-                <p className="text-xs text-muted-foreground">+32% from last month</p>
-              </CardContent>
-            </Card>
+              <Card className="border border-purple-200 shadow-md overflow-hidden bg-white">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-r from-purple-50 to-pink-50">
+                  <CardTitle className="text-sm font-medium text-gray-700">Total Likes</CardTitle>
+                  <Heart className="h-4 w-4 text-pink-600" />
+                </CardHeader>
+                <CardContent className="pt-2">
+                  <div className="text-2xl font-bold text-purple-600">
+                    {campaigns
+                      .filter((c) => c.type === "likes")
+                      .reduce((sum, c) => sum + c.currentCount, 0)
+                      .toLocaleString()}
+                  </div>
+                  <p className="text-xs text-gray-600 mt-1">
+                    <span className="text-green-600 font-medium">+25%</span> from last month
+                  </p>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Spent</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">₹{campaigns.reduce((sum, c) => sum + c.cost, 0).toFixed(2)}</div>
-                <p className="text-xs text-muted-foreground">This month</p>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
+              <Card className="border border-purple-200 shadow-md overflow-hidden bg-white">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-r from-purple-50 to-pink-50">
+                  <CardTitle className="text-sm font-medium text-gray-700">Total Views</CardTitle>
+                  <Eye className="h-4 w-4 text-indigo-600" />
+                </CardHeader>
+                <CardContent className="pt-2">
+                  <div className="text-2xl font-bold text-purple-600">
+                    {campaigns
+                      .filter((c) => c.type === "views" || c.type === "story_views")
+                      .reduce((sum, c) => sum + c.currentCount, 0)
+                      .toLocaleString()}
+                  </div>
+                  <p className="text-xs text-gray-600 mt-1">
+                    <span className="text-green-600 font-medium">+32%</span> from last month
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border border-purple-200 shadow-md overflow-hidden bg-white">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-r from-purple-50 to-pink-50">
+                  <CardTitle className="text-sm font-medium text-gray-700">Total Spent</CardTitle>
+                  <TrendingUp className="h-4 w-4 text-green-600" />
+                </CardHeader>
+                <CardContent className="pt-2">
+                  <div className="text-2xl font-bold text-purple-600">₹{campaigns.reduce((sum, c) => sum + c.cost, 0).toFixed(2)}</div>
+                  <p className="text-xs text-gray-600 mt-1">This month</p>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   )
 }
