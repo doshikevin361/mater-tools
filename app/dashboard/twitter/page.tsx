@@ -118,11 +118,14 @@ export default function TwitterPage() {
   // Load existing campaigns
   const loadCampaigns = async (userId: string) => {
     try {
-      const response = await fetch(`/api/twitter/campaigns?userId=${userId}`)
+      // Get SMM campaigns from the campaigns collection
+      const response = await fetch(`/api/campaigns?userId=${userId}`)
       const result = await response.json()
 
       if (result.success) {
-        setCampaigns(result.campaigns)
+        // Filter for Twitter campaigns
+        const twitterCampaigns = result.campaigns?.filter(c => c.platform === 'twitter') || []
+        setCampaigns(twitterCampaigns)
       }
     } catch (error) {
       console.error("Error loading campaigns:", error)
