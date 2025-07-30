@@ -70,6 +70,7 @@ export default function TwitterPage() {
 
   // Form states
   const [campaignType, setCampaignType] = useState<string>("followers")
+  const [selectedService, setSelectedService] = useState<SMMService | null>(null)
   const [targetUrl, setTargetUrl] = useState("")
   const [targetCount, setTargetCount] = useState("")
   const [campaignName, setCampaignName] = useState("")
@@ -179,6 +180,16 @@ export default function TwitterPage() {
     e.preventDefault()
     if (!user?._id) return
 
+    // For keyword trading, we don't need a service selection
+    if (campaignType !== "keyword_trading" && !selectedService) {
+      toast({
+        title: "Service Required",
+        description: "Please select a service for this campaign type.",
+        variant: "destructive",
+      })
+      return
+    }
+
     setLoading(true)
     try {
       const response = await fetch("/api/smm/order", {
@@ -193,6 +204,7 @@ export default function TwitterPage() {
           targetUrl: campaignType === "keyword_trading" ? undefined : targetUrl,
           quantity: Number.parseInt(targetCount),
           campaignName,
+          serviceId: selectedService?.service,
           keywords:
             campaignType === "keyword_trading"
               ? keywords
@@ -218,6 +230,7 @@ export default function TwitterPage() {
         setTargetUrl("")
         setTargetCount("")
         setKeywords("")
+        setSelectedService(null)
 
         toast({
           title: "Campaign Created!",
@@ -242,6 +255,23 @@ export default function TwitterPage() {
     }
   }
 
+  // Get services for selected category
+  const getServicesForCategory = (category: string): SMMService[] => {
+    return services.filter((service) => {
+      const serviceName = service.name.toLowerCase()
+      const typeKeywords = {
+        followers: ["followers", "follow"],
+        likes: ["likes", "like"],
+        retweets: ["retweets", "retweet", "rt"],
+        comments: ["comments", "comment", "reply"],
+        keyword_trading: ["keyword", "trend", "trading"],
+      }
+
+      const keywords = typeKeywords[category] || [category]
+      return keywords.some((keyword) => serviceName.includes(keyword))
+    })
+  }
+
   const getServiceForType = (type: string): SMMService | null => {
     return (
       services.find((service) => {
@@ -260,14 +290,12 @@ export default function TwitterPage() {
     )
   }
 
-  const calculateCost = (type: string, quantity: number): number => {
-    if (type === "keyword_trading") {
+  const calculateCost = (service: SMMService | null, quantity: number): number => {
+    if (campaignType === "keyword_trading") {
       return quantity * 1.0 // ₹1.00 per keyword per day
     }
 
-    const service = getServiceForType(type)
     if (!service) return 0
-
     const rate = Number.parseFloat(service.rate)
     return Math.max((rate * quantity) / 1000, 0.01)
   }
@@ -315,8 +343,7 @@ export default function TwitterPage() {
     }
   }
 
-  const currentService = getServiceForType(campaignType)
-  const estimatedCost = targetCount ? calculateCost(campaignType, Number.parseInt(targetCount)) : 0
+
 
   if (!user) {
     return (
@@ -370,7 +397,8 @@ export default function TwitterPage() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleCreateCampaign} className="space-y-6">
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-6">
+                  {/* Campaign Name */}
                   <div className="space-y-2">
                     <Label htmlFor="campaignName">Campaign Name</Label>
                     <Input
@@ -382,9 +410,13 @@ export default function TwitterPage() {
                     />
                   </div>
 
+                  {/* Step 1: Category Selection */}
                   <div className="space-y-2">
-                    <Label htmlFor="campaignType">Campaign Type</Label>
-                    <Select value={campaignType} onValueChange={setCampaignType}>
+                    <Label htmlFor="campaignType">Step 1: Select Category</Label>
+                    <Select value={campaignType} onValueChange={(value) => {
+                      setCampaignType(value)
+                      setSelectedService(null) // Reset service when category changes
+                    }}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -422,6 +454,43 @@ export default function TwitterPage() {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {/* Step 2: Service Selection - Show as Cards (except for keyword trading) */}
+                  {campaignType && campaignType !== "keyword_trading" && (
+                    <div className="space-y-4">
+                      <Label>Step 2: Select {campaignType.charAt(0).toUpperCase() + campaignType.slice(1)} Service</Label>
+                      
+                      {getServicesForCategory(campaignType).length === 0 ? (
+                        <p className="text-sm text-gray-500 p-4 bg-gray-50 rounded-lg">No services available for this category</p>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-64 overflow-y-auto">
+                          {getServicesForCategory(campaignType).map((service) => (
+                            <div
+                              key={service.service}
+                              className={`p-4 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
+                                selectedService?.service === service.service
+                                  ? 'border-blue-500 bg-blue-50 shadow-md'
+                                  : 'border-gray-200 hover:border-blue-300'
+                              }`}
+                              onClick={() => setSelectedService(service)}
+                            >
+                              <div className="flex flex-col space-y-2">
+                                <h4 className="font-medium text-sm text-gray-900">{service.name}</h4>
+                                <div className="flex justify-between items-center text-xs text-gray-600">
+                                  <span className="font-semibold text-green-600">₹{service.rate}/1k</span>
+                                  <span>Min: {service.min}</span>
+                                  <span>Max: {service.max}</span>
+                                </div>
+                                {service.description && (
+                                  <p className="text-xs text-gray-500 line-clamp-2">{service.description}</p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {campaignType === "keyword_trading" ? (
@@ -464,11 +533,12 @@ export default function TwitterPage() {
                       onChange={(e) => setTargetCount(e.target.value)}
                       required
                       min="1"
-                      max={currentService?.max || "100000"}
+                      max={selectedService?.max || "100000"}
+                      disabled={campaignType !== "keyword_trading" && !selectedService}
                     />
-                    {currentService && campaignType !== "keyword_trading" && (
+                    {selectedService && campaignType !== "keyword_trading" && (
                       <p className="text-xs text-gray-600">
-                        Min: {currentService.min} | Max: {currentService.max}
+                        Min: {selectedService.min} | Max: {selectedService.max}
                       </p>
                     )}
                   </div>
@@ -476,26 +546,34 @@ export default function TwitterPage() {
                   <div className="space-y-2">
                     <Label>Estimated Cost</Label>
                     <div className="flex items-center space-x-2">
-                      <span className="text-2xl font-bold text-green-600">₹{estimatedCost.toFixed(2)}</span>
+                      <span className="text-2xl font-bold text-green-600">
+                        ₹{targetCount ? calculateCost(selectedService, Number.parseInt(targetCount)).toFixed(2) : "0.00"}
+                      </span>
                       <span className="text-sm text-muted-foreground">
                         {campaignType === "keyword_trading"
                           ? "(₹1.00 per keyword/day)"
-                          : currentService
-                            ? `(₹${currentService.rate} per 1000)`
+                          : selectedService
+                            ? `(₹${selectedService.rate} per 1000)`
                             : ""}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                {currentService && campaignType !== "keyword_trading" && (
+                {selectedService && campaignType !== "keyword_trading" && (
                   <div className="bg-gradient-to-r from-blue-50 to-cyan-50 p-4 rounded-lg border border-blue-200">
                     <div className="space-y-2">
-                      <h4 className="font-medium text-gray-900">Service Details</h4>
-                      <p className="text-sm text-gray-600">{currentService.name}</p>
-                      <div className="text-sm text-gray-600">
-                        Rate: ₹{currentService.rate} per 1000 | Estimated delivery: 1-3 days
+                      <h4 className="font-medium text-gray-900">Selected Service Details</h4>
+                      <p className="text-sm text-gray-600 font-medium">{selectedService.name}</p>
+                      <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                        <div>Rate: ₹{selectedService.rate} per 1000</div>
+                        <div>Delivery: 1-3 days</div>
+                        <div>Min Order: {selectedService.min}</div>
+                        <div>Max Order: {selectedService.max}</div>
                       </div>
+                      {selectedService.description && (
+                        <p className="text-xs text-gray-500 mt-2">{selectedService.description}</p>
+                      )}
                     </div>
                   </div>
                 )}
@@ -504,8 +582,8 @@ export default function TwitterPage() {
                   type="submit"
                   disabled={
                     loading ||
-                    (campaignType !== "keyword_trading" && !currentService) ||
-                    (user?.balance || 0) < estimatedCost
+                    (campaignType !== "keyword_trading" && !selectedService) ||
+                    (user?.balance || 0) < (targetCount ? calculateCost(selectedService, Number.parseInt(targetCount)) : 0)
                   }
                   className="w-full"
                 >
@@ -514,12 +592,14 @@ export default function TwitterPage() {
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                       Creating Campaign...
                     </>
-                  ) : (user?.balance || 0) < estimatedCost ? (
+                  ) : campaignType !== "keyword_trading" && !selectedService ? (
+                    "Select a Service First"
+                  ) : (user?.balance || 0) < (targetCount ? calculateCost(selectedService, Number.parseInt(targetCount)) : 0) ? (
                     "Insufficient Balance"
                   ) : (
                     <>
                       <Zap className="mr-2 h-4 w-4" />
-                      Create Campaign (₹{estimatedCost.toFixed(2)})
+                      Create Campaign (₹{targetCount ? calculateCost(selectedService, Number.parseInt(targetCount)).toFixed(2) : "0.00"})
                     </>
                   )}
                 </Button>

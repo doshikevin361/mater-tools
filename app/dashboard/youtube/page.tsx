@@ -209,6 +209,24 @@ export default function YouTubePage() {
     }
   }
 
+  // Get services for selected category
+  const getServicesForCategory = (category: string): SMMService[] => {
+    return services.filter((service) => {
+      const serviceName = service.name.toLowerCase()
+      const typeKeywords = {
+        subscribers: ["subscribers", "subscribe"],
+        likes: ["likes", "like"],
+        dislikes: ["dislikes", "dislike"],
+        comments: ["comments", "comment"],
+        views: ["views", "view"],
+        shares: ["shares", "share"],
+      }
+
+      const keywords = typeKeywords[category] || [category]
+      return keywords.some((keyword) => serviceName.includes(keyword))
+    })
+  }
+
   const getServiceForType = (type: string): SMMService | null => {
     return (
       services.find((service) => {
@@ -321,7 +339,8 @@ export default function YouTubePage() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleCreateCampaign} className="space-y-6">
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-6">
+                  {/* Campaign Name */}
                   <div className="space-y-2">
                     <Label htmlFor="campaignName">Campaign Name</Label>
                     <Input
@@ -333,9 +352,13 @@ export default function YouTubePage() {
                     />
                   </div>
 
+                  {/* Step 1: Category Selection */}
                   <div className="space-y-2">
-                    <Label htmlFor="campaignType">Growth Type</Label>
-                    <Select value={campaignType} onValueChange={setCampaignType}>
+                    <Label htmlFor="campaignType">Step 1: Select Category</Label>
+                    <Select value={campaignType} onValueChange={(value) => {
+                      setCampaignType(value)
+                      setSelectedService(null) // Reset service when category changes
+                    }}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -373,6 +396,43 @@ export default function YouTubePage() {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {/* Step 2: Service Selection - Show as Cards */}
+                  {campaignType && (
+                    <div className="space-y-4">
+                      <Label>Step 2: Select {campaignType.charAt(0).toUpperCase() + campaignType.slice(1)} Service</Label>
+                      
+                      {getServicesForCategory(campaignType).length === 0 ? (
+                        <p className="text-sm text-gray-500 p-4 bg-gray-50 rounded-lg">No services available for this category</p>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-64 overflow-y-auto">
+                          {getServicesForCategory(campaignType).map((service) => (
+                            <div
+                              key={service.service}
+                              className={`p-4 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
+                                selectedService?.service === service.service
+                                  ? 'border-red-500 bg-red-50 shadow-md'
+                                  : 'border-gray-200 hover:border-red-300'
+                              }`}
+                              onClick={() => setSelectedService(service)}
+                            >
+                              <div className="flex flex-col space-y-2">
+                                <h4 className="font-medium text-sm text-gray-900">{service.name}</h4>
+                                <div className="flex justify-between items-center text-xs text-gray-600">
+                                  <span className="font-semibold text-green-600">₹{service.rate}/1k</span>
+                                  <span>Min: {service.min}</span>
+                                  <span>Max: {service.max}</span>
+                                </div>
+                                {service.description && (
+                                  <p className="text-xs text-gray-500 line-clamp-2">{service.description}</p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">

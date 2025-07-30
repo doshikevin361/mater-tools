@@ -64,9 +64,9 @@ export default function FacebookPage() {
   // Form state
   const [campaignName, setCampaignName] = useState("")
   const [growthType, setGrowthType] = useState("followers")
+  const [selectedService, setSelectedService] = useState<SMMService | null>(null)
   const [targetCount, setTargetCount] = useState("")
   const [pageUrl, setPageUrl] = useState("")
-  const [selectedService, setSelectedService] = useState<SMMService | null>(null)
 
   const [user, setUser] = useState<any>(null)
 
@@ -149,10 +149,10 @@ export default function FacebookPage() {
   }
 
   const createCampaign = async () => {
-    if (!campaignName || !targetCount || !pageUrl || !user) {
+    if (!campaignName || !targetCount || !pageUrl || !user || !selectedService) {
       toast({
         title: "Missing Information",
-        description: "Please fill in all required fields",
+        description: "Please fill in all required fields and select a service",
         variant: "destructive",
       })
       return
@@ -170,6 +170,7 @@ export default function FacebookPage() {
           targetUrl: pageUrl,
           quantity: Number.parseInt(targetCount),
           campaignName,
+          serviceId: selectedService.service,
         }),
       })
 
@@ -185,6 +186,7 @@ export default function FacebookPage() {
         setCampaignName("")
         setTargetCount("")
         setPageUrl("")
+        setSelectedService(null)
 
         // Refresh campaigns and user balance
         fetchCampaigns(user._id || user.id)
@@ -207,6 +209,22 @@ export default function FacebookPage() {
     }
   }
 
+  // Get services for selected category
+  const getServicesForCategory = (category: string): SMMService[] => {
+    return services.filter((service) => {
+      const serviceName = service.name.toLowerCase()
+      const typeKeywords = {
+        followers: ["followers", "follow", "fan"],
+        likes: ["likes", "like"],
+        comments: ["comments", "comment"],
+        shares: ["shares", "share"],
+      }
+
+      const keywords = typeKeywords[category] || [category]
+      return keywords.some((keyword) => serviceName.includes(keyword))
+    })
+  }
+
   const getServiceForType = (type: string): SMMService | null => {
     return (
       services.find((service) => {
@@ -224,16 +242,13 @@ export default function FacebookPage() {
     )
   }
 
-  const calculateCost = (type: string, quantity: number): number => {
-    const service = getServiceForType(type)
+  const calculateCost = (service: SMMService, quantity: number): number => {
     if (!service) return 0
-
     const rate = Number.parseFloat(service.rate)
     return Math.max((rate * quantity) / 1000, 0.01)
   }
 
-  const currentService = getServiceForType(growthType)
-  const estimatedCost = targetCount ? calculateCost(growthType, Number.parseInt(targetCount)) : 0
+
 
   return (
     <div className="space-y-6">
@@ -345,52 +360,94 @@ export default function FacebookPage() {
               <CardDescription>Start growing your Facebook presence with our premium SMM services</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="campaignName">Campaign Name</Label>
-                  <Input
-                    id="campaignName"
-                    placeholder="e.g., Summer Promotion Boost"
-                    value={campaignName}
-                    onChange={(e) => setCampaignName(e.target.value)}
-                    className="border-purple-200 focus:border-purple-400"
-                  />
-                </div>
+                              <div className="space-y-6">
+                  {/* Campaign Name */}
+                  <div className="space-y-2">
+                    <Label htmlFor="campaignName">Campaign Name</Label>
+                    <Input
+                      id="campaignName"
+                      placeholder="e.g., Summer Promotion Boost"
+                      value={campaignName}
+                      onChange={(e) => setCampaignName(e.target.value)}
+                      className="border-purple-200 focus:border-purple-400"
+                    />
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="growthType">Growth Type</Label>
-                  <Select value={growthType} onValueChange={setGrowthType}>
-                    <SelectTrigger className="border-purple-200 focus:border-purple-400">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="followers">
-                        <div className="flex items-center gap-2">
-                          <Users className="h-4 w-4 text-blue-600" />
-                          Followers
+                  {/* Step 1: Category Selection */}
+                  <div className="space-y-2">
+                    <Label htmlFor="growthType">Step 1: Select Category</Label>
+                    <Select value={growthType} onValueChange={(value) => {
+                      setGrowthType(value)
+                      setSelectedService(null) // Reset service when category changes
+                    }}>
+                      <SelectTrigger className="border-purple-200 focus:border-purple-400">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="followers">
+                          <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4 text-blue-600" />
+                            Followers
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="likes">
+                          <div className="flex items-center gap-2">
+                            <Heart className="h-4 w-4 text-red-600" />
+                            Page Likes
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="comments">
+                          <div className="flex items-center gap-2">
+                            <MessageCircle className="h-4 w-4 text-green-600" />
+                            Comments
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="shares">
+                          <div className="flex items-center gap-2">
+                            <Share2 className="h-4 w-4 text-purple-600" />
+                            Shares
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Step 2: Service Selection - Show as Cards */}
+                  {growthType && (
+                    <div className="space-y-4">
+                      <Label>Step 2: Select {growthType.charAt(0).toUpperCase() + growthType.slice(1)} Service</Label>
+                      
+                      {getServicesForCategory(growthType).length === 0 ? (
+                        <p className="text-sm text-gray-500 p-4 bg-gray-50 rounded-lg">No services available for this category</p>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-64 overflow-y-auto">
+                          {getServicesForCategory(growthType).map((service) => (
+                            <div
+                              key={service.service}
+                              className={`p-4 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
+                                selectedService?.service === service.service
+                                  ? 'border-blue-500 bg-blue-50 shadow-md'
+                                  : 'border-gray-200 hover:border-blue-300'
+                              }`}
+                              onClick={() => setSelectedService(service)}
+                            >
+                              <div className="flex flex-col space-y-2">
+                                <h4 className="font-medium text-sm text-gray-900">{service.name}</h4>
+                                <div className="flex justify-between items-center text-xs text-gray-600">
+                                  <span className="font-semibold text-green-600">₹{service.rate}/1k</span>
+                                  <span>Min: {service.min}</span>
+                                  <span>Max: {service.max}</span>
+                                </div>
+                                {service.description && (
+                                  <p className="text-xs text-gray-500 line-clamp-2">{service.description}</p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      </SelectItem>
-                      <SelectItem value="likes">
-                        <div className="flex items-center gap-2">
-                          <Heart className="h-4 w-4 text-red-600" />
-                          Page Likes
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="comments">
-                        <div className="flex items-center gap-2">
-                          <MessageCircle className="h-4 w-4 text-green-600" />
-                          Comments
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="shares">
-                        <div className="flex items-center gap-2">
-                          <Share2 className="h-4 w-4 text-purple-600" />
-                          Shares
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                      )}
+                    </div>
+                  )}
 
                 <div className="space-y-2">
                   <Label htmlFor="pageUrl">Facebook Page/Post URL</Label>
@@ -403,48 +460,62 @@ export default function FacebookPage() {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="targetCount">Target Count</Label>
-                  <Input
-                    id="targetCount"
-                    type="number"
-                    placeholder="1000"
-                    value={targetCount}
-                    onChange={(e) => setTargetCount(e.target.value)}
-                    className="border-purple-200 focus:border-purple-400"
-                    min={currentService?.min || "1"}
-                    max={currentService?.max || "100000"}
-                  />
-                  {currentService && (
-                    <p className="text-xs text-gray-600">
-                      Min: {currentService.min} | Max: {currentService.max}
-                    </p>
-                  )}
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="targetCount">Target Count</Label>
+                    <Input
+                      id="targetCount"
+                      type="number"
+                      placeholder="1000"
+                      value={targetCount}
+                      onChange={(e) => setTargetCount(e.target.value)}
+                      className="border-purple-200 focus:border-purple-400"
+                      min={selectedService?.min || "1"}
+                      max={selectedService?.max || "100000"}
+                      disabled={!selectedService}
+                    />
+                    {selectedService && (
+                      <p className="text-xs text-gray-600">
+                        Min: {selectedService.min} | Max: {selectedService.max}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Estimated Cost</Label>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-2xl font-bold text-green-600">
+                        ₹{selectedService && targetCount ? calculateCost(selectedService, Number.parseInt(targetCount)).toFixed(2) : "0.00"}
+                      </span>
+                      {selectedService && (
+                        <span className="text-sm text-muted-foreground">(₹{selectedService.rate} per 1000)</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {currentService && (
+              {selectedService && (
                 <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-4 rounded-lg border border-purple-200">
                   <div className="space-y-2">
-                    <h4 className="font-medium text-gray-900">Service Details</h4>
-                    <p className="text-sm text-gray-600">{currentService.name}</p>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-sm text-gray-600">Rate: ₹{currentService.rate} per 1000</div>
-                        <div className="text-sm text-gray-600">Estimated delivery: 1-3 days</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-brand-gradient">₹{estimatedCost.toFixed(2)}</div>
-                        <p className="text-sm text-gray-600">Total cost</p>
-                      </div>
+                    <h4 className="font-medium text-gray-900">Selected Service Details</h4>
+                    <p className="text-sm text-gray-600 font-medium">{selectedService.name}</p>
+                    <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                      <div>Rate: ₹{selectedService.rate} per 1000</div>
+                      <div>Delivery: 1-3 days</div>
+                      <div>Min Order: {selectedService.min}</div>
+                      <div>Max Order: {selectedService.max}</div>
                     </div>
+                    {selectedService.description && (
+                      <p className="text-xs text-gray-500 mt-2">{selectedService.description}</p>
+                    )}
                   </div>
                 </div>
               )}
 
               <Button
                 onClick={createCampaign}
-                disabled={loading || !currentService || (user?.balance || 0) < estimatedCost}
+                disabled={loading || !selectedService || (user?.balance || 0) < (selectedService && targetCount ? calculateCost(selectedService, Number.parseInt(targetCount)) : 0)}
                 className="w-full btn-gradient text-white shadow-brand"
               >
                 {loading ? (
@@ -452,12 +523,14 @@ export default function FacebookPage() {
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                     Creating Campaign...
                   </>
-                ) : (user?.balance || 0) < estimatedCost ? (
-                  <>Insufficient Balance</>
+                ) : !selectedService ? (
+                  "Select a Service First"
+                ) : (user?.balance || 0) < (selectedService && targetCount ? calculateCost(selectedService, Number.parseInt(targetCount)) : 0) ? (
+                  "Insufficient Balance"
                 ) : (
                   <>
                     <Zap className="mr-2 h-4 w-4" />
-                    Create Campaign (₹{estimatedCost.toFixed(2)})
+                    Create Campaign (₹{selectedService && targetCount ? calculateCost(selectedService, Number.parseInt(targetCount)).toFixed(2) : "0.00"})
                   </>
                 )}
               </Button>
