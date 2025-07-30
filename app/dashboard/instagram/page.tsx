@@ -47,6 +47,7 @@ export default function InstagramPage() {
 
   // Form states
   const [campaignType, setCampaignType] = useState<string>("followers")
+  const [selectedService, setSelectedService] = useState<SMMService | null>(null)
   const [targetUrl, setTargetUrl] = useState("")
   const [targetCount, setTargetCount] = useState("")
   const [campaignName, setCampaignName] = useState("")
@@ -135,7 +136,7 @@ export default function InstagramPage() {
   // Create new campaign
   const handleCreateCampaign = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!user?._id) return
+    if (!user?._id || !selectedService) return
 
     setLoading(true)
     try {
@@ -151,6 +152,7 @@ export default function InstagramPage() {
           targetUrl,
           quantity: Number.parseInt(targetCount),
           campaignName,
+          serviceId: selectedService.service,
         }),
       })
 
@@ -168,6 +170,7 @@ export default function InstagramPage() {
         setCampaignName("")
         setTargetUrl("")
         setTargetCount("")
+        setSelectedService(null)
 
         toast({
           title: "Campaign Created!",
@@ -192,6 +195,23 @@ export default function InstagramPage() {
     }
   }
 
+  // Get services for selected category
+  const getServicesForCategory = (category: string): SMMService[] => {
+    return services.filter((service) => {
+      const serviceName = service.name.toLowerCase()
+      const typeKeywords = {
+        followers: ["followers", "follow"],
+        likes: ["likes", "like"],
+        comments: ["comments", "comment"],
+        views: ["views", "view"],
+        story_views: ["story", "stories"],
+      }
+
+      const keywords = typeKeywords[category] || [category]
+      return keywords.some((keyword) => serviceName.includes(keyword))
+    })
+  }
+
   const getServiceForType = (type: string): SMMService | null => {
     return (
       services.find((service) => {
@@ -210,10 +230,8 @@ export default function InstagramPage() {
     )
   }
 
-  const calculateCost = (type: string, quantity: number): number => {
-    const service = getServiceForType(type)
+  const calculateCost = (service: SMMService, quantity: number): number => {
     if (!service) return 0
-
     const rate = Number.parseFloat(service.rate)
     return Math.max((rate * quantity) / 1000, 0.01)
   }
@@ -250,8 +268,7 @@ export default function InstagramPage() {
     }
   }
 
-  const currentService = getServiceForType(campaignType)
-  const estimatedCost = targetCount ? calculateCost(campaignType, Number.parseInt(targetCount)) : 0
+
 
   if (!user) {
     return (
@@ -304,7 +321,8 @@ export default function InstagramPage() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleCreateCampaign} className="space-y-6">
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-6">
+                  {/* Campaign Name */}
                   <div className="space-y-2">
                     <Label htmlFor="campaignName">Campaign Name</Label>
                     <Input
@@ -316,9 +334,13 @@ export default function InstagramPage() {
                     />
                   </div>
 
+                  {/* Step 1: Category Selection */}
                   <div className="space-y-2">
-                    <Label htmlFor="campaignType">Growth Type</Label>
-                    <Select value={campaignType} onValueChange={setCampaignType}>
+                    <Label htmlFor="campaignType">Step 1: Select Category</Label>
+                    <Select value={campaignType} onValueChange={(value) => {
+                      setCampaignType(value)
+                      setSelectedService(null) // Reset service when category changes
+                    }}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -356,6 +378,37 @@ export default function InstagramPage() {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {/* Step 2: Service Selection */}
+                  {campaignType && (
+                    <div className="space-y-2">
+                      <Label htmlFor="serviceSelect">Step 2: Select Service</Label>
+                      <Select value={selectedService?.service.toString() || ""} onValueChange={(value) => {
+                        const service = services.find(s => s.service.toString() === value)
+                        setSelectedService(service || null)
+                      }}>
+                        <SelectTrigger>
+                          <SelectValue placeholder={`Choose ${campaignType} service...`} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getServicesForCategory(campaignType).map((service) => (
+                            <SelectItem key={service.service} value={service.service.toString()}>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{service.name}</span>
+                                <span className="text-xs text-gray-500">
+                                  ₹{service.rate}/1k • Min: {service.min} • Max: {service.max}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      
+                      {getServicesForCategory(campaignType).length === 0 && (
+                        <p className="text-sm text-gray-500">No services available for this category</p>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -379,12 +432,13 @@ export default function InstagramPage() {
                       value={targetCount}
                       onChange={(e) => setTargetCount(e.target.value)}
                       required
-                      min={currentService?.min || "1"}
-                      max={currentService?.max || "100000"}
+                      min={selectedService?.min || "1"}
+                      max={selectedService?.max || "100000"}
+                      disabled={!selectedService}
                     />
-                    {currentService && (
+                    {selectedService && (
                       <p className="text-xs text-gray-600">
-                        Min: {currentService.min} | Max: {currentService.max}
+                        Min: {selectedService.min} | Max: {selectedService.max}
                       </p>
                     )}
                   </div>
@@ -392,29 +446,37 @@ export default function InstagramPage() {
                   <div className="space-y-2">
                     <Label>Estimated Cost</Label>
                     <div className="flex items-center space-x-2">
-                      <span className="text-2xl font-bold text-green-600">₹{estimatedCost.toFixed(2)}</span>
-                      {currentService && (
-                        <span className="text-sm text-muted-foreground">(₹{currentService.rate} per 1000)</span>
+                      <span className="text-2xl font-bold text-green-600">
+                        ₹{selectedService && targetCount ? calculateCost(selectedService, Number.parseInt(targetCount)).toFixed(2) : "0.00"}
+                      </span>
+                      {selectedService && (
+                        <span className="text-sm text-muted-foreground">(₹{selectedService.rate} per 1000)</span>
                       )}
                     </div>
                   </div>
                 </div>
 
-                {currentService && (
+                {selectedService && (
                   <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg border border-purple-200">
                     <div className="space-y-2">
-                      <h4 className="font-medium text-gray-900">Service Details</h4>
-                      <p className="text-sm text-gray-600">{currentService.name}</p>
-                      <div className="text-sm text-gray-600">
-                        Rate: ₹{currentService.rate} per 1000 | Estimated delivery: 1-3 days
+                      <h4 className="font-medium text-gray-900">Selected Service Details</h4>
+                      <p className="text-sm text-gray-600 font-medium">{selectedService.name}</p>
+                      <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                        <div>Rate: ₹{selectedService.rate} per 1000</div>
+                        <div>Delivery: 1-3 days</div>
+                        <div>Min Order: {selectedService.min}</div>
+                        <div>Max Order: {selectedService.max}</div>
                       </div>
+                      {selectedService.description && (
+                        <p className="text-xs text-gray-500 mt-2">{selectedService.description}</p>
+                      )}
                     </div>
                   </div>
                 )}
 
                 <Button
                   type="submit"
-                  disabled={loading || !currentService || (user?.balance || 0) < estimatedCost}
+                  disabled={loading || !selectedService || (user?.balance || 0) < (selectedService && targetCount ? calculateCost(selectedService, Number.parseInt(targetCount)) : 0)}
                   className="w-full"
                 >
                   {loading ? (
@@ -422,12 +484,14 @@ export default function InstagramPage() {
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                       Creating Campaign...
                     </>
-                  ) : (user?.balance || 0) < estimatedCost ? (
+                  ) : !selectedService ? (
+                    "Select a Service First"
+                  ) : (user?.balance || 0) < (selectedService && targetCount ? calculateCost(selectedService, Number.parseInt(targetCount)) : 0) ? (
                     "Insufficient Balance"
                   ) : (
                     <>
                       <Zap className="mr-2 h-4 w-4" />
-                      Create Campaign (₹{estimatedCost.toFixed(2)})
+                      Create Campaign (₹{selectedService && targetCount ? calculateCost(selectedService, Number.parseInt(targetCount)).toFixed(2) : "0.00"})
                     </>
                   )}
                 </Button>

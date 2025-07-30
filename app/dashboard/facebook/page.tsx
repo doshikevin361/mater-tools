@@ -64,9 +64,9 @@ export default function FacebookPage() {
   // Form state
   const [campaignName, setCampaignName] = useState("")
   const [growthType, setGrowthType] = useState("followers")
+  const [selectedService, setSelectedService] = useState<SMMService | null>(null)
   const [targetCount, setTargetCount] = useState("")
   const [pageUrl, setPageUrl] = useState("")
-  const [selectedService, setSelectedService] = useState<SMMService | null>(null)
 
   const [user, setUser] = useState<any>(null)
 
@@ -149,10 +149,10 @@ export default function FacebookPage() {
   }
 
   const createCampaign = async () => {
-    if (!campaignName || !targetCount || !pageUrl || !user) {
+    if (!campaignName || !targetCount || !pageUrl || !user || !selectedService) {
       toast({
         title: "Missing Information",
-        description: "Please fill in all required fields",
+        description: "Please fill in all required fields and select a service",
         variant: "destructive",
       })
       return
@@ -170,6 +170,7 @@ export default function FacebookPage() {
           targetUrl: pageUrl,
           quantity: Number.parseInt(targetCount),
           campaignName,
+          serviceId: selectedService.service,
         }),
       })
 
@@ -185,6 +186,7 @@ export default function FacebookPage() {
         setCampaignName("")
         setTargetCount("")
         setPageUrl("")
+        setSelectedService(null)
 
         // Refresh campaigns and user balance
         fetchCampaigns(user._id || user.id)
@@ -207,6 +209,22 @@ export default function FacebookPage() {
     }
   }
 
+  // Get services for selected category
+  const getServicesForCategory = (category: string): SMMService[] => {
+    return services.filter((service) => {
+      const serviceName = service.name.toLowerCase()
+      const typeKeywords = {
+        followers: ["followers", "follow", "fan"],
+        likes: ["likes", "like"],
+        comments: ["comments", "comment"],
+        shares: ["shares", "share"],
+      }
+
+      const keywords = typeKeywords[category] || [category]
+      return keywords.some((keyword) => serviceName.includes(keyword))
+    })
+  }
+
   const getServiceForType = (type: string): SMMService | null => {
     return (
       services.find((service) => {
@@ -224,16 +242,14 @@ export default function FacebookPage() {
     )
   }
 
-  const calculateCost = (type: string, quantity: number): number => {
-    const service = getServiceForType(type)
+  const calculateCost = (service: SMMService, quantity: number): number => {
     if (!service) return 0
-
     const rate = Number.parseFloat(service.rate)
     return Math.max((rate * quantity) / 1000, 0.01)
   }
 
   const currentService = getServiceForType(growthType)
-  const estimatedCost = targetCount ? calculateCost(growthType, Number.parseInt(targetCount)) : 0
+  const estimatedCost = targetCount ? calculateCost(currentService || { service: 0, rate: "0", min: "1", max: "100000" }, Number.parseInt(targetCount)) : 0
 
   return (
     <div className="space-y-6">
