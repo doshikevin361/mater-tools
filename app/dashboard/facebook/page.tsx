@@ -95,13 +95,16 @@ export default function FacebookPage() {
 
   const fetchCampaigns = async (userId: string) => {
     try {
-      const response = await fetch(`/api/facebook/campaigns?userId=${userId}`)
+      // Get SMM campaigns from the campaigns collection
+      const response = await fetch(`/api/campaigns?userId=${userId}`)
       if (response.ok) {
         const data = await response.json()
-        setCampaigns(data.campaigns || [])
+        // Filter for Facebook campaigns
+        const facebookCampaigns = data.campaigns?.filter(c => c.platform === 'facebook') || []
+        setCampaigns(facebookCampaigns)
 
         // Calculate stats
-        const campaigns = data.campaigns || []
+        const campaigns = facebookCampaigns
         setStats({
           totalCampaigns: campaigns.length,
           totalFollowers: campaigns.filter((c) => c.type === "followers").reduce((sum, c) => sum + c.currentCount, 0),
