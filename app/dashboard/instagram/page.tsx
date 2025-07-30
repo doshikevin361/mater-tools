@@ -379,33 +379,39 @@ export default function InstagramPage() {
                     </Select>
                   </div>
 
-                  {/* Step 2: Service Selection */}
+                  {/* Step 2: Service Selection - Show as Cards */}
                   {campaignType && (
-                    <div className="space-y-2">
-                      <Label htmlFor="serviceSelect">Step 2: Select Service</Label>
-                      <Select value={selectedService?.service.toString() || ""} onValueChange={(value) => {
-                        const service = services.find(s => s.service.toString() === value)
-                        setSelectedService(service || null)
-                      }}>
-                        <SelectTrigger>
-                          <SelectValue placeholder={`Choose ${campaignType} service...`} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {getServicesForCategory(campaignType).map((service) => (
-                            <SelectItem key={service.service} value={service.service.toString()}>
-                              <div className="flex flex-col">
-                                <span className="font-medium">{service.name}</span>
-                                <span className="text-xs text-gray-500">
-                                  ₹{service.rate}/1k • Min: {service.min} • Max: {service.max}
-                                </span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                    <div className="space-y-4">
+                      <Label>Step 2: Select {campaignType.charAt(0).toUpperCase() + campaignType.slice(1)} Service</Label>
                       
-                      {getServicesForCategory(campaignType).length === 0 && (
-                        <p className="text-sm text-gray-500">No services available for this category</p>
+                      {getServicesForCategory(campaignType).length === 0 ? (
+                        <p className="text-sm text-gray-500 p-4 bg-gray-50 rounded-lg">No services available for this category</p>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-64 overflow-y-auto">
+                          {getServicesForCategory(campaignType).map((service) => (
+                            <div
+                              key={service.service}
+                              className={`p-4 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
+                                selectedService?.service === service.service
+                                  ? 'border-purple-500 bg-purple-50 shadow-md'
+                                  : 'border-gray-200 hover:border-purple-300'
+                              }`}
+                              onClick={() => setSelectedService(service)}
+                            >
+                              <div className="flex flex-col space-y-2">
+                                <h4 className="font-medium text-sm text-gray-900">{service.name}</h4>
+                                <div className="flex justify-between items-center text-xs text-gray-600">
+                                  <span className="font-semibold text-green-600">₹{service.rate}/1k</span>
+                                  <span>Min: {service.min}</span>
+                                  <span>Max: {service.max}</span>
+                                </div>
+                                {service.description && (
+                                  <p className="text-xs text-gray-500 line-clamp-2">{service.description}</p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       )}
                     </div>
                   )}
