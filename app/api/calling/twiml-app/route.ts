@@ -6,6 +6,10 @@ export async function POST(request: NextRequest) {
     const rawTo = formData.get("To") as string
     const from = formData.get("From") as string
 
+    if (!rawTo) {
+      throw new Error("No destination number provided")
+    }
+
     // Format the phone number to ensure E.164 format
     const formatIndianNumber = (number: string): string => {
       const cleaned = number.replace(/\D/g, "")
@@ -19,17 +23,27 @@ export async function POST(request: NextRequest) {
     }
 
     const to = formatIndianNumber(rawTo)
+    const callerId = process.env.TWILIO_PHONE_NUMBER || "+19252617266"
 
     console.log(`Outgoing call from ${from} to ${to}`)
 
-    console.log(`Outgoing call from ${from} to ${to}`)
+    // Build recording webhook URL - handle both development and production
+    const baseUrl = process.env.NODE_ENV === "production" 
+      ? process.env.NEXT_PUBLIC_APP_URL || "https://your-domain.com"
+      : "http://localhost:3000"
+    
+    const recordingWebhookUrl = `${baseUrl}/api/calling/recording-webhook`
+
+    console.log("Recording webhook URL:", recordingWebhookUrl)
 
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Dial callerId="+19252617266" record="record-from-ringing-dual" recordingStatusCallback="/api/calling/recording-webhook">
+    <Dial callerId="${callerId}" record="record-from-ringing-dual" recordingStatusCallback="${recordingWebhookUrl}">
         <Number>${to}</Number>
     </Dial>
 </Response>`
+
+    console.log("Generated TwiML:", twiml)
 
     return new NextResponse(twiml, {
       headers: {

@@ -117,9 +117,22 @@ export class TwilioVoiceBrowser {
   }
 
   async hangupCall(): Promise<void> {
+    console.log("Hanging up call, activeCall exists:", !!this.activeCall)
+    
     if (this.activeCall) {
-      this.activeCall.disconnect()
-      this.activeCall = null
+      try {
+        // Try to disconnect the call
+        this.activeCall.disconnect()
+        console.log("Call disconnect initiated")
+      } catch (error) {
+        console.error("Error during call disconnect:", error)
+      } finally {
+        // Always clear the active call reference
+        this.activeCall = null
+        console.log("Active call reference cleared")
+      }
+    } else {
+      console.log("No active call to hang up")
     }
   }
 
