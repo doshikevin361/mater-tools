@@ -69,18 +69,43 @@ export class TwilioVoiceBrowser {
     })
 
     this.device.on("connect", (call: any) => {
-      console.log("Call connected")
+      console.log("Call connected:", call)
       this.activeCall = call
+      
+      // Set up call-specific event listeners
+      if (call) {
+        call.on("accept", () => {
+          console.log("Call accepted by remote party")
+        })
+        
+        call.on("ringing", () => {
+          console.log("Call is ringing")
+        })
+        
+        call.on("cancel", () => {
+          console.log("Call was cancelled")
+          this.activeCall = null
+        })
+        
+        call.on("disconnect", () => {
+          console.log("Call disconnected from call object")
+          this.activeCall = null
+        })
+        
+        call.on("reject", () => {
+          console.log("Call was rejected")
+          this.activeCall = null
+        })
+      }
     })
 
     this.device.on("disconnect", (call: any) => {
-      console.log("Call disconnected")
+      console.log("Device disconnect event:", call)
       this.activeCall = null
     })
 
     this.device.on("incoming", (call: any) => {
       console.log("Incoming call from:", call.parameters.From)
-      // Handle incoming call
       this.activeCall = call
     })
   }
@@ -174,11 +199,40 @@ export class TwilioVoiceBrowser {
 
   getCallStatus(): string {
     if (!this.activeCall) return "idle"
-    return this.activeCall.status()
+    
+    try {
+      const status = this.activeCall.status()
+      console.log("Current call status:", status)
+      return status
+    } catch (error) {
+      console.error("Error getting call status:", error)
+      return "unknown"
+    }
   }
 
   isCallActive(): boolean {
-    return this.activeCall !== null && this.activeCall.status() === "open"
+    if (!this.activeCall) return false
+    
+    try {
+      const status = this.activeCall.status()
+      console.log("Checking if call is active, status:", status)
+      return status === "open" || status === "connecting" || status === "ringing"
+    } catch (error) {
+      console.error("Error checking call status:", error)
+      return false
+    }
+  }
+
+  isCallConnected(): boolean {
+    if (!this.activeCall) return false
+    
+    try {
+      const status = this.activeCall.status()
+      return status === "open"
+    } catch (error) {
+      console.error("Error checking if call is connected:", error)
+      return false
+    }
   }
 
   getDevice() {

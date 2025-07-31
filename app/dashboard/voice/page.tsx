@@ -410,7 +410,9 @@ export default function VoicePage() {
 
               {/* Audio Recording/Upload */}
               {campaignType === "audio" && (
-                <VoiceRecorder onRecordingComplete={handleAudioReady} maxDuration={300} className="h-fit" />
+                <div className="lg:col-span-1">
+                  <VoiceRecorder onRecordingComplete={handleAudioReady} maxDuration={300} className="h-fit" />
+                </div>
               )}
 
               {/* Contact Selection */}

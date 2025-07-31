@@ -290,9 +290,40 @@ export default function CallingPage() {
         device.on("connect", (call: any) => {
           console.log("Device connect event fired:", call)
           setIsCallActive(true)
-          setCallStatus("connected")
+          setCallStatus("ringing")
           setCallDuration(0)
-          toast.success("Call connected!")
+          toast.info("Call initiated - waiting for answer...")
+          
+          // Set up call-specific listeners
+          if (call) {
+            call.on("accept", () => {
+              console.log("Call answered by remote party")
+              setCallStatus("connected")
+              toast.success("Call connected!")
+            })
+            
+            call.on("ringing", () => {
+              console.log("Call is ringing")
+              setCallStatus("ringing")
+              toast.info("Phone is ringing...")
+            })
+            
+            call.on("cancel", () => {
+              console.log("Call was cancelled")
+              setIsCallActive(false)
+              setCallStatus("idle")
+              setIsMuted(false)
+              toast.info("Call cancelled")
+            })
+            
+            call.on("reject", () => {
+              console.log("Call was rejected")
+              setIsCallActive(false)
+              setCallStatus("idle")
+              setIsMuted(false)
+              toast.error("Call rejected")
+            })
+          }
         })
 
         device.on("disconnect", (call: any) => {
@@ -658,7 +689,14 @@ export default function CallingPage() {
               <CardHeader>
                 <CardTitle>Live Call Controls</CardTitle>
                 <CardDescription>
-                  {isCallActive ? `Active call - ${formatDuration(callDuration)}` : "No active call"}
+                  {isCallActive 
+                    ? callStatus === "ringing" 
+                      ? `Calling ${formatPhoneNumber(phoneNumber)} - ${formatDuration(callDuration)}`
+                      : callStatus === "connected"
+                      ? `Connected - ${formatDuration(callDuration)}`
+                      : `${callStatus} - ${formatDuration(callDuration)}`
+                    : "No active call"
+                  }
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -676,8 +714,22 @@ export default function CallingPage() {
                           <span>${callCost.toFixed(2)}</span>
                         </div>
                       </div>
-                      <Badge variant="default" className="bg-green-600">
-                        🔴 LIVE - Browser Call
+                      <Badge 
+                        variant="default" 
+                        className={
+                          callStatus === "connected" 
+                            ? "bg-green-600" 
+                            : callStatus === "ringing"
+                            ? "bg-yellow-600"
+                            : "bg-blue-600"
+                        }
+                      >
+                        {callStatus === "connected" 
+                          ? "🟢 CONNECTED - Browser Call"
+                          : callStatus === "ringing"
+                          ? "🟡 RINGING - Browser Call"
+                          : "🔵 " + callStatus.toUpperCase() + " - Browser Call"
+                        }
                       </Badge>
                     </div>
 
@@ -687,9 +739,19 @@ export default function CallingPage() {
                         {isMuted ? "Unmute" : "Mute"}
                       </Button>
 
-                      <Button variant="outline" size="lg" disabled>
+                      <Button 
+                        variant={isRecording ? "destructive" : "outline"} 
+                        size="lg" 
+                        disabled={callStatus !== "connected"}
+                        onClick={() => {
+                          setIsRecording(!isRecording)
+                          toast.info(isRecording ? "Recording stopped" : "Recording started")
+                          console.log("Recording button clicked, new state:", !isRecording)
+                        }}
+                        className={callStatus !== "connected" ? "opacity-50 cursor-not-allowed" : ""}
+                      >
                         <Square className="mr-2 h-4 w-4" />
-                        Recording
+                        {isRecording ? "Stop Recording" : callStatus === "connected" ? "Start Recording" : "Recording (Call Required)"}
                       </Button>
                     </div>
 
@@ -867,6 +929,19 @@ export default function CallingPage() {
                   <p>TWILIO_API_SECRET=your_api_secret</p>
                   <p>TWILIO_TWIML_APP_SID=your_twiml_app_sid</p>
                   <p>TWILIO_PHONE_NUMBER=your_twilio_number</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Debug Information</Label>
+                <div className="text-xs text-muted-foreground space-y-1 bg-gray-50 p-3 rounded">
+                  <p>Call Status: {callStatus}</p>
+                  <p>Is Call Active: {isCallActive ? "Yes" : "No"}</p>
+                  <p>Is Muted: {isMuted ? "Yes" : "No"}</p>
+                  <p>Is Recording: {isRecording ? "Yes" : "No"}</p>
+                  <p>Call Duration: {formatDuration(callDuration)}</p>
+                  <p>SDK Connected: {isConnected ? "Yes" : "No"}</p>
+                  <p>Initializing: {isInitializing ? "Yes" : "No"}</p>
                 </div>
               </div>
             </CardContent>
