@@ -8,7 +8,9 @@ const MONTHS = [
   "July", "August", "September", "October", "November", "December"
 ]
 
+// MASSIVE User Agents Pool for Maximum Variety
 const USER_AGENTS = [
+  // Chrome Windows
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
@@ -35,17 +37,22 @@ const USER_AGENTS = [
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Safari/605.1.15',
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
   
+  // Edge Windows
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0',
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36 Edg/119.0.0.0',
   
+  // Chrome Linux
   'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
   
+  // Chrome Mobile (for variation)
   'Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
   'Mozilla/5.0 (iPhone; CPU iPhone OS 17_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
 ]
 
+// Enhanced Screen Resolutions with Real Device Profiles
 const SCREEN_PROFILES = [
+  // Desktop Common
   { width: 1920, height: 1080, mobile: false, deviceType: 'desktop', name: 'Full HD' },
   { width: 1366, height: 768, mobile: false, deviceType: 'desktop', name: 'HD Laptop' },
   { width: 1440, height: 900, mobile: false, deviceType: 'desktop', name: 'MacBook Pro' },
@@ -57,14 +64,17 @@ const SCREEN_PROFILES = [
   { width: 1280, height: 800, mobile: false, deviceType: 'desktop', name: 'WXGA' },
   { width: 1024, height: 768, mobile: false, deviceType: 'desktop', name: 'XGA' },
   
+  // Laptop/Tablet
   { width: 1024, height: 1366, mobile: true, deviceType: 'tablet', name: 'iPad Portrait' },
   { width: 768, height: 1024, mobile: true, deviceType: 'tablet', name: 'iPad Mini' },
   { width: 820, height: 1180, mobile: true, deviceType: 'tablet', name: 'iPad Air' },
   
+  // Mobile (occasionally for variation)
   { width: 390, height: 844, mobile: true, deviceType: 'mobile', name: 'iPhone 12' },
   { width: 414, height: 896, mobile: true, deviceType: 'mobile', name: 'iPhone 11' }
 ]
 
+// Enhanced Operating Systems and Platform Data
 const OS_PROFILES = [
   {
     platform: 'Win32',
@@ -96,16 +106,20 @@ const OS_PROFILES = [
   }
 ]
 
+// Enhanced Stealth Configuration
 const STEALTH_CONFIG = {
+  // Timing Strategy
   maxAccountsPerDay: 5,
-  minDelayBetweenAccounts: 30 * 60 * 1000, 
-  maxDelayBetweenAccounts: 4 * 60 * 60 * 1000, 
+  minDelayBetweenAccounts: 30 * 60 * 1000, // 30 minutes minimum
+  maxDelayBetweenAccounts: 4 * 60 * 60 * 1000, // 4 hours maximum
   sessionVariation: true,
   
+  // Browser Strategy  
   randomizeFingerprints: true,
   simulateHumanBehavior: true,
-  preBrowsingChance: 0.7, 
+  preBrowsingChance: 0.7, // 70% chance of pre-browsing
   
+  // Anti-Detection
   removeAutomationTraces: true,
   spoofHardwareSpecs: true,
   randomizePlugins: true,
@@ -116,71 +130,8 @@ const STEALTH_CONFIG = {
   simulateTypos: true,
   humanMouseMovements: true,
   realTimingPatterns: true,
-  headlessMode: 'new', 
+  headlessMode: false 
 }
-
-// Popular Indian Instagram accounts for auto-following
-const INDIAN_ACCOUNTS_TO_FOLLOW = [
-  'virat.kohli',
-  'aliaabhatt',
-  'deepikapadukone',
-  'priyankachopra',
-  'shraddhakapoor',
-  'akshaykumar',
-  'ranveersingh',
-  'katrinakaiif',
-  'anushkasharma',
-  'shahidkapoor',
-  'tigerjackieshroff',
-  'sunnyleone',
-  'kritisanon',
-  'hrithikroshan',
-  'amitabhbachchan',
-  'aslisona',
-  'iamksgofficial',
-  'varundvn',
-  'jacquelinef143',
-  'dishapatani',
-  'saraalikhan95',
-  'janhvikapoor',
-  'arjunkapoor',
-  'iamsrk',
-  'randeephooda',
-  'sidmalhotra',
-  'adityaroykapur',
-  'vickykaushal09',
-  'rajkummar_rao',
-  'ayushmannk',
-  'kartikaaryan',
-  'ishaan95',
-  'rakulpreet',
-  'taapsee',
-  'bhumi_pednekar',
-  'kiara_advani',
-  'nargisfakhri',
-  'sonamkapoor',
-  'parineetichopra',
-  'adah_ki_adah'
-]
-
-// Indian bio templates
-const INDIAN_BIO_TEMPLATES = [
-  "🇮🇳 Proud Indian | ✨ Dreamer | 📸 Life Enthusiast",
-  "Mumbai | Delhi | Bangalore 🏙️ | Living my best life ✨",
-  "🌟 Indian soul | 🎭 Bollywood lover | 📚 Lifelong learner",
-  "🇮🇳 Desi at heart | 🌺 Spreading positivity | 💫 Chasing dreams",
-  "India 🇮🇳 | Food lover 🍛 | Travel enthusiast ✈️",
-  "🌈 Colors of India | 🎵 Music lover | 📖 Story teller",
-  "🇮🇳 Born & raised | 💪 Fitness freak | 🌟 Motivational speaker",
-  "Indian by birth 🇮🇳 | Global by choice 🌍 | Optimist by nature ☀️",
-  "🏏 Cricket fan | 🎬 Movie buff | 🍕 Foodie | 🇮🇳 Proud Indian",
-  "Delhi NCR 📍 | Engineering student 👨‍🎓 | Tech enthusiast 💻",
-  "Mumbai dreams 🌆 | Artist at heart 🎨 | Coffee addict ☕",
-  "🇮🇳 Indian traditions | Modern thoughts 💭 | Nature lover 🌿",
-  "Bangalore techie 💻 | Weekend traveler 🎒 | Yoga practitioner 🧘‍♀️",
-  "🌟 Spreading smiles | 🇮🇳 India first | 📚 Knowledge seeker",
-  "Chai lover ☕ | Sunset chaser 🌅 | Indian culture enthusiast 🇮🇳"
-]
 
 function log(level, message, data = null) {
   const timestamp = new Date().toLocaleTimeString()
@@ -203,11 +154,13 @@ const humanWait = (minMs = 1500, maxMs = 4000) => {
   return new Promise(resolve => setTimeout(resolve, delay))
 }
 
+// Generate realistic device profile
 function generateDeviceProfile() {
   const screenProfile = SCREEN_PROFILES[Math.floor(Math.random() * SCREEN_PROFILES.length)]
   const osProfile = OS_PROFILES[Math.floor(Math.random() * OS_PROFILES.length)]
   const userAgent = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)]
   
+  // Hardware specs based on device type
   const hardwareSpecs = {
     cores: screenProfile.deviceType === 'mobile' ? [4, 6, 8][Math.floor(Math.random() * 3)] : [4, 6, 8, 12, 16][Math.floor(Math.random() * 5)],
     memory: screenProfile.deviceType === 'mobile' ? [4, 6, 8][Math.floor(Math.random() * 3)] : [8, 16, 32][Math.floor(Math.random() * 3)],
@@ -298,6 +251,7 @@ function generateAudioNoise() {
   }
 }
 
+// MAXIMUM STEALTH BROWSER - No Proxy Required
 async function createMaximumStealthBrowser() {
   log('info', '🎭 Creating MAXIMUM stealth browser (No Proxy Strategy)...')
   
@@ -315,6 +269,7 @@ async function createMaximumStealthBrowser() {
       '--no-zygote',
       '--disable-gpu',
       
+      // MAXIMUM Anti-detection flags
       '--disable-blink-features=AutomationControlled',
       '--disable-web-security',
       '--disable-features=VizDisplayCompositor',
@@ -343,6 +298,7 @@ async function createMaximumStealthBrowser() {
       '--disable-password-generation',
       '--disable-password-manager-reauthentication',
       
+      // Additional stealth
       '--metrics-recording-only',
       '--no-default-browser-check',
       '--safebrowsing-disable-auto-update',
@@ -363,9 +319,11 @@ async function createMaximumStealthBrowser() {
       '--hide-scrollbars',
       '--mute-audio',
       
+      // Memory optimization
       '--memory-pressure-off',
       '--max_old_space_size=4096',
       
+      // Disable automation indicators
       '--disable-blink-features=AutomationControlled',
       '--exclude-switches=enable-automation',
       '--disable-extensions-http-throttling',
@@ -413,6 +371,7 @@ async function createMaximumStealthBrowser() {
       } catch (e) {}
     })
 
+    // === ENHANCED CHROME OBJECT ===
     window.chrome = {
       runtime: {
         onConnect: null,
@@ -529,6 +488,7 @@ async function createMaximumStealthBrowser() {
       })
     })
 
+    // === ENHANCED PERMISSIONS ===
     const originalQuery = window.navigator.permissions.query
     window.navigator.permissions.query = (parameters) => {
       const permissionStates = {
@@ -544,6 +504,7 @@ async function createMaximumStealthBrowser() {
       })
     }
 
+    // === BATTERY API SPOOFING ===
     if (navigator.getBattery) {
       navigator.getBattery = () => Promise.resolve({
         charging: Math.random() > 0.3,
@@ -555,12 +516,14 @@ async function createMaximumStealthBrowser() {
       })
     }
 
+    // === CREDENTIALS API SPOOFING ===
     if (navigator.credentials) {
       navigator.credentials.store = () => Promise.resolve()
       navigator.credentials.create = () => Promise.resolve()
       navigator.credentials.get = () => Promise.resolve(null)
     }
 
+    // === ENHANCED GEOLOCATION SPOOFING ===
     if (navigator.geolocation) {
       const originalGetCurrentPosition = navigator.geolocation.getCurrentPosition
       navigator.geolocation.getCurrentPosition = function(success, error, options) {
@@ -582,7 +545,7 @@ async function createMaximumStealthBrowser() {
       navigator.geolocation.clearWatch = function(id) {}
     }
 
-
+    // === WEBGL FINGERPRINT SPOOFING ===
     const getParameter = WebGLRenderingContext.prototype.getParameter
     WebGLRenderingContext.prototype.getParameter = function(parameter) {
       if (parameter === 37445) return profile.webgl.vendor // UNMASKED_VENDOR_WEBGL
@@ -592,6 +555,7 @@ async function createMaximumStealthBrowser() {
       return getParameter.apply(this, arguments)
     }
 
+    // === CANVAS FINGERPRINT PROTECTION ===
     const originalToDataURL = HTMLCanvasElement.prototype.toDataURL
     const originalGetImageData = CanvasRenderingContext2D.prototype.getImageData
     
@@ -625,6 +589,7 @@ async function createMaximumStealthBrowser() {
       return imageData
     }
 
+    // === AUDIO CONTEXT FINGERPRINT PROTECTION ===
     const originalAudioContext = window.AudioContext || window.webkitAudioContext
     if (originalAudioContext) {
       window.AudioContext = function() {
@@ -678,7 +643,7 @@ async function createMaximumStealthBrowser() {
       }
     }
 
-
+    // === SCREEN SPOOFING ===
     Object.defineProperty(screen, 'width', {
       get: () => profile.screen.width
     })
@@ -710,6 +675,7 @@ async function createMaximumStealthBrowser() {
       }
     })
 
+    // === ENHANCED MOUSE ENTROPY ===
     let mouseEntropyData = []
     let isMouseMoving = false
     
@@ -727,6 +693,7 @@ async function createMaximumStealthBrowser() {
       setTimeout(() => { isMouseMoving = false }, 100)
     })
 
+    // === ENHANCED KEYBOARD ENTROPY ===
     let keyEntropyData = []
     let keyTimings = []
     
@@ -763,6 +730,7 @@ async function createMaximumStealthBrowser() {
       }
     })
 
+    // === REALISTIC SCROLL BEHAVIOR ===
     let scrollBehavior = {
       lastScrollTime: 0,
       scrollDirection: 1,
@@ -796,6 +764,7 @@ async function createMaximumStealthBrowser() {
       }
     })
 
+    // === REALISTIC PAGE VISIBILITY CHANGES ===
     let pageVisibilityState = 'visible'
     let lastVisibilityChange = Date.now()
     
@@ -807,6 +776,7 @@ async function createMaximumStealthBrowser() {
       get: () => pageVisibilityState === 'hidden'
     })
 
+    // === REALISTIC NETWORK INFORMATION ===
     if (navigator.connection || navigator.mozConnection || navigator.webkitConnection) {
       const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection
       
@@ -903,11 +873,10 @@ async function createMaximumStealthBrowser() {
   return { browser, page, deviceProfile }
 }
 
-// Enhanced email creation with temp-mail.org fallback
+// Enhanced email creation
 async function createTempEmail() {
   log('info', '📧 Creating temporary email...')
   
-  // Try guerrillamail first
   try {
     const sessionResponse = await axios.get('https://www.guerrillamail.com/ajax.php?f=get_email_address', {
       timeout: 15000,
@@ -924,7 +893,7 @@ async function createTempEmail() {
       const email = sessionResponse.data.email_addr
       const sessionId = sessionResponse.data.sid_token
       
-      log('success', `✅ Created email with guerrillamail: ${email}`)
+      log('success', `✅ Created email: ${email}`)
       return {
         success: true,
         email: email,
@@ -932,78 +901,11 @@ async function createTempEmail() {
         provider: "guerrillamail"
       }
     } else {
-      throw new Error("Failed to get email address from guerrillamail")
+      throw new Error("Failed to get email address")
     }
   } catch (error) {
-    log('warning', `⚠️ Guerrillamail failed: ${error.message}. Trying temp-mail.org fallback...`)
-    
-    // Fallback to mail.tm
-    try {
-      // First get available domains
-      const domainsResponse = await axios.get('https://api.mail.tm/domains', {
-        timeout: 15000,
-        headers: {
-          "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
-          "Accept": "application/ld+json",
-          "Content-Type": "application/json"
-        }
-      })
-      
-      if (!domainsResponse.data || !domainsResponse.data['hydra:member'] || domainsResponse.data['hydra:member'].length === 0) {
-        throw new Error("No domains available from mail.tm")
-      }
-      
-      // Select a random domain
-      const domains = domainsResponse.data['hydra:member']
-      const selectedDomain = domains[Math.floor(Math.random() * domains.length)]
-      
-      // Generate random username to ensure different mailboxes
-      const randomUsername = Math.random().toString(36).substring(2, 10) + Date.now().toString(36).substring(0, 5)
-      const email = `${randomUsername}@${selectedDomain.domain}`
-      const password = Math.random().toString(36).substring(2, 15)
-      
-      // Create account
-      const accountResponse = await axios.post('https://api.mail.tm/accounts', {
-        address: email,
-        password: password
-      }, {
-        timeout: 15000,
-        headers: {
-          "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
-          "Accept": "application/ld+json",
-          "Content-Type": "application/json"
-        }
-      })
-      
-      if (accountResponse.data && accountResponse.data.address) {
-        // Get authentication token
-        const tokenResponse = await axios.post('https://api.mail.tm/token', {
-          address: email,
-          password: password
-        }, {
-          timeout: 15000,
-          headers: {
-            "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
-            "Accept": "application/ld+json",
-            "Content-Type": "application/json"
-          }
-        })
-        
-        log('success', `✅ Created email with mail.tm fallback: ${email}`)
-        return {
-          success: true,
-          email: email,
-          sessionId: tokenResponse.data?.token || null,
-          provider: "mailtml",
-          password: password
-        }
-      } else {
-        throw new Error("Failed to create account on mail.tm")
-      }
-    } catch (tempMailError) {
-      log('error', `❌ Both email services failed. Guerrillamail: ${error.message}, Mail.tm: ${tempMailError.message}`)
-      throw new Error("Email creation failed - both services unavailable")
-    }
+    log('error', `❌ Email creation failed: ${error.message}`)
+    throw new Error("Email creation failed")
   }
 }
 
@@ -1335,121 +1237,13 @@ async function simulatePreBrowsing(page) {
   }
 }
 
-// Mail.tm OTP checking function
-async function checkTempMailForOTP(email, maxWaitMinutes = 3, token = null) {
+// Enhanced email OTP checking
+async function checkEmailForInstagramOTP(email, maxWaitMinutes = 3, browser) {
   const startTime = Date.now()
   const maxWaitTime = maxWaitMinutes * 60 * 1000
+  const [username] = email.split('@')
   
-  log('info', `📧 Checking mail.tm for OTP: ${email}`)
-  
-  if (!token) {
-    log('error', '❌ No authentication token provided for mail.tm')
-    return { success: false }
-  }
-  
-  let checkCount = 0
-  const maxChecks = Math.floor(maxWaitTime / 10000)
-  
-  while (Date.now() - startTime < maxWaitTime && checkCount < maxChecks) {
-    checkCount++
-    log('info', `📧 Mail.tm OTP Check ${checkCount}/${maxChecks}...`)
-    
-    try {
-      // Get messages from mail.tm API
-      const messagesResponse = await axios.get('https://api.mail.tm/messages', {
-        timeout: 10000,
-        headers: {
-          "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
-          "Accept": "application/ld+json",
-          "Authorization": `Bearer ${token}`
-        }
-      })
-      
-      if (messagesResponse.data && messagesResponse.data['hydra:member'] && messagesResponse.data['hydra:member'].length > 0) {
-        // Check each message for Instagram OTP
-        for (const message of messagesResponse.data['hydra:member']) {
-          try {
-            // Get full message content
-            const messageResponse = await axios.get(`https://api.mail.tm/messages/${message.id}`, {
-              timeout: 10000,
-                             headers: {
-                 "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
-                 "Accept": "application/ld+json",
-                 "Authorization": `Bearer ${token}`
-               }
-            })
-            
-            if (messageResponse.data) {
-              const messageContent = messageResponse.data.text || messageResponse.data.html || ''
-              const messageSubject = messageResponse.data.subject || ''
-              const fullContent = messageSubject + ' ' + messageContent
-              
-              // Instagram OTP patterns
-              const patterns = [
-                /(\d{6})\s+is\s+your\s+Instagram\s+code/gi,
-                /Instagram\s+code:\s*(\d{6})/gi,
-                /Your\s+Instagram\s+code\s+is\s+(\d{6})/gi,
-                /Instagram.*(\d{6})/gi
-              ]
-              
-              for (const pattern of patterns) {
-                const match = fullContent.match(pattern)
-                if (match) {
-                  const codeMatch = match[0].match(/\d{6}/)
-                  if (codeMatch) {
-                    log('success', `✅ Found OTP in mail.tm: ${codeMatch[0]}`)
-                    return {
-                      success: true,
-                      code: codeMatch[0],
-                      method: 'mailtml_api'
-                    }
-                  }
-                }
-              }
-              
-              // Fallback: Instagram mention with 6-digit code
-              if (fullContent.toLowerCase().includes('instagram')) {
-                const codes = fullContent.match(/\b\d{6}\b/g)
-                if (codes && codes.length > 0) {
-                  log('success', `✅ Found OTP in mail.tm (fallback): ${codes[0]}`)
-                  return {
-                    success: true,
-                    code: codes[0],
-                    method: 'mailtml_fallback'
-                  }
-                }
-              }
-            }
-          } catch (messageError) {
-            log('warning', `⚠️ Error reading mail.tm message: ${messageError.message}`)
-          }
-        }
-      }
-      
-      await new Promise(resolve => setTimeout(resolve, 8000 + Math.random() * 4000))
-      
-    } catch (error) {
-      log('warning', `⚠️ Mail.tm check error: ${error.message}`)
-      await new Promise(resolve => setTimeout(resolve, 5000))
-    }
-  }
-  
-  log('warning', `⚠️ No OTP found in mail.tm after ${maxWaitMinutes} minutes`)
-  return { success: false }
-}
-
-// Enhanced email OTP checking with mail.tm support
-async function checkEmailForInstagramOTP(email, maxWaitMinutes = 3, browser, provider = "guerrillamail", token = null) {
-  const startTime = Date.now()
-  const maxWaitTime = maxWaitMinutes * 60 * 1000
-  const [username, domain] = email.split('@')
-  
-  log('info', `📧 Starting OTP check for: ${email} (provider: ${provider})`)
-  
-  // Handle mail.tm emails differently
-  if (provider === "mailtml" || provider === "tempmail") {
-    return await checkTempMailForOTP(email, maxWaitMinutes, token)
-  }
+  log('info', `📧 Starting OTP check for: ${email}`)
   
   let guerrillamailPage = null
   
@@ -1658,247 +1452,6 @@ async function checkEmailForInstagramOTP(email, maxWaitMinutes = 3, browser, pro
       success: true,
       code: fallbackCode.toString(),
       method: "error_fallback"
-    }
-  }
-}
-
-// Auto-follow Indian accounts function
-async function autoFollowIndianAccounts(page, targetCount = 12) {
-  log('info', `🔄 Starting auto-follow for ${targetCount} Indian accounts...`)
-  
-  try {
-    // Shuffle the accounts list and select random ones
-    const shuffledAccounts = [...INDIAN_ACCOUNTS_TO_FOLLOW].sort(() => 0.5 - Math.random())
-    const accountsToFollow = shuffledAccounts.slice(0, targetCount)
-    
-    let followedCount = 0
-    let skippedCount = 0
-    
-    for (let i = 0; i < accountsToFollow.length; i++) {
-      const username = accountsToFollow[i]
-      
-      try {
-        log('info', `👤 Following account ${i + 1}/${accountsToFollow.length}: @${username}`)
-        
-        // Navigate to profile
-        const profileUrl = `https://www.instagram.com/${username}/`
-        await page.goto(profileUrl, { 
-          waitUntil: 'networkidle2', 
-          timeout: 30000 
-        })
-        
-        await humanWait(2000, 4000)
-        
-        // Find and click follow button
-        const followSelectors = [
-          'button:has-text("Follow")',
-          'button[type="button"]:has-text("Follow")',
-          'div[role="button"]:has-text("Follow")',
-          'button:contains("Follow")',
-          'button._acan._acap._acas._aj1-._ap30',
-          'button._acan._acap._acas._aj1-',
-          'button[class*="follow"]',
-          'button[data-testid="follow-button"]'
-        ]
-        
-        let followSuccess = false
-        
-        // Try different selectors
-        for (const selector of followSelectors) {
-          try {
-            const followButton = await page.$(selector)
-            if (followButton) {
-              const buttonText = await page.evaluate(el => el.textContent?.trim(), followButton)
-              
-              if (buttonText && buttonText.toLowerCase().includes('follow') && !buttonText.toLowerCase().includes('following')) {
-                await humanClickMaxStealth(page, selector)
-                followSuccess = true
-                followedCount++
-                log('success', `✅ Successfully followed @${username}`)
-                break
-              }
-            }
-          } catch (e) {
-            continue
-          }
-        }
-        
-        if (!followSuccess) {
-          // Try JavaScript click as fallback
-          const jsFollowResult = await page.evaluate(() => {
-            const buttons = Array.from(document.querySelectorAll('button, div[role="button"]'))
-            
-            for (const button of buttons) {
-              const text = button.textContent?.trim().toLowerCase() || ''
-              if (text === 'follow' && button.offsetParent !== null) {
-                button.click()
-                return { success: true, text: text }
-              }
-            }
-            
-            return { success: false }
-          })
-          
-          if (jsFollowResult.success) {
-            followSuccess = true
-            followedCount++
-            log('success', `✅ Successfully followed @${username} (JS click)`)
-          } else {
-            skippedCount++
-            log('verbose', `⏭️ Skipped @${username} (already following or button not found)`)
-          }
-        }
-        
-        // Human-like delay between follows
-        const followDelay = 8000 + Math.random() * 12000 // 8-20 seconds
-        await humanWait(followDelay, followDelay + 5000)
-        
-        // Random chance to scroll or interact
-        if (Math.random() > 0.7) {
-          await page.evaluate(() => {
-            window.scrollBy(0, Math.random() * 300 + 100)
-          })
-          await humanWait(1000, 3000)
-        }
-        
-      } catch (followError) {
-        skippedCount++
-        log('verbose', `⚠️ Failed to follow @${username}: ${followError.message}`)
-        await humanWait(3000, 6000)
-        continue
-      }
-    }
-    
-    log('success', `🎉 Auto-follow completed: ${followedCount} followed, ${skippedCount} skipped`)
-    
-    return {
-      success: true,
-      followedCount: followedCount,
-      skippedCount: skippedCount,
-      targetCount: targetCount,
-      accountsAttempted: accountsToFollow
-    }
-    
-  } catch (error) {
-    log('error', `❌ Auto-follow failed: ${error.message}`)
-    return {
-      success: false,
-      error: error.message,
-      followedCount: 0
-    }
-  }
-}
-
-// Set bio function
-async function setInstagramBio(page) {
-  log('info', '📝 Setting up Instagram bio...')
-  
-  try {
-    // Navigate to profile edit page
-    await page.goto('https://www.instagram.com/accounts/edit/', { 
-      waitUntil: 'networkidle2', 
-      timeout: 30000 
-    })
-    
-    await humanWait(3000, 5000)
-    
-    // Select a random bio template
-    const randomBio = INDIAN_BIO_TEMPLATES[Math.floor(Math.random() * INDIAN_BIO_TEMPLATES.length)]
-    
-    // Find bio textarea
-    const bioSelectors = [
-      'textarea[id="pepBio"]',
-      'textarea[name="biography"]',
-      'textarea[placeholder*="Bio"]',
-      'textarea[placeholder*="bio"]',
-      'textarea[aria-label*="Bio"]',
-      'textarea'
-    ]
-    
-    let bioSet = false
-    
-    for (const selector of bioSelectors) {
-      try {
-        await page.waitForSelector(selector, { timeout: 5000 })
-        await humanTypeMaxStealth(page, selector, randomBio)
-        bioSet = true
-        log('success', `✅ Bio set: "${randomBio}"`)
-        break
-      } catch (e) {
-        continue
-      }
-    }
-    
-    if (!bioSet) {
-      // Try JavaScript approach
-      const jsBioResult = await page.evaluate((bio) => {
-        const textareas = Array.from(document.querySelectorAll('textarea'))
-        
-        for (const textarea of textareas) {
-          if (textarea.offsetParent !== null) {
-            textarea.focus()
-            textarea.value = bio
-            textarea.dispatchEvent(new Event('input', { bubbles: true }))
-            textarea.dispatchEvent(new Event('change', { bubbles: true }))
-            return { success: true }
-          }
-        }
-        
-        return { success: false }
-      }, randomBio)
-      
-      if (jsBioResult.success) {
-        bioSet = true
-        log('success', `✅ Bio set via JS: "${randomBio}"`)
-      }
-    }
-    
-    if (bioSet) {
-      await humanWait(2000, 4000)
-      
-      // Submit the form
-      const submitSelectors = [
-        'button[type="submit"]',
-        'button:has-text("Submit")',
-        'button:contains("Submit")',
-        'div[role="button"]:has-text("Submit")'
-      ]
-      
-      let submitSuccess = false
-      
-      for (const selector of submitSelectors) {
-        try {
-          await humanClickMaxStealth(page, selector)
-          submitSuccess = true
-          break
-        } catch (e) {
-          continue
-        }
-      }
-      
-      if (!submitSuccess) {
-        await page.keyboard.press('Enter')
-      }
-      
-      await humanWait(3000, 5000)
-      
-      return {
-        success: true,
-        bio: randomBio,
-        method: bioSet ? 'textarea_input' : 'javascript'
-      }
-    } else {
-      return {
-        success: false,
-        error: 'Could not find bio textarea'
-      }
-    }
-    
-  } catch (error) {
-    log('error', `❌ Bio setup failed: ${error.message}`)
-    return {
-      success: false,
-      error: error.message
     }
   }
 }
@@ -2120,7 +1673,7 @@ async function createMaxStealthInstagramAccount(accountData) {
       if (emailConfirmationFound && emailFieldSelector) {
         log('info', '📧 Email verification required - checking for OTP...')
         
-        const emailResult = await checkEmailForInstagramOTP(accountData.email, 3, browser, accountData.emailProvider, accountData.sessionId)
+        const emailResult = await checkEmailForInstagramOTP(accountData.email, 3, browser)
         
         if (emailResult.success) {
           try {
@@ -2159,35 +1712,12 @@ async function createMaxStealthInstagramAccount(accountData) {
     
     const isSuccessful = successIndicators.some(indicator => indicator)
     
-    // Initialize results for auto-follow and bio setup
-    let autoFollowResult = { success: false, followedCount: 0 }
-    let bioSetupResult = { success: false }
-    
     if (isSuccessful) {
-      log('success', '🎉 Account creation successful! Starting post-creation setup...')
-      
-      // Auto-follow Indian accounts (10-15 accounts)
-      try {
-        const targetFollowCount = 10 + Math.floor(Math.random() * 6) // 10-15 accounts
-        autoFollowResult = await autoFollowIndianAccounts(page, targetFollowCount)
-      } catch (followError) {
-        log('error', `❌ Auto-follow failed: ${followError.message}`)
-        autoFollowResult = { success: false, error: followError.message, followedCount: 0 }
-      }
-      
-      // Set up Indian bio
-      try {
-        bioSetupResult = await setInstagramBio(page)
-      } catch (bioError) {
-        log('error', `❌ Bio setup failed: ${bioError.message}`)
-        bioSetupResult = { success: false, error: bioError.message }
-      }
-      
-      log('success', '🎉 Complete Instagram account setup finished!')
+      log('success', '🎉 Account creation successful!')
       return {
         success: true,
         platform: "instagram",
-        message: "Account created successfully with maximum stealth, auto-follow, and bio setup",
+        message: "Account created successfully with maximum stealth",
         username: accountData.profile.usernames[0],
         email: accountData.email,
         emailVerified: true,
@@ -2200,8 +1730,6 @@ async function createMaxStealthInstagramAccount(accountData) {
         noProxy: true,
         deviceProfile: deviceProfile.screen.name,
         userAgent: deviceProfile.userAgent.substring(0, 50) + '...',
-        autoFollowResult: autoFollowResult,
-        bioSetupResult: bioSetupResult,
         accountData: {
           userId: `ig_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           profileUrl: `https://instagram.com/${accountData.profile.usernames[0]}`,
@@ -2311,8 +1839,6 @@ export async function POST(request) {
           email: emailResult.email,
           profile: profile,
           platform: platform,
-          emailProvider: emailResult.provider,
-          sessionId: emailResult.sessionId,
         }
 
         const creationResult = await createMaxStealthInstagramAccount(accountData)
@@ -2340,11 +1866,6 @@ export async function POST(request) {
           passwordDialogHandled: creationResult.passwordDialogHandled || false,
           indianProfile: creationResult.indianProfile || false,
           deviceProfile: creationResult.deviceProfile || null,
-          autoFollowResult: creationResult.autoFollowResult || { success: false, followedCount: 0 },
-          bioSetupResult: creationResult.bioSetupResult || { success: false },
-          followedAccounts: creationResult.autoFollowResult?.followedCount || 0,
-          bioSet: creationResult.bioSetupResult?.success || false,
-          bio: creationResult.bioSetupResult?.bio || null,
           realAccount: true,
           browserAutomation: true,
           emailOnly: true,
@@ -2377,11 +1898,6 @@ export async function POST(request) {
           passwordDialogHandled: creationResult.passwordDialogHandled || false,
           indianProfile: creationResult.indianProfile || false,
           deviceProfile: creationResult.deviceProfile || null,
-          autoFollowResult: creationResult.autoFollowResult || { success: false, followedCount: 0 },
-          bioSetupResult: creationResult.bioSetupResult || { success: false },
-          followedAccounts: creationResult.autoFollowResult?.followedCount || 0,
-          bioSet: creationResult.bioSetupResult?.success || false,
-          bio: creationResult.bioSetupResult?.bio || null,
           realAccount: true,
           emailOnly: true,
           enhanced: true,
