@@ -616,7 +616,7 @@ export default function FacebookPage() {
                           <div>
                             <span className="text-gray-600">Progress:</span>
                             <div className="font-medium text-blue-600">
-                              {Math.round((campaign.currentCount / campaign.targetCount) * 100)}%
+                              {campaign.status === "completed" ? 100 : Math.round((campaign.currentCount / campaign.targetCount) * 100)}%
                             </div>
                           </div>
                           <div>
@@ -627,7 +627,7 @@ export default function FacebookPage() {
                         <div className="mt-2 text-xs text-gray-500">Created: {new Date(campaign.createdAt).toLocaleDateString()}</div>
                         {campaign.currentCount > 0 && (
                           <div className="mt-2">
-                            <Progress value={(campaign.currentCount / campaign.targetCount) * 100} className="h-2" />
+                            <Progress value={campaign.status === "completed" ? 100 : (campaign.currentCount / campaign.targetCount) * 100} className="h-2" />
                             <div className="text-xs text-gray-600 mt-1">
                               Success Rate: {((campaign.currentCount / campaign.targetCount) * 100).toFixed(1)}%
                             </div>
