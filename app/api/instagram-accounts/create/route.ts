@@ -944,7 +944,8 @@ async function createTempEmail() {
         timeout: 15000,
         headers: {
           "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
-          "Accept": "application/json"
+          "Accept": "application/ld+json",
+          "Content-Type": "application/json"
         }
       })
       
@@ -969,7 +970,7 @@ async function createTempEmail() {
         timeout: 15000,
         headers: {
           "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
-          "Accept": "application/json",
+          "Accept": "application/ld+json",
           "Content-Type": "application/json"
         }
       })
@@ -983,7 +984,7 @@ async function createTempEmail() {
           timeout: 15000,
           headers: {
             "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
-            "Accept": "application/json",
+            "Accept": "application/ld+json",
             "Content-Type": "application/json"
           }
         })
@@ -1359,7 +1360,7 @@ async function checkTempMailForOTP(email, maxWaitMinutes = 3, token = null) {
         timeout: 10000,
         headers: {
           "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
-          "Accept": "application/json",
+          "Accept": "application/ld+json",
           "Authorization": `Bearer ${token}`
         }
       })
@@ -1371,11 +1372,11 @@ async function checkTempMailForOTP(email, maxWaitMinutes = 3, token = null) {
             // Get full message content
             const messageResponse = await axios.get(`https://api.mail.tm/messages/${message.id}`, {
               timeout: 10000,
-              headers: {
-                "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
-                "Accept": "application/json",
-                "Authorization": `Bearer ${token}`
-              }
+                             headers: {
+                 "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
+                 "Accept": "application/ld+json",
+                 "Authorization": `Bearer ${token}`
+               }
             })
             
             if (messageResponse.data) {
