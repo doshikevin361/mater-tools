@@ -1,16 +1,16 @@
-# Instagram Account Creation with Email Fallback Implementation
+# Instagram Account Creation with Mail.tm Email Service
 
 ## Overview
 
-This implementation enhances the Instagram account creation system with a robust email fallback mechanism. When GuerrillaMail fails, the system automatically falls back to the mail.tm API service, ensuring reliable email creation and OTP verification for Instagram account registration.
+This implementation uses the mail.tm API as the primary and only email service for Instagram account creation. The system creates temporary email accounts through mail.tm and handles OTP verification for Instagram account registration.
 
 ## Features Implemented
 
-### 1. Enhanced Email Service with Fallback
-- **Primary Service**: GuerrillaMail (existing)
-- **Fallback Service**: mail.tm API
-- **Automatic Fallback**: When GuerrillaMail fails, system automatically switches to mail.tm
-- **Provider Tracking**: Each email creation tracks which provider was used
+### 1. Mail.tm Email Service (Primary and Only)
+- **Service**: mail.tm API exclusively
+- **Domain Management**: Fetches available domains from `https://api.mail.tm/domains`
+- **Account Creation**: Creates temporary email accounts with secure passwords
+- **OTP Verification**: Polls mailbox for Instagram verification emails
 
 ### 2. Mail.tm API Integration
 
@@ -37,39 +37,29 @@ This implementation enhances the Instagram account creation system with a robust
   - `verification\s+code:\s*(\d{6})`
 - Fallback to any 6-digit code when Instagram is mentioned
 
-### 3. Enhanced OTP Checking System
+### 3. OTP Checking System
 
-#### Provider-Aware OTP Checking
-- `checkEmailForInstagramOTP()` function now accepts email provider parameter
-- Routes to appropriate checking method based on provider:
-  - `guerrillamail` → `checkGuerrillaMailForOTP()`
-  - `mailtm` → `checkMailTmForOTP()`
-
-#### GuerrillaMail OTP Checking (Enhanced)
-- Renamed original function to `checkGuerrillaMailForOTP()`
-- Maintains all existing functionality
-- Improved logging with provider-specific messages
-
-#### Mail.tm OTP Checking (New)
+#### Mail.tm OTP Checking
+- `checkEmailForInstagramOTP()` function uses mail.tm exclusively
 - `checkMailTmForOTP()` function for mail.tm service
 - Uses API authentication with stored tokens
 - Polls messages endpoint for new emails
 - Retrieves full message content for OTP extraction
-- Implements same fallback mechanisms as GuerrillaMail
+- Implements fallback mechanisms for OTP extraction
 
 ### 4. Database Integration
 
-#### Enhanced Account Storage
-- Stores email provider information (`emailProvider` field)
-- Tracks fallback usage (`emailFallbackUsed` boolean)
+#### Account Storage
+- Stores email provider information (`emailProvider: "mailtm"`)
+- Tracks email service usage
 - Maintains backward compatibility with existing data
 
 #### Account Data Structure
 ```javascript
 {
   email: "user_123456_78901@somoj.com",
-  emailProvider: "mailtm", // or "guerrillamail"
-  emailFallbackUsed: true, // true when mail.tm was used
+  emailProvider: "mailtm",
+  emailFallbackUsed: false, // Always false since no fallback
   // ... other existing fields
 }
 ```
@@ -77,14 +67,12 @@ This implementation enhances the Instagram account creation system with a robust
 ### 5. Error Handling and Logging
 
 #### Comprehensive Error Handling
-- Graceful fallback between email services
 - Detailed error logging for debugging
 - Timeout handling for API calls
 - Network error recovery
 
 #### Enhanced Logging
 - Provider-specific log messages
-- Clear indication of fallback usage
 - OTP method tracking (pattern_match, instagram_mention, fallback)
 - Success/failure status for each step
 
@@ -100,21 +88,21 @@ This implementation enhances the Instagram account creation system with a robust
 ## Implementation Details
 
 ### Email Creation Flow
-1. Attempt GuerrillaMail email creation
-2. If successful, return with `provider: "guerrillamail"`
-3. If failed, attempt mail.tm email creation
-4. If successful, return with `provider: "mailtm"`
-5. If both fail, throw error
+1. Fetch available domains from mail.tm
+2. Select random active domain
+3. Generate unique username and email
+4. Create account with secure password
+5. Authenticate and get access token
+6. Return email with provider information
 
 ### OTP Verification Flow
-1. Check email provider from account data
-2. Route to appropriate OTP checking method
-3. Poll for emails with Instagram verification codes
+1. Use stored authentication token
+2. Poll messages endpoint for new emails
+3. Check for Instagram verification emails
 4. Extract OTP using pattern matching
 5. Return OTP with method tracking
 
 ### Fallback Mechanisms
-- **Email Creation**: GuerrillaMail → mail.tm
 - **OTP Extraction**: Pattern matching → Instagram mention → Random fallback
 - **API Errors**: Retry with exponential backoff
 - **Network Issues**: Timeout handling and recovery
@@ -122,23 +110,23 @@ This implementation enhances the Instagram account creation system with a robust
 ## Benefits
 
 ### Reliability
-- **Redundancy**: Two email services ensure availability
-- **Automatic Fallback**: No manual intervention required
+- **Single Service**: Consistent mail.tm API usage
+- **API-Based**: No browser automation required for email checking
 - **Error Recovery**: Graceful handling of service failures
 
 ### Performance
-- **Fast Fallback**: Immediate switch when primary service fails
+- **Fast Response**: Direct API calls for email operations
 - **Efficient Polling**: Optimized OTP checking intervals
-- **Resource Management**: Proper cleanup of browser instances
+- **Resource Management**: No browser instances for email checking
 
 ### Monitoring
-- **Provider Tracking**: Know which service was used
-- **Success Metrics**: Track fallback usage rates
+- **Provider Tracking**: Consistent mail.tm usage
+- **Success Metrics**: Track OTP verification success rates
 - **Debug Information**: Detailed logging for troubleshooting
 
 ## Usage
 
-The enhanced system works transparently with existing Instagram account creation calls. No changes required to the API interface - the fallback mechanism is automatic.
+The system works transparently with existing Instagram account creation calls. No changes required to the API interface.
 
 ### Example Response
 ```javascript
@@ -146,7 +134,7 @@ The enhanced system works transparently with existing Instagram account creation
   success: true,
   email: "user_123456_78901@somoj.com",
   emailProvider: "mailtm",
-  emailFallbackUsed: true,
+  emailFallbackUsed: false,
   username: "arjun_sharma_123456",
   // ... other account details
 }
@@ -160,16 +148,16 @@ The implementation includes comprehensive testing:
 - ✅ Account creation and authentication
 - ✅ Message retrieval and parsing
 - ✅ OTP extraction patterns
-- ✅ Fallback mechanisms
+- ✅ Error handling mechanisms
 
 ## Future Enhancements
 
-1. **Additional Email Providers**: Easy to add more fallback services
-2. **Provider Health Monitoring**: Track service reliability
-3. **Smart Provider Selection**: Choose based on success rates
-4. **Rate Limiting**: Implement provider-specific rate limits
-5. **Caching**: Cache domain lists and authentication tokens
+1. **Domain Caching**: Cache domain lists for faster startup
+2. **Token Management**: Implement token refresh mechanisms
+3. **Rate Limiting**: Implement API rate limiting
+4. **Health Monitoring**: Track API service reliability
+5. **Alternative Domains**: Add support for multiple domain selection
 
 ## Conclusion
 
-This implementation provides a robust, reliable email service for Instagram account creation with automatic fallback capabilities. The system maintains high availability while providing detailed monitoring and error handling for optimal performance.
+This implementation provides a reliable, API-based email service for Instagram account creation using mail.tm exclusively. The system offers consistent performance and detailed monitoring for optimal account creation success rates.

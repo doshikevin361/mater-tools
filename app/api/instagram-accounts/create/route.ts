@@ -873,47 +873,15 @@ async function createMaximumStealthBrowser() {
   return { browser, page, deviceProfile }
 }
 
-// Enhanced email service with fallback
+// Mail.tm email service (primary and only)
 async function createTempEmail() {
-  log('info', '📧 Creating temporary email...')
+  log('info', '📧 Creating mail.tm email...')
   
-  // Try GuerrillaMail first
   try {
-    const sessionResponse = await axios.get('https://www.guerrillamail.com/ajax.php?f=get_email_address', {
-      timeout: 15000,
-      headers: {
-        "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
-        "Referer": "https://www.guerrillamail.com/inbox",
-        "Accept": "application/json, text/javascript, */*; q=0.01",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Cache-Control": "no-cache"
-      }
-    })
-    
-    if (sessionResponse.data && sessionResponse.data.email_addr) {
-      const email = sessionResponse.data.email_addr
-      const sessionId = sessionResponse.data.sid_token
-      
-      log('success', `✅ Created GuerrillaMail email: ${email}`)
-      return {
-        success: true,
-        email: email,
-        sessionId: sessionId,
-        provider: "guerrillamail"
-      }
-    } else {
-      throw new Error("Failed to get GuerrillaMail email address")
-    }
+    return await createMailTmEmail()
   } catch (error) {
-    log('warn', `⚠️ GuerrillaMail failed: ${error.message}, trying mail.tm fallback...`)
-    
-    // Fallback to mail.tm
-    try {
-      return await createMailTmEmail()
-    } catch (mailTmError) {
-      log('error', `❌ Both email services failed: ${mailTmError.message}`)
-      throw new Error("All email services failed")
-    }
+    log('error', `❌ Mail.tm email creation failed: ${error.message}`)
+    throw new Error("Email creation failed")
   }
 }
 
@@ -1002,18 +970,14 @@ async function createMailTmEmail() {
   }
 }
 
-// Enhanced OTP checking with mail.tm support
-async function checkEmailForInstagramOTP(email, maxWaitMinutes = 3, browser, emailProvider = "guerrillamail") {
+// Mail.tm OTP checking (primary and only)
+async function checkEmailForInstagramOTP(email, maxWaitMinutes = 3, browser) {
   const startTime = Date.now()
   const maxWaitTime = maxWaitMinutes * 60 * 1000
   
-  log('info', `📧 Starting OTP check for: ${email} (Provider: ${emailProvider})`)
+  log('info', `📧 Starting mail.tm OTP check for: ${email}`)
   
-  if (emailProvider === "mailtm") {
-    return await checkMailTmForOTP(email, maxWaitMinutes, browser)
-  } else {
-    return await checkGuerrillaMailForOTP(email, maxWaitMinutes, browser)
-  }
+  return await checkMailTmForOTP(email, maxWaitMinutes, browser)
 }
 
 // Mail.tm OTP checking
@@ -1151,224 +1115,7 @@ async function checkMailTmForOTP(email, maxWaitMinutes = 3, browser) {
   }
 }
 
-// Original GuerrillaMail OTP checking (renamed)
-async function checkGuerrillaMailForOTP(email, maxWaitMinutes = 3, browser) {
-  const startTime = Date.now()
-  const maxWaitTime = maxWaitMinutes * 60 * 1000
-  const [username] = email.split('@')
-  
-  log('info', `📧 Starting GuerrillaMail OTP check for: ${email}`)
-  
-  let guerrillamailPage = null
-  
-  try {
-    guerrillamailPage = await browser.newPage()
-    await guerrillamailPage.setUserAgent(USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)])
-    await guerrillamailPage.setViewport({ width: 1366, height: 768 })
-    
-    await guerrillamailPage.goto('https://www.guerrillamail.com/', { 
-      waitUntil: 'networkidle2',
-      timeout: 30000
-    })
-    
-    await humanWait(3000, 5000)
-    
-    try {
-      const emailClickResult = await guerrillamailPage.evaluate((targetUsername) => {
-        const editableElements = document.querySelectorAll('span.editable, .editable, [id*="inbox-id"]')
-        
-        for (const element of editableElements) {
-          const elementText = element.textContent?.trim() || ''
-          if (elementText && elementText.length > 3 && !elementText.includes('@')) {
-            element.click()
-            return { success: true, clickedText: elementText }
-          }
-        }
-        
-        const allSpans = document.querySelectorAll('span, div, a')
-        for (const span of allSpans) {
-          const spanText = span.textContent?.trim() || ''
-          const isClickable = span.onclick || span.getAttribute('onclick') || 
-                            span.classList.contains('clickable') || 
-                            span.classList.contains('editable') ||
-                            span.style.cursor === 'pointer'
-          
-          if (spanText && spanText.length > 3 && spanText.length < 20 && 
-              !spanText.includes('@') && !spanText.includes(' ') && isClickable) {
-            span.click()
-            return { success: true, clickedText: spanText }
-          }
-        }
-        
-        return { success: false }
-      }, username)
-      
-      if (emailClickResult.success) {
-        await humanWait(1000, 2000)
-        
-        const textInputResult = await guerrillamailPage.evaluate((targetUsername) => {
-          const textInputs = document.querySelectorAll('input[type="text"]')
-          
-          for (const input of textInputs) {
-            if (input.offsetParent !== null && !input.disabled) {
-              input.focus()
-              input.select()
-              input.value = ''
-              input.value = targetUsername
-              input.dispatchEvent(new Event('input', { bubbles: true }))
-              input.dispatchEvent(new Event('change', { bubbles: true }))
-              return { success: true, inputValue: input.value }
-            }
-          }
-          return { success: false }
-        }, username)
-        
-        if (textInputResult.success) {
-          await humanWait(500, 1000)
-          
-          const setButtonResult = await guerrillamailPage.evaluate(() => {
-            const buttons = document.querySelectorAll('button, input[type="button"], input[type="submit"]')
-            
-            for (const button of buttons) {
-              const buttonText = (button.textContent || button.value || '').trim().toLowerCase()
-              if (buttonText === 'set' && button.offsetParent !== null) {
-                button.click()
-                return { success: true }
-              }
-            }
-            
-            const allElements = document.querySelectorAll('*')
-            for (const element of allElements) {
-              const text = element.textContent?.trim().toLowerCase() || ''
-              if (text === 'set' && element.offsetParent !== null) {
-                element.click()
-                return { success: true }
-              }
-            }
-            
-            return { success: false }
-          })
-          
-          if (!setButtonResult.success) {
-            await guerrillamailPage.keyboard.press('Enter')
-          }
-        }
-      } else {
-        const textInputs = await guerrillamailPage.$$('input[type="text"]')
-        if (textInputs.length > 0) {
-          await textInputs[0].click({ clickCount: 3 })
-          await guerrillamailPage.keyboard.press('Backspace')
-          await textInputs[0].type(username, { delay: 120 })
-          await guerrillamailPage.keyboard.press('Enter')
-        }
-      }
-    } catch (setError) {
-      // Continue with OTP checking even if email setting fails
-    }
-    
-    
-    await humanWait(3000, 5000)
-    
-    // Check for OTP
-    let checkCount = 0
-    const maxChecks = Math.floor(maxWaitTime / 10000)
-    
-    while (Date.now() - startTime < maxWaitTime && checkCount < maxChecks) {
-      checkCount++
-      log('info', `📧 GuerrillaMail OTP Check ${checkCount}/${maxChecks}...`)
-      
-      try {
-        await guerrillamailPage.reload({ waitUntil: 'networkidle2' })
-        await humanWait(2000, 4000)
-        
-        const otpResult = await guerrillamailPage.evaluate(() => {
-          const pageContent = document.body.textContent || document.body.innerText || ''
-          
-          // Instagram OTP patterns
-          const patterns = [
-            /(\d{6})\s+is\s+your\s+Instagram\s+code/gi,
-            /Instagram\s+code:\s*(\d{6})/gi,
-            /Your\s+Instagram\s+code\s+is\s+(\d{6})/gi
-          ]
-          
-          for (const pattern of patterns) {
-            const match = pageContent.match(pattern)
-            if (match) {
-              const codeMatch = match[0].match(/\d{6}/)
-              if (codeMatch) {
-                return {
-                  success: true,
-                  code: codeMatch[0],
-                  method: 'guerrillamail_pattern_match'
-                }
-              }
-            }
-          }
-          
-          // Fallback: Instagram mention with 6-digit code
-          if (pageContent.includes('Instagram') || pageContent.includes('instagram')) {
-            const codes = pageContent.match(/\b\d{6}\b/g)
-            if (codes && codes.length > 0) {
-              return {
-                success: true,
-                code: codes[0],
-                method: 'guerrillamail_instagram_mention'
-              }
-            }
-          }
-          
-          return { success: false }
-        })
-        
-        if (otpResult.success) {
-          log('success', `✅ Found OTP: ${otpResult.code}`)
-          await guerrillamailPage.close()
-          return {
-            success: true,
-            code: otpResult.code,
-            method: otpResult.method
-          }
-        }
-        
-        await humanWait(8000, 12000)
-        
-      } catch (error) {
-        log('verbose', `GuerrillaMail OTP check error: ${error.message}`)
-        await humanWait(5000, 8000)
-      }
-    }
-    
-    // Fallback code
-    const fallbackCode = Math.floor(Math.random() * 900000) + 100000
-    log('info', `🎲 Using fallback OTP for GuerrillaMail: ${fallbackCode}`)
-    
-    if (guerrillamailPage) {
-      await guerrillamailPage.close()
-    }
-    
-    return {
-      success: true,
-      code: fallbackCode.toString(),
-      method: "guerrillamail_fallback"
-    }
-    
-  } catch (error) {
-    log('error', `❌ GuerrillaMail email check failed: ${error.message}`)
-    
-    if (guerrillamailPage) {
-      try {
-        await guerrillamailPage.close()
-      } catch (e) {}
-    }
-    
-    const fallbackCode = Math.floor(Math.random() * 900000) + 100000
-    return {
-      success: true,
-      code: fallbackCode.toString(),
-      method: "guerrillamail_error_fallback"
-    }
-  }
-}
+
 
 // Enhanced birthday selection
 async function handleBirthdaySelection(page, profile) {
@@ -1915,7 +1662,7 @@ async function createMaxStealthInstagramAccount(accountData) {
       if (emailConfirmationFound && emailFieldSelector) {
         log('info', '📧 Email verification required - checking for OTP...')
         
-        const emailResult = await checkEmailForInstagramOTP(accountData.email, 3, browser, accountData.emailProvider)
+        const emailResult = await checkEmailForInstagramOTP(accountData.email, 3, browser)
         
         if (emailResult.success) {
           try {
@@ -2081,7 +1828,6 @@ export async function POST(request) {
           email: emailResult.email,
           profile: profile,
           platform: platform,
-          emailProvider: emailResult.provider,
         }
 
         const creationResult = await createMaxStealthInstagramAccount(accountData)
@@ -2091,7 +1837,7 @@ export async function POST(request) {
           accountNumber: i + 1,
           platform: platform,
           email: emailResult.email,
-          emailProvider: emailResult.provider,
+          emailProvider: "mailtm",
           username: creationResult.username || profile.usernames[0],
           password: profile.password,
           profile: {
@@ -2117,7 +1863,7 @@ export async function POST(request) {
           maxStealth: true,
           noProxy: true,
           stealthStrategy: "no_proxy_enhanced_stealth",
-          emailFallbackUsed: emailResult.provider === "mailtm",
+          emailFallbackUsed: false,
           createdAt: new Date(),
           updatedAt: new Date(),
         }
@@ -2129,7 +1875,7 @@ export async function POST(request) {
           success: creationResult.success,
           platform: platform,
           email: emailResult.email,
-          emailProvider: emailResult.provider,
+          emailProvider: "mailtm",
           username: creationResult.username || profile.usernames[0],
           password: profile.password,
           profile: profile,
@@ -2143,7 +1889,7 @@ export async function POST(request) {
           birthdayCompleted: creationResult.birthdayCompleted || false,
           passwordDialogHandled: creationResult.passwordDialogHandled || false,
           indianProfile: creationResult.indianProfile || false,
-          emailFallbackUsed: emailResult.provider === "mailtm",
+          emailFallbackUsed: false,
           deviceProfile: creationResult.deviceProfile || null,
           realAccount: true,
           emailOnly: true,
