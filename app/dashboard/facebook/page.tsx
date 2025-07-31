@@ -281,7 +281,11 @@ export default function FacebookPage() {
             <CardContent className="pt-2">
               <div className="text-2xl font-bold text-blue-600">{stats.totalFollowers.toLocaleString()}</div>
               <p className="text-xs text-gray-600 mt-1">
-                <span className="text-green-600 font-medium">+{stats.growthRate}%</span> this month
+                {stats.totalFollowers > 0 ? (
+                  <span className="text-green-600 font-medium">+{stats.growthRate}%</span>
+                ) : (
+                  <span className="text-gray-500">0%</span>
+                )} this month
               </p>
             </CardContent>
           </Card>
@@ -294,7 +298,11 @@ export default function FacebookPage() {
             <CardContent className="pt-2">
               <div className="text-2xl font-bold text-blue-600">{stats.totalEngagement.toLocaleString()}</div>
               <p className="text-xs text-gray-600 mt-1">
-                <span className="text-green-600 font-medium">+18%</span> this month
+                {stats.totalEngagement > 0 ? (
+                  <span className="text-green-600 font-medium">+18%</span>
+                ) : (
+                  <span className="text-gray-500">0%</span>
+                )} this month
               </p>
             </CardContent>
           </Card>
@@ -642,77 +650,61 @@ export default function FacebookPage() {
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-6">
-            <div className="grid gap-6 md:grid-cols-2">
-              <Card className="border border-blue-200 shadow-md overflow-hidden bg-white">
-                <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
-                  <CardTitle className="text-blue-600">Growth Analytics</CardTitle>
-                  <CardDescription>Track your Facebook growth performance</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4 p-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
-                      <div className="text-2xl font-bold text-blue-600">{stats.totalFollowers}</div>
-                      <div className="text-sm text-blue-600">Total Followers</div>
-                    </div>
-                    <div className="text-center p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
-                      <div className="text-2xl font-bold text-blue-600">{stats.totalEngagement}</div>
-                      <div className="text-sm text-blue-600">Total Engagement</div>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Growth Rate</span>
-                      <span className="text-green-600 font-medium">+{stats.growthRate}%</span>
-                    </div>
-                    <Progress value={stats.growthRate} className="h-2" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border border-blue-200 shadow-md overflow-hidden bg-white">
-                <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
-                  <CardTitle className="text-blue-600">Campaign Performance</CardTitle>
-                  <CardDescription>Success metrics across all campaigns</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4 p-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
-                      <div className="text-2xl font-bold text-blue-600">
-                        {campaigns.filter((c) => c.status === "active").length}
+            <Card className="border border-blue-200 shadow-md overflow-hidden bg-white">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
+                <CardTitle className="flex items-center space-x-2">
+                  <BarChart3 className="h-5 w-5 text-blue-600" />
+                  <span>Campaign Analytics</span>
+                </CardTitle>
+                <CardDescription>Detailed performance metrics for your Facebook campaigns</CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Growth Overview</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                        <span className="text-sm font-medium text-gray-700">Total Campaigns</span>
+                        <span className="text-lg font-bold text-blue-600">{stats.totalCampaigns}</span>
                       </div>
-                      <div className="text-sm text-blue-600">Active Campaigns</div>
-                    </div>
-                    <div className="text-center p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-100">
-                      <div className="text-2xl font-bold text-blue-600">₹{stats.totalSpent.toFixed(2)}</div>
-                      <div className="text-sm text-blue-600">Total Investment</div>
+                      <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                        <span className="text-sm font-medium text-gray-700">Active Campaigns</span>
+                        <span className="text-lg font-bold text-blue-600">{campaigns.filter(c => c.status === 'active').length}</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                        <span className="text-sm font-medium text-gray-700">Completed Campaigns</span>
+                        <span className="text-lg font-bold text-blue-600">{campaigns.filter(c => c.status === 'completed').length}</span>
+                      </div>
                     </div>
                   </div>
-
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Average Success Rate</span>
-                      <span className="text-green-600 font-medium">
-                        {campaigns.length > 0
-                          ? Math.round(
-                              (campaigns.filter((c) => c.status === "completed").length / campaigns.length) * 100,
-                            )
-                          : 0}
-                        %
-                      </span>
+                  
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Performance Metrics</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center p-3 bg-indigo-50 rounded-lg">
+                        <span className="text-sm font-medium text-gray-700">Success Rate</span>
+                        <span className="text-lg font-bold text-indigo-600">
+                          {campaigns.length > 0 ? Math.round((campaigns.filter(c => c.status === 'completed').length / campaigns.length) * 100) : 0}%
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-indigo-50 rounded-lg">
+                        <span className="text-sm font-medium text-gray-700">Avg. Cost per Campaign</span>
+                        <span className="text-lg font-bold text-indigo-600">
+                          ₹{campaigns.length > 0 ? (stats.totalSpent / campaigns.length).toFixed(2) : '0.00'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-indigo-50 rounded-lg">
+                        <span className="text-sm font-medium text-gray-700">Total Growth</span>
+                        <span className="text-lg font-bold text-indigo-600">
+                          {stats.totalFollowers + stats.totalEngagement > 0 ? '+' : ''}
+                          {(stats.totalFollowers + stats.totalEngagement).toLocaleString()}
+                        </span>
+                      </div>
                     </div>
-                    <Progress
-                      value={
-                        campaigns.length > 0
-                          ? (campaigns.filter((c) => c.status === "completed").length / campaigns.length) * 100
-                          : 0
-                      }
-                      className="h-2"
-                    />
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
