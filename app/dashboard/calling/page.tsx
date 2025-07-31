@@ -245,6 +245,7 @@ export default function CallingPage() {
 
   // Initialize Twilio Voice SDK
   useEffect(() => {
+    console.log("Initializing Twilio Voice SDK...")
     initializeTwilioVoice()
   }, [])
 
@@ -287,6 +288,7 @@ export default function CallingPage() {
       const device = twilioVoiceBrowser.getDevice()
       if (device) {
         device.on("connect", (call: any) => {
+          console.log("Device connect event fired:", call)
           setIsCallActive(true)
           setCallStatus("connected")
           setCallDuration(0)
@@ -294,6 +296,7 @@ export default function CallingPage() {
         })
 
         device.on("disconnect", (call: any) => {
+          console.log("Device disconnect event fired:", call)
           setIsCallActive(false)
           setCallStatus("idle")
           setIsMuted(false)
@@ -425,11 +428,36 @@ export default function CallingPage() {
 
   const endCall = async () => {
     try {
+      console.log("Attempting to end call, current state:", { isCallActive, callStatus })
+      
+      // First update UI state immediately to show the call is ending
+      setCallStatus("ending")
+      
+      // Call the Twilio hangup function
       await twilioVoiceBrowser.hangupCall()
-      // The disconnect will be handled by the device event listeners
+      
+      // Reset call state immediately in case device events don't fire
+      setTimeout(() => {
+        setIsCallActive(false)
+        setCallStatus("idle")
+        setIsMuted(false)
+        setCallDuration(0)
+        setCallCost(0)
+        console.log("Call state reset after timeout")
+      }, 1000)
+      
+      toast.success("Call ended successfully")
     } catch (error) {
       console.error("Error ending call:", error)
-      toast.error("Failed to end call")
+      
+      // Force reset state even if there's an error
+      setIsCallActive(false)
+      setCallStatus("idle")
+      setIsMuted(false)
+      setCallDuration(0)
+      setCallCost(0)
+      
+      toast.error("Call ended (forced reset)")
     }
   }
 
@@ -590,20 +618,26 @@ export default function CallingPage() {
                 </div>
 
                 <div className="flex space-x-2">
-                  {!isCallActive ? (
+                  {!isCallActive && callStatus !== "ending" ? (
                     <Button
                       onClick={makeCall}
                       className="flex-1"
                       size="lg"
-                      disabled={!isConnected || isInitializing || callStatus === "connecting"}
+                      disabled={!isConnected || isInitializing || callStatus === "connecting" || callStatus === "ending"}
                     >
                       <PhoneCall className="mr-2 h-4 w-4" />
                       {callStatus === "connecting" ? "Connecting..." : "Call Now"}
                     </Button>
                   ) : (
-                    <Button onClick={endCall} variant="destructive" className="flex-1" size="lg">
+                    <Button 
+                      onClick={endCall} 
+                      variant="destructive" 
+                      className="flex-1" 
+                      size="lg"
+                      disabled={callStatus === "ending"}
+                    >
                       <PhoneOff className="mr-2 h-4 w-4" />
-                      End Call
+                      {callStatus === "ending" ? "Ending..." : "End Call"}
                     </Button>
                   )}
                 </div>
