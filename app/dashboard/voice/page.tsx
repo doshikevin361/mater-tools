@@ -411,9 +411,32 @@ export default function VoicePage() {
               {/* Audio Recording/Upload */}
               {campaignType === "audio" && (
                 <div className="lg:col-span-1">
+                  <Card className="border border-red-200 mb-4 bg-red-50">
+                    <CardContent className="p-4">
+                      <p className="text-red-700 text-sm">
+                        🔍 Debug: VoiceRecorder should appear below this message when campaign type is "audio"
+                      </p>
+                      <p className="text-xs text-red-600">Campaign Type: {campaignType}</p>
+                    </CardContent>
+                  </Card>
                   <VoiceRecorder onRecordingComplete={handleAudioReady} maxDuration={300} className="h-fit" />
                 </div>
               )}
+
+              {/* Debug - Always show recorder for testing */}
+              <div className="lg:col-span-1">
+                <Card className="border border-blue-200 bg-blue-50">
+                  <CardHeader>
+                    <CardTitle className="text-blue-700">Debug: Voice Recorder (Always Visible)</CardTitle>
+                    <CardDescription className="text-blue-600">
+                      This recorder is always visible for testing. The one above only shows when campaign type is "audio".
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <VoiceRecorder onRecordingComplete={handleAudioReady} maxDuration={300} className="h-fit" />
+                  </CardContent>
+                </Card>
+              </div>
 
               {/* Contact Selection */}
               <Card className="border border-purple-200 shadow-md overflow-hidden bg-white lg:col-span-2">
