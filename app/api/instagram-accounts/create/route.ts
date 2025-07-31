@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
 import axios from "axios"
 import puppeteer from "puppeteer"
+import { getFreeIndianProxy, getProxyLogInfo } from "@/lib/proxy-service"
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -299,9 +300,30 @@ function generateAudioNoise() {
 }
 
 // Get free Indian proxy for enhanced anonymity
-async function getFreeIndianProxy() {
+async function getFreeIndianProxyWithFallback() {
   try {
-    log('info', '🌐 Fetching free Indian proxy...')
+    log('info', '🌐 Fetching free Indian proxy from proxy5.net service...')
+    
+    const proxy = await getFreeIndianProxy()
+    
+    if (proxy) {
+      log('success', `✅ Got Indian proxy: ${getProxyLogInfo(proxy)}`)
+      return {
+        ip: proxy.ip,
+        port: proxy.port,
+        protocol: proxy.protocol || 'http',
+        country: proxy.country,
+        uptime: proxy.uptime || 50,
+        source: proxy.source || 'proxy5_service'
+      }
+    }
+  } catch (error) {
+    log('warning', `⚠️ Proxy service failed: ${error.message}`)
+  }
+  
+  // Fallback to original methods if our service fails
+  try {
+    log('info', '🔄 Falling back to original proxy methods...')
     
     // Try GetProxyList API first (supports Indian proxies)
     const proxyResponse = await axios.get('https://api.getproxylist.com/proxy?country[]=IN&protocol[]=http&protocol[]=https&anonymity[]=anonymous&anonymity[]=high%20anonymity&maxConnectTime=3&minUptime=70', {
@@ -319,7 +341,8 @@ async function getFreeIndianProxy() {
         port: proxyResponse.data.port,
         protocol: proxyResponse.data.protocol || 'http',
         country: proxyResponse.data.country,
-        uptime: proxyResponse.data.uptime
+        uptime: proxyResponse.data.uptime,
+        source: 'getproxylist'
       }
     }
   } catch (error) {
@@ -343,7 +366,8 @@ async function getFreeIndianProxy() {
         port: proxyResponse.data.port,
         protocol: proxyResponse.data.protocol?.toLowerCase() || 'http',
         country: proxyResponse.data.location?.country || 'Unknown',
-        uptime: proxyResponse.data.uptime || 0
+        uptime: proxyResponse.data.uptime || 0,
+        source: 'proxykingdom'
       }
     }
   } catch (error) {
@@ -371,7 +395,8 @@ async function getFreeIndianProxy() {
             port: parseInt(port.trim()),
             protocol: 'http',
             country: 'IN',
-            uptime: 50
+            uptime: 50,
+            source: 'proxy-list-download'
           }
         }
       }
