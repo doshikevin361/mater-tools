@@ -1102,8 +1102,75 @@ async function createTempEmail() {
         throw new Error("Failed to create account on mail.tm")
       }
     } catch (tempMailError) {
-      log('error', `❌ Both email services failed. Guerrillamail: ${error.message}, Mail.tm: ${tempMailError.message}`)
-      throw new Error("Email creation failed - both services unavailable")
+      // Try additional fallback services
+      try {
+        log('warning', '⚠️ Trying additional email fallback services...')
+        
+        // Try 10minutemail.com
+        const tenMinResponse = await axios.get('https://10minutemail.com/session/address', {
+          timeout: 10000,
+          headers: {
+            "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
+            "Accept": "application/json"
+          }
+        })
+        
+        if (tenMinResponse.data && tenMinResponse.data.address) {
+          log('success', `✅ Created email with 10minutemail: ${tenMinResponse.data.address}`)
+          return {
+            success: true,
+            email: tenMinResponse.data.address,
+            sessionId: null,
+            provider: "10minutemail"
+          }
+        }
+      } catch (tenMinError) {
+        log('warning', `⚠️ 10minutemail failed: ${tenMinError.message}`)
+      }
+      
+      try {
+        // Try tempmail.plus
+        const tempMailPlusResponse = await axios.post('https://tempmail.plus/api/mails', {}, {
+          timeout: 10000,
+          headers: {
+            "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+          }
+        })
+        
+        if (tempMailPlusResponse.data && tempMailPlusResponse.data.mail) {
+          log('success', `✅ Created email with tempmail.plus: ${tempMailPlusResponse.data.mail}`)
+          return {
+            success: true,
+            email: tempMailPlusResponse.data.mail,
+            sessionId: null,
+            provider: "tempmailplus"
+          }
+        }
+      } catch (tempMailPlusError) {
+        log('warning', `⚠️ Tempmail.plus failed: ${tempMailPlusError.message}`)
+      }
+      
+      try {
+        // Try maildrop.cc
+        const randomMaildropUser = Math.random().toString(36).substring(2, 12)
+        const maildropEmail = `${randomMaildropUser}@maildrop.cc`
+        
+        // Maildrop doesn't require registration, just use the email
+        log('success', `✅ Created email with maildrop: ${maildropEmail}`)
+        return {
+          success: true,
+          email: maildropEmail,
+          sessionId: null,
+          provider: "maildrop"
+        }
+      } catch (maildropError) {
+        log('warning', `⚠️ Maildrop failed: ${maildropError.message}`)
+      }
+      
+      log('error', `❌ All email services failed. Guerrillamail: ${error.message}, Mail.tm: ${tempMailError.message}`)
+      throw new Error("Email creation failed - all services unavailable")
     }
   }
 }
@@ -1539,6 +1606,253 @@ async function checkTempMailForOTP(email, maxWaitMinutes = 3, token = null) {
   return { success: false }
 }
 
+// 10minutemail OTP checking function
+async function check10MinuteMailForOTP(email, maxWaitMinutes = 3) {
+  const startTime = Date.now()
+  const maxWaitTime = maxWaitMinutes * 60 * 1000
+  
+  log('info', `📧 Checking 10minutemail for OTP: ${email}`)
+  
+  let checkCount = 0
+  const maxChecks = Math.floor(maxWaitTime / 10000)
+  
+  while (Date.now() - startTime < maxWaitTime && checkCount < maxChecks) {
+    checkCount++
+    log('info', `📧 10minutemail OTP Check ${checkCount}/${maxChecks}...`)
+    
+    try {
+      const messagesResponse = await axios.get('https://10minutemail.com/session/mails', {
+        timeout: 10000,
+        headers: {
+          "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
+          "Accept": "application/json"
+        }
+      })
+      
+      if (messagesResponse.data && messagesResponse.data.length > 0) {
+        for (const message of messagesResponse.data) {
+          const fullContent = (message.subject || '') + ' ' + (message.body || '')
+          
+          // Instagram OTP patterns
+          const patterns = [
+            /(\d{6})\s+is\s+your\s+Instagram\s+code/gi,
+            /Instagram\s+code:\s*(\d{6})/gi,
+            /Your\s+Instagram\s+code\s+is\s+(\d{6})/gi,
+            /Instagram.*(\d{6})/gi
+          ]
+          
+          for (const pattern of patterns) {
+            const match = fullContent.match(pattern)
+            if (match) {
+              const codeMatch = match[0].match(/\d{6}/)
+              if (codeMatch) {
+                log('success', `✅ Found OTP in 10minutemail: ${codeMatch[0]}`)
+                return {
+                  success: true,
+                  code: codeMatch[0],
+                  method: '10minutemail_api'
+                }
+              }
+            }
+          }
+          
+          // Fallback: Instagram mention with 6-digit code
+          if (fullContent.toLowerCase().includes('instagram')) {
+            const codes = fullContent.match(/\b\d{6}\b/g)
+            if (codes && codes.length > 0) {
+              log('success', `✅ Found OTP in 10minutemail (fallback): ${codes[0]}`)
+              return {
+                success: true,
+                code: codes[0],
+                method: '10minutemail_fallback'
+              }
+            }
+          }
+        }
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 8000 + Math.random() * 4000))
+      
+    } catch (error) {
+      log('warning', `⚠️ 10minutemail check error: ${error.message}`)
+      await new Promise(resolve => setTimeout(resolve, 5000))
+    }
+  }
+  
+  log('warning', `⚠️ No OTP found in 10minutemail after ${maxWaitMinutes} minutes`)
+  return { success: false }
+}
+
+// TempMail.plus OTP checking function
+async function checkTempMailPlusForOTP(email, maxWaitMinutes = 3) {
+  const startTime = Date.now()
+  const maxWaitTime = maxWaitMinutes * 60 * 1000
+  
+  log('info', `📧 Checking tempmail.plus for OTP: ${email}`)
+  
+  let checkCount = 0
+  const maxChecks = Math.floor(maxWaitTime / 10000)
+  
+  while (Date.now() - startTime < maxWaitTime && checkCount < maxChecks) {
+    checkCount++
+    log('info', `📧 TempMail.plus OTP Check ${checkCount}/${maxChecks}...`)
+    
+    try {
+      const messagesResponse = await axios.get(`https://tempmail.plus/api/mails/${email}`, {
+        timeout: 10000,
+        headers: {
+          "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
+          "Accept": "application/json"
+        }
+      })
+      
+      if (messagesResponse.data && messagesResponse.data.length > 0) {
+        for (const message of messagesResponse.data) {
+          const fullContent = (message.subject || '') + ' ' + (message.text || message.html || '')
+          
+          // Instagram OTP patterns
+          const patterns = [
+            /(\d{6})\s+is\s+your\s+Instagram\s+code/gi,
+            /Instagram\s+code:\s*(\d{6})/gi,
+            /Your\s+Instagram\s+code\s+is\s+(\d{6})/gi,
+            /Instagram.*(\d{6})/gi
+          ]
+          
+          for (const pattern of patterns) {
+            const match = fullContent.match(pattern)
+            if (match) {
+              const codeMatch = match[0].match(/\d{6}/)
+              if (codeMatch) {
+                log('success', `✅ Found OTP in tempmail.plus: ${codeMatch[0]}`)
+                return {
+                  success: true,
+                  code: codeMatch[0],
+                  method: 'tempmailplus_api'
+                }
+              }
+            }
+          }
+          
+          // Fallback: Instagram mention with 6-digit code
+          if (fullContent.toLowerCase().includes('instagram')) {
+            const codes = fullContent.match(/\b\d{6}\b/g)
+            if (codes && codes.length > 0) {
+              log('success', `✅ Found OTP in tempmail.plus (fallback): ${codes[0]}`)
+              return {
+                success: true,
+                code: codes[0],
+                method: 'tempmailplus_fallback'
+              }
+            }
+          }
+        }
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 8000 + Math.random() * 4000))
+      
+    } catch (error) {
+      log('warning', `⚠️ TempMail.plus check error: ${error.message}`)
+      await new Promise(resolve => setTimeout(resolve, 5000))
+    }
+  }
+  
+  log('warning', `⚠️ No OTP found in tempmail.plus after ${maxWaitMinutes} minutes`)
+  return { success: false }
+}
+
+// Maildrop OTP checking function
+async function checkMaildropForOTP(email, maxWaitMinutes = 3) {
+  const startTime = Date.now()
+  const maxWaitTime = maxWaitMinutes * 60 * 1000
+  const [username] = email.split('@')
+  
+  log('info', `📧 Checking maildrop for OTP: ${email}`)
+  
+  let checkCount = 0
+  const maxChecks = Math.floor(maxWaitTime / 10000)
+  
+  while (Date.now() - startTime < maxWaitTime && checkCount < maxChecks) {
+    checkCount++
+    log('info', `📧 Maildrop OTP Check ${checkCount}/${maxChecks}...`)
+    
+    try {
+      const messagesResponse = await axios.get(`https://maildrop.cc/api/inbox/${username}`, {
+        timeout: 10000,
+        headers: {
+          "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
+          "Accept": "application/json"
+        }
+      })
+      
+      if (messagesResponse.data && messagesResponse.data.length > 0) {
+        for (const message of messagesResponse.data) {
+          try {
+            // Get full message content
+            const messageResponse = await axios.get(`https://maildrop.cc/api/inbox/${username}/${message.id}`, {
+              timeout: 10000,
+              headers: {
+                "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
+                "Accept": "application/json"
+              }
+            })
+            
+            if (messageResponse.data) {
+              const fullContent = (messageResponse.data.subject || '') + ' ' + (messageResponse.data.body || '')
+              
+              // Instagram OTP patterns
+              const patterns = [
+                /(\d{6})\s+is\s+your\s+Instagram\s+code/gi,
+                /Instagram\s+code:\s*(\d{6})/gi,
+                /Your\s+Instagram\s+code\s+is\s+(\d{6})/gi,
+                /Instagram.*(\d{6})/gi
+              ]
+              
+              for (const pattern of patterns) {
+                const match = fullContent.match(pattern)
+                if (match) {
+                  const codeMatch = match[0].match(/\d{6}/)
+                  if (codeMatch) {
+                    log('success', `✅ Found OTP in maildrop: ${codeMatch[0]}`)
+                    return {
+                      success: true,
+                      code: codeMatch[0],
+                      method: 'maildrop_api'
+                    }
+                  }
+                }
+              }
+              
+              // Fallback: Instagram mention with 6-digit code
+              if (fullContent.toLowerCase().includes('instagram')) {
+                const codes = fullContent.match(/\b\d{6}\b/g)
+                if (codes && codes.length > 0) {
+                  log('success', `✅ Found OTP in maildrop (fallback): ${codes[0]}`)
+                  return {
+                    success: true,
+                    code: codes[0],
+                    method: 'maildrop_fallback'
+                  }
+                }
+              }
+            }
+          } catch (messageError) {
+            log('warning', `⚠️ Error reading maildrop message: ${messageError.message}`)
+          }
+        }
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 8000 + Math.random() * 4000))
+      
+    } catch (error) {
+      log('warning', `⚠️ Maildrop check error: ${error.message}`)
+      await new Promise(resolve => setTimeout(resolve, 5000))
+    }
+  }
+  
+  log('warning', `⚠️ No OTP found in maildrop after ${maxWaitMinutes} minutes`)
+  return { success: false }
+}
+
 // Enhanced email OTP checking with mail.tm support
 async function checkEmailForInstagramOTP(email, maxWaitMinutes = 3, browser, provider = "guerrillamail", token = null) {
   const startTime = Date.now()
@@ -1547,9 +1861,15 @@ async function checkEmailForInstagramOTP(email, maxWaitMinutes = 3, browser, pro
   
   log('info', `📧 Starting OTP check for: ${email} (provider: ${provider})`)
   
-  // Handle mail.tm emails differently
+  // Handle different email providers
   if (provider === "mailtml" || provider === "tempmail") {
     return await checkTempMailForOTP(email, maxWaitMinutes, token)
+  } else if (provider === "10minutemail") {
+    return await check10MinuteMailForOTP(email, maxWaitMinutes)
+  } else if (provider === "tempmailplus") {
+    return await checkTempMailPlusForOTP(email, maxWaitMinutes)
+  } else if (provider === "maildrop") {
+    return await checkMaildropForOTP(email, maxWaitMinutes)
   }
   
   let guerrillamailPage = null
