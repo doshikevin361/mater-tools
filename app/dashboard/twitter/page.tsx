@@ -393,7 +393,11 @@ export default function TwitterPage() {
                   .toLocaleString()}
               </div>
               <p className="text-xs text-gray-600 mt-1">
-                <span className="text-green-600 font-medium">+20%</span> this month
+                {campaigns.filter((c) => c.type === "followers").reduce((sum, c) => sum + c.currentCount, 0) > 0 ? (
+                  <span className="text-green-600 font-medium">+20%</span>
+                ) : (
+                  <span className="text-gray-500">0%</span>
+                )} this month
               </p>
             </CardContent>
           </Card>
@@ -411,7 +415,11 @@ export default function TwitterPage() {
                   .toLocaleString()}
               </div>
               <p className="text-xs text-gray-600 mt-1">
-                <span className="text-green-600 font-medium">+30%</span> this month
+                {campaigns.filter((c) => c.type === "likes" || c.type === "retweets").reduce((sum, c) => sum + c.currentCount, 0) > 0 ? (
+                  <span className="text-green-600 font-medium">+30%</span>
+                ) : (
+                  <span className="text-gray-500">0%</span>
+                )} this month
               </p>
             </CardContent>
           </Card>
@@ -865,69 +873,61 @@ export default function TwitterPage() {
 
           {/* Analytics Tab */}
           <TabsContent value="analytics" className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <Card className="border border-blue-200 shadow-md overflow-hidden bg-white">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-r from-blue-50 to-cyan-50">
-                  <CardTitle className="text-sm font-medium text-gray-700">Total Followers</CardTitle>
-                  <Users className="h-4 w-4 text-blue-600" />
-                </CardHeader>
-                <CardContent className="pt-2">
-                  <div className="text-2xl font-bold text-blue-600">
-                    {campaigns
-                      .filter((c) => c.type === "followers")
-                      .reduce((sum, c) => sum + c.currentCount, 0)
-                      .toLocaleString()}
+            <Card className="border border-blue-200 shadow-md overflow-hidden bg-white">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-cyan-50 border-b border-blue-100">
+                <CardTitle className="flex items-center space-x-2">
+                  <BarChart3 className="h-5 w-5 text-blue-600" />
+                  <span>Campaign Analytics</span>
+                </CardTitle>
+                <CardDescription>Detailed performance metrics for your Twitter campaigns</CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Growth Overview</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                        <span className="text-sm font-medium text-gray-700">Total Campaigns</span>
+                        <span className="text-lg font-bold text-blue-600">{campaigns.length}</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                        <span className="text-sm font-medium text-gray-700">Active Campaigns</span>
+                        <span className="text-lg font-bold text-blue-600">{campaigns.filter(c => c.status === 'active').length}</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
+                        <span className="text-sm font-medium text-gray-700">Completed Campaigns</span>
+                        <span className="text-lg font-bold text-blue-600">{campaigns.filter(c => c.status === 'completed').length}</span>
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-xs text-gray-600 mt-1">
-                    <span className="text-green-600 font-medium">+20%</span> from last month
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="border border-blue-200 shadow-md overflow-hidden bg-white">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-r from-blue-50 to-cyan-50">
-                  <CardTitle className="text-sm font-medium text-gray-700">Total Engagement</CardTitle>
-                  <Heart className="h-4 w-4 text-pink-600" />
-                </CardHeader>
-                <CardContent className="pt-2">
-                  <div className="text-2xl font-bold text-blue-600">
-                    {campaigns
-                      .filter((c) => c.type === "likes" || c.type === "retweets")
-                      .reduce((sum, c) => sum + c.currentCount, 0)
-                      .toLocaleString()}
+                  
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Performance Metrics</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center p-3 bg-cyan-50 rounded-lg">
+                        <span className="text-sm font-medium text-gray-700">Success Rate</span>
+                        <span className="text-lg font-bold text-cyan-600">
+                          {campaigns.length > 0 ? Math.round((campaigns.filter(c => c.status === 'completed').length / campaigns.length) * 100) : 0}%
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-cyan-50 rounded-lg">
+                        <span className="text-sm font-medium text-gray-700">Avg. Cost per Campaign</span>
+                        <span className="text-lg font-bold text-cyan-600">
+                          ₹{campaigns.length > 0 ? (campaigns.reduce((sum, c) => sum + c.cost, 0) / campaigns.length).toFixed(2) : '0.00'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-cyan-50 rounded-lg">
+                        <span className="text-sm font-medium text-gray-700">Total Growth</span>
+                        <span className="text-lg font-bold text-cyan-600">
+                          {campaigns.reduce((sum, c) => sum + c.currentCount, 0) > 0 ? '+' : ''}
+                          {campaigns.reduce((sum, c) => sum + c.currentCount, 0).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-xs text-gray-600 mt-1">
-                    <span className="text-green-600 font-medium">+30%</span> from last month
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="border border-blue-200 shadow-md overflow-hidden bg-white">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-r from-blue-50 to-cyan-50">
-                  <CardTitle className="text-sm font-medium text-gray-700">Keywords Traded</CardTitle>
-                  <Hash className="h-4 w-4 text-purple-600" />
-                </CardHeader>
-                <CardContent className="pt-2">
-                  <div className="text-2xl font-bold text-blue-600">
-                    {campaigns
-                      .filter((c) => c.type === "keyword_trading")
-                      .reduce((sum, c) => sum + (c.keywords?.length || 0), 0)}
-                  </div>
-                  <p className="text-xs text-gray-600 mt-1">Active keywords</p>
-                </CardContent>
-              </Card>
-
-              <Card className="border border-blue-200 shadow-md overflow-hidden bg-white">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-r from-blue-50 to-cyan-50">
-                  <CardTitle className="text-sm font-medium text-gray-700">Total Spent</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-green-600" />
-                </CardHeader>
-                <CardContent className="pt-2">
-                  <div className="text-2xl font-bold text-blue-600">₹{campaigns.reduce((sum, c) => sum + c.cost, 0).toFixed(2)}</div>
-                  <p className="text-xs text-gray-600 mt-1">This month</p>
-                </CardContent>
-              </Card>
-            </div>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

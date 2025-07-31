@@ -340,7 +340,11 @@ export default function YouTubePage() {
                   .toLocaleString()}
               </div>
               <p className="text-xs text-gray-600 mt-1">
-                <span className="text-green-600 font-medium">+22%</span> this month
+                {campaigns.filter((c) => c.type === "subscribers").reduce((sum, c) => sum + c.currentCount, 0) > 0 ? (
+                  <span className="text-green-600 font-medium">+22%</span>
+                ) : (
+                  <span className="text-gray-500">0%</span>
+                )} this month
               </p>
             </CardContent>
           </Card>
@@ -358,7 +362,11 @@ export default function YouTubePage() {
                   .toLocaleString()}
               </div>
               <p className="text-xs text-gray-600 mt-1">
-                <span className="text-green-600 font-medium">+35%</span> this month
+                {campaigns.filter((c) => c.type === "views").reduce((sum, c) => sum + c.currentCount, 0) > 0 ? (
+                  <span className="text-green-600 font-medium">+35%</span>
+                ) : (
+                  <span className="text-gray-500">0%</span>
+                )} this month
               </p>
             </CardContent>
           </Card>
@@ -376,7 +384,11 @@ export default function YouTubePage() {
                   .toLocaleString()}
               </div>
               <p className="text-xs text-gray-600 mt-1">
-                <span className="text-green-600 font-medium">+28%</span> this month
+                {campaigns.filter((c) => c.type === "likes").reduce((sum, c) => sum + c.currentCount, 0) > 0 ? (
+                  <span className="text-green-600 font-medium">+28%</span>
+                ) : (
+                  <span className="text-gray-500">0%</span>
+                )} this month
               </p>
             </CardContent>
           </Card>
@@ -701,72 +713,61 @@ export default function YouTubePage() {
 
           {/* Analytics Tab */}
           <TabsContent value="analytics" className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <Card className="border border-red-200 shadow-md overflow-hidden bg-white">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-r from-red-50 to-orange-50">
-                  <CardTitle className="text-sm font-medium text-gray-700">Total Subscribers</CardTitle>
-                  <Users className="h-4 w-4 text-red-600" />
-                </CardHeader>
-                <CardContent className="pt-2">
-                  <div className="text-2xl font-bold text-red-600">
-                    {campaigns
-                      .filter((c) => c.type === "subscribers")
-                      .reduce((sum, c) => sum + c.currentCount, 0)
-                      .toLocaleString()}
+            <Card className="border border-red-200 shadow-md overflow-hidden bg-white">
+              <CardHeader className="bg-gradient-to-r from-red-50 to-orange-50 border-b border-red-100">
+                <CardTitle className="flex items-center space-x-2">
+                  <BarChart3 className="h-5 w-5 text-red-600" />
+                  <span>Campaign Analytics</span>
+                </CardTitle>
+                <CardDescription>Detailed performance metrics for your YouTube campaigns</CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Growth Overview</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
+                        <span className="text-sm font-medium text-gray-700">Total Campaigns</span>
+                        <span className="text-lg font-bold text-red-600">{campaigns.length}</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
+                        <span className="text-sm font-medium text-gray-700">Active Campaigns</span>
+                        <span className="text-lg font-bold text-red-600">{campaigns.filter(c => c.status === 'active').length}</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-red-50 rounded-lg">
+                        <span className="text-sm font-medium text-gray-700">Completed Campaigns</span>
+                        <span className="text-lg font-bold text-red-600">{campaigns.filter(c => c.status === 'completed').length}</span>
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-xs text-gray-600 mt-1">
-                    <span className="text-green-600 font-medium">+22%</span> from last month
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="border border-red-200 shadow-md overflow-hidden bg-white">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-r from-red-50 to-orange-50">
-                  <CardTitle className="text-sm font-medium text-gray-700">Total Views</CardTitle>
-                  <Eye className="h-4 w-4 text-orange-600" />
-                </CardHeader>
-                <CardContent className="pt-2">
-                  <div className="text-2xl font-bold text-red-600">
-                    {campaigns
-                      .filter((c) => c.type === "views")
-                      .reduce((sum, c) => sum + c.currentCount, 0)
-                      .toLocaleString()}
+                  
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-gray-900">Performance Metrics</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
+                        <span className="text-sm font-medium text-gray-700">Success Rate</span>
+                        <span className="text-lg font-bold text-orange-600">
+                          {campaigns.length > 0 ? Math.round((campaigns.filter(c => c.status === 'completed').length / campaigns.length) * 100) : 0}%
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
+                        <span className="text-sm font-medium text-gray-700">Avg. Cost per Campaign</span>
+                        <span className="text-lg font-bold text-orange-600">
+                          ₹{campaigns.length > 0 ? (campaigns.reduce((sum, c) => sum + c.cost, 0) / campaigns.length).toFixed(2) : '0.00'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-orange-50 rounded-lg">
+                        <span className="text-sm font-medium text-gray-700">Total Growth</span>
+                        <span className="text-lg font-bold text-orange-600">
+                          {campaigns.reduce((sum, c) => sum + c.currentCount, 0) > 0 ? '+' : ''}
+                          {campaigns.reduce((sum, c) => sum + c.currentCount, 0).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-xs text-gray-600 mt-1">
-                    <span className="text-green-600 font-medium">+35%</span> from last month
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="border border-red-200 shadow-md overflow-hidden bg-white">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-r from-red-50 to-orange-50">
-                  <CardTitle className="text-sm font-medium text-gray-700">Total Likes</CardTitle>
-                  <ThumbsUp className="h-4 w-4 text-blue-600" />
-                </CardHeader>
-                <CardContent className="pt-2">
-                  <div className="text-2xl font-bold text-red-600">
-                    {campaigns
-                      .filter((c) => c.type === "likes")
-                      .reduce((sum, c) => sum + c.currentCount, 0)
-                      .toLocaleString()}
-                  </div>
-                  <p className="text-xs text-gray-600 mt-1">
-                    <span className="text-green-600 font-medium">+28%</span> from last month
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="border border-red-200 shadow-md overflow-hidden bg-white">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-r from-red-50 to-orange-50">
-                  <CardTitle className="text-sm font-medium text-gray-700">Total Spent</CardTitle>
-                  <Zap className="h-4 w-4 text-green-600" />
-                </CardHeader>
-                <CardContent className="pt-2">
-                  <div className="text-2xl font-bold text-red-600">₹{campaigns.reduce((sum, c) => sum + c.cost, 0).toFixed(2)}</div>
-                  <p className="text-xs text-gray-600 mt-1">This month</p>
-                </CardContent>
-              </Card>
-            </div>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
