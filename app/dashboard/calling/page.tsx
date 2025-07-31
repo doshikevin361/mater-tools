@@ -355,8 +355,14 @@ export default function CallingPage() {
         device.on("error", (error: any) => {
           console.error("Call error:", error)
           setIsCallActive(false)
-          setCallStatus("idle")
+          setCallStatus("error")
           toast.error(`Call error: ${error.message}`)
+          
+          // If it's a device-level error, we might need to reinitialize
+          if (error.code === 31000 || error.code === 31001) {
+            setIsConnected(false)
+            toast.error("Device error detected. Please refresh the page to reinitialize.")
+          }
         })
 
         device.on("incoming", (call: any) => {
@@ -449,6 +455,15 @@ export default function CallingPage() {
       // Make the actual browser call
       await twilioVoiceBrowser.makeCall(phoneNumber)
 
+      // Add a timeout to handle cases where the call doesn't connect properly
+      setTimeout(() => {
+        if (callStatus === "connecting" && !isCallActive) {
+          console.log("Call connection timeout - resetting state")
+          setCallStatus("idle")
+          toast.error("Call connection timeout. Please try again.")
+        }
+      }, 30000) // 30 second timeout
+
       // The actual connection will be handled by the device event listeners
     } catch (error) {
       console.error("Error making call:", error)
@@ -490,6 +505,16 @@ export default function CallingPage() {
       
       toast.error("Call ended (forced reset)")
     }
+  }
+
+  const resetCallState = () => {
+    console.log("Resetting call state manually")
+    setIsCallActive(false)
+    setCallStatus("idle")
+    setIsMuted(false)
+    setCallDuration(0)
+    setCallCost(0)
+    toast.info("Call state reset")
   }
 
   const toggleMute = async () => {
@@ -649,7 +674,7 @@ export default function CallingPage() {
                 </div>
 
                 <div className="flex space-x-2">
-                  {!isCallActive && callStatus !== "ending" ? (
+                  {(!isCallActive && callStatus === "idle") ? (
                     <Button
                       onClick={makeCall}
                       className="flex-1"
@@ -672,6 +697,65 @@ export default function CallingPage() {
                     </Button>
                   )}
                 </div>
+
+                {/* Show reset button when call state is stuck */}
+                {(!isCallActive && callStatus !== "idle" && callStatus !== "ending") && (
+                  <div className="mt-2">
+                    <Button 
+                      onClick={resetCallState} 
+                      variant="outline" 
+                      size="sm"
+                      className="w-full text-orange-600 border-orange-200 hover:bg-orange-50"
+                    >
+                      🔄 Reset Call State
+                    </Button>
+                  </div>
+                )}
+
+                {/* Show reinitialize button when connection is lost */}
+                {!isConnected && !isInitializing && (
+                  <div className="mt-2">
+                    <Button 
+                      onClick={() => {
+                        setIsInitializing(true)
+                        initializeTwilioVoice()
+                      }} 
+                      variant="outline" 
+                      size="sm"
+                      className="w-full text-blue-600 border-blue-200 hover:bg-blue-50"
+                    >
+                      🔄 Reinitialize Voice Calling
+                    </Button>
+                  </div>
+                )}
+
+                {/* Call Status Indicator */}
+                {callStatus !== "idle" && (
+                  <div className={`border rounded-lg p-3 ${
+                    callStatus === "error" 
+                      ? "bg-red-50 border-red-200" 
+                      : callStatus === "connecting"
+                      ? "bg-blue-50 border-blue-200"
+                      : callStatus === "ending"
+                      ? "bg-orange-50 border-orange-200"
+                      : "bg-gray-50 border-gray-200"
+                  }`}>
+                    <p className={`text-sm ${
+                      callStatus === "error" 
+                        ? "text-red-800" 
+                        : callStatus === "connecting"
+                        ? "text-blue-800"
+                        : callStatus === "ending"
+                        ? "text-orange-800"
+                        : "text-gray-800"
+                    }`}>
+                      <strong>Call Status:</strong> {callStatus.toUpperCase()}
+                      {callStatus === "error" && " - Use Reset Call State button to clear"}
+                      {callStatus === "connecting" && " - Please wait..."}
+                      {callStatus === "ending" && " - Please wait..."}
+                    </p>
+                  </div>
+                )}
 
                 {!isConnected && (
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
