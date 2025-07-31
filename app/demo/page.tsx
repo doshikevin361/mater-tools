@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { MessageSquare, Mail, Phone, Smartphone, User, BarChart3, Play, ArrowRight, CheckCircle } from "lucide-react"
+import { VoiceCalling } from "@/components/voice-calling"
 
 export default function DemoPage() {
   const features = [
@@ -200,6 +201,14 @@ export default function DemoPage() {
                 </li>
               </ol>
             </div>
+          </div>
+        </div>
+
+        {/* Voice Calling Demo */}
+        <div className="mt-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">🎙️ Voice Calling Demo</h2>
+          <div className="max-w-md mx-auto">
+            <VoiceCalling />
           </div>
         </div>
 

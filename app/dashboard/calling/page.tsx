@@ -245,7 +245,6 @@ export default function CallingPage() {
 
   // Initialize Twilio Voice SDK
   useEffect(() => {
-    console.log("Initializing Twilio Voice SDK...")
     initializeTwilioVoice()
   }, [])
 
@@ -288,7 +287,6 @@ export default function CallingPage() {
       const device = twilioVoiceBrowser.getDevice()
       if (device) {
         device.on("connect", (call: any) => {
-          console.log("Device connect event fired:", call)
           setIsCallActive(true)
           setCallStatus("ringing")
           setCallDuration(0)
@@ -297,19 +295,16 @@ export default function CallingPage() {
           // Set up call-specific listeners
           if (call) {
             call.on("accept", () => {
-              console.log("Call answered by remote party")
               setCallStatus("connected")
               toast.success("Call connected!")
             })
             
             call.on("ringing", () => {
-              console.log("Call is ringing")
               setCallStatus("ringing")
               toast.info("Phone is ringing...")
             })
             
             call.on("cancel", () => {
-              console.log("Call was cancelled")
               setIsCallActive(false)
               setCallStatus("idle")
               setIsMuted(false)
@@ -317,7 +312,6 @@ export default function CallingPage() {
             })
             
             call.on("reject", () => {
-              console.log("Call was rejected")
               setIsCallActive(false)
               setCallStatus("idle")
               setIsMuted(false)
@@ -327,7 +321,6 @@ export default function CallingPage() {
         })
 
         device.on("disconnect", (call: any) => {
-          console.log("Device disconnect event fired:", call)
           setIsCallActive(false)
           setCallStatus("idle")
           setIsMuted(false)
@@ -459,8 +452,6 @@ export default function CallingPage() {
 
   const endCall = async () => {
     try {
-      console.log("Attempting to end call, current state:", { isCallActive, callStatus })
-      
       // First update UI state immediately to show the call is ending
       setCallStatus("ending")
       
@@ -474,13 +465,13 @@ export default function CallingPage() {
         setIsMuted(false)
         setCallDuration(0)
         setCallCost(0)
-        console.log("Call state reset after timeout")
       }, 1000)
       
       toast.success("Call ended successfully")
-    } catch (error) {
-      console.error("Error ending call:", error)
       
+      // Refresh the page after ending the call
+      window.location.reload()
+    } catch (error) {
       // Force reset state even if there's an error
       setIsCallActive(false)
       setCallStatus("idle")
@@ -489,6 +480,9 @@ export default function CallingPage() {
       setCallCost(0)
       
       toast.error("Call ended (forced reset)")
+      
+      // Refresh the page even if there's an error
+      window.location.reload()
     }
   }
 
@@ -746,7 +740,6 @@ export default function CallingPage() {
                         onClick={() => {
                           setIsRecording(!isRecording)
                           toast.info(isRecording ? "Recording stopped" : "Recording started")
-                          console.log("Recording button clicked, new state:", !isRecording)
                         }}
                         className={callStatus !== "connected" ? "opacity-50 cursor-not-allowed" : ""}
                       >
