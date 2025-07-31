@@ -10,7 +10,6 @@ export async function POST(request: NextRequest) {
       throw new Error("No destination number provided")
     }
 
-    // Format the phone number to ensure E.164 format
     const formatIndianNumber = (number: string): string => {
       const cleaned = number.replace(/\D/g, "")
       if (cleaned.length === 10) {
@@ -27,14 +26,12 @@ export async function POST(request: NextRequest) {
 
     console.log(`Outgoing call from ${from} to ${to}`)
 
-    // Build recording webhook URL - handle both development and production
-    const baseUrl = process.env.NODE_ENV === "production" 
-      ? process.env.NEXT_PUBLIC_APP_URL || "https://your-domain.com"
+    const baseUrl = process.env.NODE_ENV === "production"
+      ? process.env.NEXT_PUBLIC_APP_URL || "https://mastertool.brandbuzzinsights.ai/"
       : "http://localhost:3000"
-    
+
     const recordingWebhookUrl = `${baseUrl}/api/calling/recording-webhook`
 
-    console.log("Recording webhook URL:", recordingWebhookUrl)
 
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
@@ -43,7 +40,6 @@ export async function POST(request: NextRequest) {
     </Dial>
 </Response>`
 
-    console.log("Generated TwiML:", twiml)
 
     return new NextResponse(twiml, {
       headers: {

@@ -188,7 +188,6 @@ export class SMMApiClient {
   }
 }
 
-// Singleton instance
 let smmClient: SMMApiClient | null = null
 
 export function getSMMClient(): SMMApiClient {
@@ -199,7 +198,6 @@ export function getSMMClient(): SMMApiClient {
   return smmClient
 }
 
-// Helper function to calculate estimated delivery time
 export function getEstimatedDeliveryTime(quantity: number, serviceType: string): string {
   const baseTime = {
     followers: 24, // hours
@@ -220,7 +218,6 @@ export function getEstimatedDeliveryTime(quantity: number, serviceType: string):
   }
 }
 
-// Helper function to get service pricing
 export function calculateServiceCost(service: SMMService, quantity: number): number {
   const rate = Number.parseFloat(service.rate)
   const cost = (rate * quantity) / 1000 // Rate is usually per 1000
