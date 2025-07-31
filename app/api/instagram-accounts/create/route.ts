@@ -119,6 +119,69 @@ const STEALTH_CONFIG = {
   headlessMode: 'new', 
 }
 
+// Popular Indian Instagram accounts for auto-following
+const INDIAN_ACCOUNTS_TO_FOLLOW = [
+  'virat.kohli',
+  'aliaabhatt',
+  'deepikapadukone',
+  'priyankachopra',
+  'shraddhakapoor',
+  'akshaykumar',
+  'ranveersingh',
+  'katrinakaiif',
+  'anushkasharma',
+  'shahidkapoor',
+  'tigerjackieshroff',
+  'sunnyleone',
+  'kritisanon',
+  'hrithikroshan',
+  'amitabhbachchan',
+  'aslisona',
+  'iamksgofficial',
+  'varundvn',
+  'jacquelinef143',
+  'dishapatani',
+  'saraalikhan95',
+  'janhvikapoor',
+  'arjunkapoor',
+  'iamsrk',
+  'randeephooda',
+  'sidmalhotra',
+  'adityaroykapur',
+  'vickykaushal09',
+  'rajkummar_rao',
+  'ayushmannk',
+  'kartikaaryan',
+  'ishaan95',
+  'rakulpreet',
+  'taapsee',
+  'bhumi_pednekar',
+  'kiara_advani',
+  'nargisfakhri',
+  'sonamkapoor',
+  'parineetichopra',
+  'adah_ki_adah'
+]
+
+// Indian bio templates
+const INDIAN_BIO_TEMPLATES = [
+  "🇮🇳 Proud Indian | ✨ Dreamer | 📸 Life Enthusiast",
+  "Mumbai | Delhi | Bangalore 🏙️ | Living my best life ✨",
+  "🌟 Indian soul | 🎭 Bollywood lover | 📚 Lifelong learner",
+  "🇮🇳 Desi at heart | 🌺 Spreading positivity | 💫 Chasing dreams",
+  "India 🇮🇳 | Food lover 🍛 | Travel enthusiast ✈️",
+  "🌈 Colors of India | 🎵 Music lover | 📖 Story teller",
+  "🇮🇳 Born & raised | 💪 Fitness freak | 🌟 Motivational speaker",
+  "Indian by birth 🇮🇳 | Global by choice 🌍 | Optimist by nature ☀️",
+  "🏏 Cricket fan | 🎬 Movie buff | 🍕 Foodie | 🇮🇳 Proud Indian",
+  "Delhi NCR 📍 | Engineering student 👨‍🎓 | Tech enthusiast 💻",
+  "Mumbai dreams 🌆 | Artist at heart 🎨 | Coffee addict ☕",
+  "🇮🇳 Indian traditions | Modern thoughts 💭 | Nature lover 🌿",
+  "Bangalore techie 💻 | Weekend traveler 🎒 | Yoga practitioner 🧘‍♀️",
+  "🌟 Spreading smiles | 🇮🇳 India first | 📚 Knowledge seeker",
+  "Chai lover ☕ | Sunset chaser 🌅 | Indian culture enthusiast 🇮🇳"
+]
+
 function log(level, message, data = null) {
   const timestamp = new Date().toLocaleTimeString()
   console.log(`[${timestamp}] [${level.toUpperCase()}] ${message}`)
@@ -1423,6 +1486,247 @@ async function checkEmailForInstagramOTP(email, maxWaitMinutes = 3, browser) {
   }
 }
 
+// Auto-follow Indian accounts function
+async function autoFollowIndianAccounts(page, targetCount = 12) {
+  log('info', `🔄 Starting auto-follow for ${targetCount} Indian accounts...`)
+  
+  try {
+    // Shuffle the accounts list and select random ones
+    const shuffledAccounts = [...INDIAN_ACCOUNTS_TO_FOLLOW].sort(() => 0.5 - Math.random())
+    const accountsToFollow = shuffledAccounts.slice(0, targetCount)
+    
+    let followedCount = 0
+    let skippedCount = 0
+    
+    for (let i = 0; i < accountsToFollow.length; i++) {
+      const username = accountsToFollow[i]
+      
+      try {
+        log('info', `👤 Following account ${i + 1}/${accountsToFollow.length}: @${username}`)
+        
+        // Navigate to profile
+        const profileUrl = `https://www.instagram.com/${username}/`
+        await page.goto(profileUrl, { 
+          waitUntil: 'networkidle2', 
+          timeout: 30000 
+        })
+        
+        await humanWait(2000, 4000)
+        
+        // Find and click follow button
+        const followSelectors = [
+          'button:has-text("Follow")',
+          'button[type="button"]:has-text("Follow")',
+          'div[role="button"]:has-text("Follow")',
+          'button:contains("Follow")',
+          'button._acan._acap._acas._aj1-._ap30',
+          'button._acan._acap._acas._aj1-',
+          'button[class*="follow"]',
+          'button[data-testid="follow-button"]'
+        ]
+        
+        let followSuccess = false
+        
+        // Try different selectors
+        for (const selector of followSelectors) {
+          try {
+            const followButton = await page.$(selector)
+            if (followButton) {
+              const buttonText = await page.evaluate(el => el.textContent?.trim(), followButton)
+              
+              if (buttonText && buttonText.toLowerCase().includes('follow') && !buttonText.toLowerCase().includes('following')) {
+                await humanClickMaxStealth(page, selector)
+                followSuccess = true
+                followedCount++
+                log('success', `✅ Successfully followed @${username}`)
+                break
+              }
+            }
+          } catch (e) {
+            continue
+          }
+        }
+        
+        if (!followSuccess) {
+          // Try JavaScript click as fallback
+          const jsFollowResult = await page.evaluate(() => {
+            const buttons = Array.from(document.querySelectorAll('button, div[role="button"]'))
+            
+            for (const button of buttons) {
+              const text = button.textContent?.trim().toLowerCase() || ''
+              if (text === 'follow' && button.offsetParent !== null) {
+                button.click()
+                return { success: true, text: text }
+              }
+            }
+            
+            return { success: false }
+          })
+          
+          if (jsFollowResult.success) {
+            followSuccess = true
+            followedCount++
+            log('success', `✅ Successfully followed @${username} (JS click)`)
+          } else {
+            skippedCount++
+            log('verbose', `⏭️ Skipped @${username} (already following or button not found)`)
+          }
+        }
+        
+        // Human-like delay between follows
+        const followDelay = 8000 + Math.random() * 12000 // 8-20 seconds
+        await humanWait(followDelay, followDelay + 5000)
+        
+        // Random chance to scroll or interact
+        if (Math.random() > 0.7) {
+          await page.evaluate(() => {
+            window.scrollBy(0, Math.random() * 300 + 100)
+          })
+          await humanWait(1000, 3000)
+        }
+        
+      } catch (followError) {
+        skippedCount++
+        log('verbose', `⚠️ Failed to follow @${username}: ${followError.message}`)
+        await humanWait(3000, 6000)
+        continue
+      }
+    }
+    
+    log('success', `🎉 Auto-follow completed: ${followedCount} followed, ${skippedCount} skipped`)
+    
+    return {
+      success: true,
+      followedCount: followedCount,
+      skippedCount: skippedCount,
+      targetCount: targetCount,
+      accountsAttempted: accountsToFollow
+    }
+    
+  } catch (error) {
+    log('error', `❌ Auto-follow failed: ${error.message}`)
+    return {
+      success: false,
+      error: error.message,
+      followedCount: 0
+    }
+  }
+}
+
+// Set bio function
+async function setInstagramBio(page) {
+  log('info', '📝 Setting up Instagram bio...')
+  
+  try {
+    // Navigate to profile edit page
+    await page.goto('https://www.instagram.com/accounts/edit/', { 
+      waitUntil: 'networkidle2', 
+      timeout: 30000 
+    })
+    
+    await humanWait(3000, 5000)
+    
+    // Select a random bio template
+    const randomBio = INDIAN_BIO_TEMPLATES[Math.floor(Math.random() * INDIAN_BIO_TEMPLATES.length)]
+    
+    // Find bio textarea
+    const bioSelectors = [
+      'textarea[id="pepBio"]',
+      'textarea[name="biography"]',
+      'textarea[placeholder*="Bio"]',
+      'textarea[placeholder*="bio"]',
+      'textarea[aria-label*="Bio"]',
+      'textarea'
+    ]
+    
+    let bioSet = false
+    
+    for (const selector of bioSelectors) {
+      try {
+        await page.waitForSelector(selector, { timeout: 5000 })
+        await humanTypeMaxStealth(page, selector, randomBio)
+        bioSet = true
+        log('success', `✅ Bio set: "${randomBio}"`)
+        break
+      } catch (e) {
+        continue
+      }
+    }
+    
+    if (!bioSet) {
+      // Try JavaScript approach
+      const jsBioResult = await page.evaluate((bio) => {
+        const textareas = Array.from(document.querySelectorAll('textarea'))
+        
+        for (const textarea of textareas) {
+          if (textarea.offsetParent !== null) {
+            textarea.focus()
+            textarea.value = bio
+            textarea.dispatchEvent(new Event('input', { bubbles: true }))
+            textarea.dispatchEvent(new Event('change', { bubbles: true }))
+            return { success: true }
+          }
+        }
+        
+        return { success: false }
+      }, randomBio)
+      
+      if (jsBioResult.success) {
+        bioSet = true
+        log('success', `✅ Bio set via JS: "${randomBio}"`)
+      }
+    }
+    
+    if (bioSet) {
+      await humanWait(2000, 4000)
+      
+      // Submit the form
+      const submitSelectors = [
+        'button[type="submit"]',
+        'button:has-text("Submit")',
+        'button:contains("Submit")',
+        'div[role="button"]:has-text("Submit")'
+      ]
+      
+      let submitSuccess = false
+      
+      for (const selector of submitSelectors) {
+        try {
+          await humanClickMaxStealth(page, selector)
+          submitSuccess = true
+          break
+        } catch (e) {
+          continue
+        }
+      }
+      
+      if (!submitSuccess) {
+        await page.keyboard.press('Enter')
+      }
+      
+      await humanWait(3000, 5000)
+      
+      return {
+        success: true,
+        bio: randomBio,
+        method: bioSet ? 'textarea_input' : 'javascript'
+      }
+    } else {
+      return {
+        success: false,
+        error: 'Could not find bio textarea'
+      }
+    }
+    
+  } catch (error) {
+    log('error', `❌ Bio setup failed: ${error.message}`)
+    return {
+      success: false,
+      error: error.message
+    }
+  }
+}
+
 // Enhanced birthday selection
 async function handleBirthdaySelection(page, profile) {
   log('info', '📅 Handling birthday selection...')
@@ -1679,12 +1983,35 @@ async function createMaxStealthInstagramAccount(accountData) {
     
     const isSuccessful = successIndicators.some(indicator => indicator)
     
+    // Initialize results for auto-follow and bio setup
+    let autoFollowResult = { success: false, followedCount: 0 }
+    let bioSetupResult = { success: false }
+    
     if (isSuccessful) {
-      log('success', '🎉 Account creation successful!')
+      log('success', '🎉 Account creation successful! Starting post-creation setup...')
+      
+      // Auto-follow Indian accounts (10-15 accounts)
+      try {
+        const targetFollowCount = 10 + Math.floor(Math.random() * 6) // 10-15 accounts
+        autoFollowResult = await autoFollowIndianAccounts(page, targetFollowCount)
+      } catch (followError) {
+        log('error', `❌ Auto-follow failed: ${followError.message}`)
+        autoFollowResult = { success: false, error: followError.message, followedCount: 0 }
+      }
+      
+      // Set up Indian bio
+      try {
+        bioSetupResult = await setInstagramBio(page)
+      } catch (bioError) {
+        log('error', `❌ Bio setup failed: ${bioError.message}`)
+        bioSetupResult = { success: false, error: bioError.message }
+      }
+      
+      log('success', '🎉 Complete Instagram account setup finished!')
       return {
         success: true,
         platform: "instagram",
-        message: "Account created successfully with maximum stealth",
+        message: "Account created successfully with maximum stealth, auto-follow, and bio setup",
         username: accountData.profile.usernames[0],
         email: accountData.email,
         emailVerified: true,
@@ -1697,6 +2024,8 @@ async function createMaxStealthInstagramAccount(accountData) {
         noProxy: true,
         deviceProfile: deviceProfile.screen.name,
         userAgent: deviceProfile.userAgent.substring(0, 50) + '...',
+        autoFollowResult: autoFollowResult,
+        bioSetupResult: bioSetupResult,
         accountData: {
           userId: `ig_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           profileUrl: `https://instagram.com/${accountData.profile.usernames[0]}`,
@@ -1833,6 +2162,11 @@ export async function POST(request) {
           passwordDialogHandled: creationResult.passwordDialogHandled || false,
           indianProfile: creationResult.indianProfile || false,
           deviceProfile: creationResult.deviceProfile || null,
+          autoFollowResult: creationResult.autoFollowResult || { success: false, followedCount: 0 },
+          bioSetupResult: creationResult.bioSetupResult || { success: false },
+          followedAccounts: creationResult.autoFollowResult?.followedCount || 0,
+          bioSet: creationResult.bioSetupResult?.success || false,
+          bio: creationResult.bioSetupResult?.bio || null,
           realAccount: true,
           browserAutomation: true,
           emailOnly: true,
@@ -1865,6 +2199,11 @@ export async function POST(request) {
           passwordDialogHandled: creationResult.passwordDialogHandled || false,
           indianProfile: creationResult.indianProfile || false,
           deviceProfile: creationResult.deviceProfile || null,
+          autoFollowResult: creationResult.autoFollowResult || { success: false, followedCount: 0 },
+          bioSetupResult: creationResult.bioSetupResult || { success: false },
+          followedAccounts: creationResult.autoFollowResult?.followedCount || 0,
+          bioSet: creationResult.bioSetupResult?.success || false,
+          bio: creationResult.bioSetupResult?.bio || null,
           realAccount: true,
           emailOnly: true,
           enhanced: true,

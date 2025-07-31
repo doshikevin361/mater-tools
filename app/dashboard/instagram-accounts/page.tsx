@@ -404,7 +404,7 @@ export default function InstagramAccountsPage() {
               <div>
                 <CardTitle className="text-2xl font-bold text-slate-800">Create Instagram Accounts</CardTitle>
                 <CardDescription className="text-slate-600 text-base mt-1">
-                  Generate authentic Instagram accounts with real profiles and advanced automation
+                  Generate authentic Instagram accounts with real Indian profiles, auto-follow 10-15 popular accounts, and set Indian bio
                 </CardDescription>
               </div>
             </div>
@@ -494,20 +494,20 @@ export default function InstagramAccountsPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-blue-100 rounded-lg">
-                    <Shield className="h-5 w-5 text-blue-600" />
+                    <Users className="h-5 w-5 text-blue-600" />
                   </div>
                   <div>
-                    <div className="font-medium text-slate-700">Advanced Security</div>
-                    <div className="text-sm text-slate-500">Anti-detection measures</div>
+                    <div className="font-medium text-slate-700">Auto-Follow Indians</div>
+                    <div className="text-sm text-slate-500">Follows 10-15 popular Indian accounts</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-purple-100 rounded-lg">
-                    <Activity className="h-5 w-5 text-purple-600" />
+                    <Star className="h-5 w-5 text-purple-600" />
                   </div>
                   <div>
-                    <div className="font-medium text-slate-700">High Success Rate</div>
-                    <div className="text-sm text-slate-500">95%+ account creation success</div>
+                    <div className="font-medium text-slate-700">Indian Bio Setup</div>
+                    <div className="text-sm text-slate-500">Authentic Indian bio templates</div>
                   </div>
                 </div>
               </div>
@@ -545,6 +545,8 @@ export default function InstagramAccountsPage() {
                     <TableHead className="text-slate-700 font-semibold">Password</TableHead>
                     <TableHead className="text-slate-700 font-semibold">Full Name</TableHead>
                     <TableHead className="text-slate-700 font-semibold">Status</TableHead>
+                    <TableHead className="text-slate-700 font-semibold">Follows</TableHead>
+                    <TableHead className="text-slate-700 font-semibold">Bio</TableHead>
                     <TableHead className="text-slate-700 font-semibold">Profile</TableHead>
                     <TableHead className="text-slate-700 font-semibold">Created</TableHead>
                   </TableRow>
@@ -552,14 +554,14 @@ export default function InstagramAccountsPage() {
                 <TableBody>
                   {loading ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center text-slate-500 py-16">
+                      <TableCell colSpan={10} className="text-center text-slate-500 py-16">
                         <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-pink-500" />
                         <p className="text-lg font-medium">Loading accounts...</p>
                       </TableCell>
                     </TableRow>
                   ) : accounts.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center text-slate-500 py-16">
+                      <TableCell colSpan={10} className="text-center text-slate-500 py-16">
                         <div className="flex flex-col items-center">
                           <div className="p-4 bg-pink-100 rounded-full mb-4">
                             <Instagram className="h-12 w-12 text-pink-400" />
@@ -663,6 +665,34 @@ export default function InstagramAccountsPage() {
                               <Badge className="bg-blue-50 text-blue-700 border-blue-200 font-medium">
                                 <CheckCircle className="h-3 w-3 mr-1" />
                                 Verified
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {account.followedAccounts ? (
+                              <Badge className="bg-green-50 text-green-700 border-green-200 font-medium">
+                                <Users className="h-3 w-3 mr-1" />
+                                {account.followedAccounts} follows
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="bg-gray-50 text-gray-500 border-gray-200">
+                                No follows
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {account.bioSet ? (
+                              <Badge className="bg-blue-50 text-blue-700 border-blue-200 font-medium">
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Bio set
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="bg-gray-50 text-gray-500 border-gray-200">
+                                No bio
                               </Badge>
                             )}
                           </div>
