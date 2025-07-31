@@ -260,7 +260,7 @@ export default function CallingPage() {
       callTimerRef.current = setInterval(() => {
         setCallDuration((prev) => {
           const newDuration = prev + 1
-          setCallCost(newDuration * 0.05) // $0.05 per minute
+          setCallCost(newDuration * 0.05) 
           return newDuration
         })
       }, 1000)
@@ -649,28 +649,28 @@ export default function CallingPage() {
                 </div>
 
                 <div className="flex space-x-2">
-                  {!isCallActive && callStatus !== "ending" ? (
-                    <Button
-                      onClick={makeCall}
-                      className="flex-1"
-                      size="lg"
-                      disabled={!isConnected || isInitializing || callStatus === "connecting" || callStatus === "ending"}
-                    >
-                      <PhoneCall className="mr-2 h-4 w-4" />
-                      {callStatus === "connecting" ? "Connecting..." : "Call Now"}
-                    </Button>
-                  ) : (
-                    <Button 
-                      onClick={endCall} 
-                      variant="destructive" 
-                      className="flex-1" 
-                      size="lg"
-                      disabled={callStatus === "ending"}
-                    >
-                      <PhoneOff className="mr-2 h-4 w-4" />
-                      {callStatus === "ending" ? "Ending..." : "End Call"}
-                    </Button>
-                  )}
+                 {(!isCallActive && callStatus === "idle") ? (
+  <Button
+    onClick={makeCall}
+    className="flex-1"
+    size="lg"
+    disabled={!isConnected || isInitializing || callStatus === "connecting" || callStatus === "ending"}
+  >
+    <PhoneCall className="mr-2 h-4 w-4" />
+    {callStatus === "connecting" ? "Connecting..." : "Call Now"}
+  </Button>
+) : (
+  <Button 
+    onClick={endCall} 
+    variant="destructive" 
+    className="flex-1" 
+    size="lg"
+    disabled={callStatus === "ending"}
+  >
+    <PhoneOff className="mr-2 h-4 w-4" />
+    {callStatus === "ending" ? "Ending..." : "End Call"}
+  </Button>
+)}
                 </div>
 
                 {!isConnected && (
