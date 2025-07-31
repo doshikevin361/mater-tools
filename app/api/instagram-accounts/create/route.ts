@@ -937,35 +937,70 @@ async function createTempEmail() {
   } catch (error) {
     log('warning', `⚠️ Guerrillamail failed: ${error.message}. Trying temp-mail.org fallback...`)
     
-    // Fallback to temp-mail.org
+    // Fallback to mail.tm
     try {
-      // Generate random mailbox name to ensure different mailboxes
-      const randomMailbox = Math.random().toString(36).substring(2, 10) + Date.now().toString(36)
+      // First get available domains
+      const domainsResponse = await axios.get('https://api.mail.tm/domains', {
+        timeout: 15000,
+        headers: {
+          "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
+          "Accept": "application/json"
+        }
+      })
       
-      const tempMailResponse = await axios.get(`https://www.1secmail.com/api/v1/?action=genRandomMailbox&count=1`, {
+      if (!domainsResponse.data || !domainsResponse.data['hydra:member'] || domainsResponse.data['hydra:member'].length === 0) {
+        throw new Error("No domains available from mail.tm")
+      }
+      
+      // Select a random domain
+      const domains = domainsResponse.data['hydra:member']
+      const selectedDomain = domains[Math.floor(Math.random() * domains.length)]
+      
+      // Generate random username to ensure different mailboxes
+      const randomUsername = Math.random().toString(36).substring(2, 10) + Date.now().toString(36).substring(0, 5)
+      const email = `${randomUsername}@${selectedDomain.domain}`
+      const password = Math.random().toString(36).substring(2, 15)
+      
+      // Create account
+      const accountResponse = await axios.post('https://api.mail.tm/accounts', {
+        address: email,
+        password: password
+      }, {
         timeout: 15000,
         headers: {
           "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
           "Accept": "application/json",
-          "Accept-Language": "en-US,en;q=0.9"
+          "Content-Type": "application/json"
         }
       })
       
-      if (tempMailResponse.data && tempMailResponse.data.length > 0) {
-        const email = tempMailResponse.data[0]
+      if (accountResponse.data && accountResponse.data.address) {
+        // Get authentication token
+        const tokenResponse = await axios.post('https://api.mail.tm/token', {
+          address: email,
+          password: password
+        }, {
+          timeout: 15000,
+          headers: {
+            "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+          }
+        })
         
-        log('success', `✅ Created email with temp-mail fallback: ${email}`)
+        log('success', `✅ Created email with mail.tm fallback: ${email}`)
         return {
           success: true,
           email: email,
-          sessionId: null,
-          provider: "tempmail"
+          sessionId: tokenResponse.data?.token || null,
+          provider: "mailtml",
+          password: password
         }
       } else {
-        throw new Error("Failed to get email address from temp-mail")
+        throw new Error("Failed to create account on mail.tm")
       }
     } catch (tempMailError) {
-      log('error', `❌ Both email services failed. Guerrillamail: ${error.message}, Temp-mail: ${tempMailError.message}`)
+      log('error', `❌ Both email services failed. Guerrillamail: ${error.message}, Mail.tm: ${tempMailError.message}`)
       throw new Error("Email creation failed - both services unavailable")
     }
   }
@@ -1299,46 +1334,52 @@ async function simulatePreBrowsing(page) {
   }
 }
 
-// Temp-mail.org OTP checking function
-async function checkTempMailForOTP(email, maxWaitMinutes = 3) {
+// Mail.tm OTP checking function
+async function checkTempMailForOTP(email, maxWaitMinutes = 3, token = null) {
   const startTime = Date.now()
   const maxWaitTime = maxWaitMinutes * 60 * 1000
-  const [username, domain] = email.split('@')
   
-  log('info', `📧 Checking temp-mail for OTP: ${email}`)
+  log('info', `📧 Checking mail.tm for OTP: ${email}`)
+  
+  if (!token) {
+    log('error', '❌ No authentication token provided for mail.tm')
+    return { success: false }
+  }
   
   let checkCount = 0
   const maxChecks = Math.floor(maxWaitTime / 10000)
   
   while (Date.now() - startTime < maxWaitTime && checkCount < maxChecks) {
     checkCount++
-    log('info', `📧 Temp-mail OTP Check ${checkCount}/${maxChecks}...`)
+    log('info', `📧 Mail.tm OTP Check ${checkCount}/${maxChecks}...`)
     
     try {
-      // Get messages from temp-mail API
-      const messagesResponse = await axios.get(`https://www.1secmail.com/api/v1/?action=getMessages&login=${username}&domain=${domain}`, {
+      // Get messages from mail.tm API
+      const messagesResponse = await axios.get('https://api.mail.tm/messages', {
         timeout: 10000,
         headers: {
           "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
-          "Accept": "application/json"
+          "Accept": "application/json",
+          "Authorization": `Bearer ${token}`
         }
       })
       
-      if (messagesResponse.data && messagesResponse.data.length > 0) {
+      if (messagesResponse.data && messagesResponse.data['hydra:member'] && messagesResponse.data['hydra:member'].length > 0) {
         // Check each message for Instagram OTP
-        for (const message of messagesResponse.data) {
+        for (const message of messagesResponse.data['hydra:member']) {
           try {
             // Get full message content
-            const messageResponse = await axios.get(`https://www.1secmail.com/api/v1/?action=readMessage&login=${username}&domain=${domain}&id=${message.id}`, {
+            const messageResponse = await axios.get(`https://api.mail.tm/messages/${message.id}`, {
               timeout: 10000,
               headers: {
                 "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
-                "Accept": "application/json"
+                "Accept": "application/json",
+                "Authorization": `Bearer ${token}`
               }
             })
             
             if (messageResponse.data) {
-              const messageContent = messageResponse.data.textBody || messageResponse.data.htmlBody || ''
+              const messageContent = messageResponse.data.text || messageResponse.data.html || ''
               const messageSubject = messageResponse.data.subject || ''
               const fullContent = messageSubject + ' ' + messageContent
               
@@ -1355,11 +1396,11 @@ async function checkTempMailForOTP(email, maxWaitMinutes = 3) {
                 if (match) {
                   const codeMatch = match[0].match(/\d{6}/)
                   if (codeMatch) {
-                    log('success', `✅ Found OTP in temp-mail: ${codeMatch[0]}`)
+                    log('success', `✅ Found OTP in mail.tm: ${codeMatch[0]}`)
                     return {
                       success: true,
                       code: codeMatch[0],
-                      method: 'tempmail_api'
+                      method: 'mailtml_api'
                     }
                   }
                 }
@@ -1369,17 +1410,17 @@ async function checkTempMailForOTP(email, maxWaitMinutes = 3) {
               if (fullContent.toLowerCase().includes('instagram')) {
                 const codes = fullContent.match(/\b\d{6}\b/g)
                 if (codes && codes.length > 0) {
-                  log('success', `✅ Found OTP in temp-mail (fallback): ${codes[0]}`)
+                  log('success', `✅ Found OTP in mail.tm (fallback): ${codes[0]}`)
                   return {
                     success: true,
                     code: codes[0],
-                    method: 'tempmail_fallback'
+                    method: 'mailtml_fallback'
                   }
                 }
               }
             }
           } catch (messageError) {
-            log('warning', `⚠️ Error reading temp-mail message: ${messageError.message}`)
+            log('warning', `⚠️ Error reading mail.tm message: ${messageError.message}`)
           }
         }
       }
@@ -1387,26 +1428,26 @@ async function checkTempMailForOTP(email, maxWaitMinutes = 3) {
       await new Promise(resolve => setTimeout(resolve, 8000 + Math.random() * 4000))
       
     } catch (error) {
-      log('warning', `⚠️ Temp-mail check error: ${error.message}`)
+      log('warning', `⚠️ Mail.tm check error: ${error.message}`)
       await new Promise(resolve => setTimeout(resolve, 5000))
     }
   }
   
-  log('warning', `⚠️ No OTP found in temp-mail after ${maxWaitMinutes} minutes`)
+  log('warning', `⚠️ No OTP found in mail.tm after ${maxWaitMinutes} minutes`)
   return { success: false }
 }
 
-// Enhanced email OTP checking with temp-mail.org support
-async function checkEmailForInstagramOTP(email, maxWaitMinutes = 3, browser, provider = "guerrillamail") {
+// Enhanced email OTP checking with mail.tm support
+async function checkEmailForInstagramOTP(email, maxWaitMinutes = 3, browser, provider = "guerrillamail", token = null) {
   const startTime = Date.now()
   const maxWaitTime = maxWaitMinutes * 60 * 1000
   const [username, domain] = email.split('@')
   
   log('info', `📧 Starting OTP check for: ${email} (provider: ${provider})`)
   
-  // Handle temp-mail.org emails differently
-  if (provider === "tempmail" || domain.includes("1secmail")) {
-    return await checkTempMailForOTP(email, maxWaitMinutes)
+  // Handle mail.tm emails differently
+  if (provider === "mailtml" || provider === "tempmail") {
+    return await checkTempMailForOTP(email, maxWaitMinutes, token)
   }
   
   let guerrillamailPage = null
@@ -2078,7 +2119,7 @@ async function createMaxStealthInstagramAccount(accountData) {
       if (emailConfirmationFound && emailFieldSelector) {
         log('info', '📧 Email verification required - checking for OTP...')
         
-        const emailResult = await checkEmailForInstagramOTP(accountData.email, 3, browser, accountData.emailProvider)
+        const emailResult = await checkEmailForInstagramOTP(accountData.email, 3, browser, accountData.emailProvider, accountData.sessionId)
         
         if (emailResult.success) {
           try {
@@ -2270,6 +2311,7 @@ export async function POST(request) {
           profile: profile,
           platform: platform,
           emailProvider: emailResult.provider,
+          sessionId: emailResult.sessionId,
         }
 
         const creationResult = await createMaxStealthInstagramAccount(accountData)
