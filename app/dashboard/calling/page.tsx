@@ -241,16 +241,7 @@ export default function CallingPage() {
   const [isConnected, setIsConnected] = useState(false)
   const [isInitializing, setIsInitializing] = useState(false)
   const [callStatus, setCallStatus] = useState("idle")
-  const [debugEvents, setDebugEvents] = useState<string[]>([])
   const callTimerRef = useRef<NodeJS.Timeout>()
-
-  // Debug event logger
-  const logDebugEvent = (event: string) => {
-    const timestamp = new Date().toLocaleTimeString()
-    const logEntry = `${timestamp}: ${event}`
-    console.log(logEntry)
-    setDebugEvents(prev => [...prev.slice(-10), logEntry]) // Keep last 10 events
-  }
 
   // Initialize Twilio Voice SDK
   useEffect(() => {
@@ -263,7 +254,7 @@ export default function CallingPage() {
     fetchCallHistory()
   }, [])
 
-  // Call timer and status monitor effect
+  // Call timer effect
   useEffect(() => {
     if (isCallActive) {
       callTimerRef.current = setInterval(() => {
@@ -272,18 +263,6 @@ export default function CallingPage() {
           setCallCost(newDuration * 0.05) // $0.05 per minute
           return newDuration
         })
-
-        // Check call status every second while active
-        const currentStatus = twilioVoiceBrowser.getCallStatus()
-        if (currentStatus === "open" && callStatus !== "connected") {
-          logDebugEvent(`Status auto-updated to connected from ${callStatus}`)
-          setCallStatus("connected")
-          toast.success("Call connected!")
-        } else if (currentStatus === "closed" || currentStatus === "idle") {
-          logDebugEvent(`Call ended - status: ${currentStatus}`)
-          setIsCallActive(false)
-          setCallStatus("idle")
-        }
       }, 1000)
     } else {
       if (callTimerRef.current) {
@@ -296,7 +275,7 @@ export default function CallingPage() {
         clearInterval(callTimerRef.current)
       }
     }
-  }, [isCallActive, callStatus])
+  }, [isCallActive])
 
   const initializeTwilioVoice = async () => {
     try {
@@ -309,41 +288,49 @@ export default function CallingPage() {
       const device = twilioVoiceBrowser.getDevice()
       if (device) {
         device.on("connect", (call: any) => {
-          logDebugEvent("Device connect event fired")
+          console.log("Device connect event fired:", call)
           setIsCallActive(true)
-          setCallStatus("connecting")
+          setCallStatus("ringing")
           setCallDuration(0)
+          toast.info("Call initiated - waiting for answer...")
           
-          // Force check call status after a delay to see actual state
-          setTimeout(() => {
-            const status = twilioVoiceBrowser.getCallStatus()
-            logDebugEvent(`Call status after connect: ${status}`)
-            if (status === "open") {
+          // Set up call-specific listeners
+          if (call) {
+            call.on("accept", () => {
+              console.log("Call answered by remote party")
               setCallStatus("connected")
               toast.success("Call connected!")
-            } else if (status === "ringing" || status === "connecting") {
+            })
+            
+            call.on("ringing", () => {
+              console.log("Call is ringing")
               setCallStatus("ringing")
               toast.info("Phone is ringing...")
-            }
-          }, 1000)
-
-          // Another check after more time
-          setTimeout(() => {
-            const status = twilioVoiceBrowser.getCallStatus()
-            logDebugEvent(`Call status check 2: ${status}`)
-            if (status === "open") {
-              setCallStatus("connected")
-              toast.success("Call connected!")
-            }
-          }, 3000)
+            })
+            
+            call.on("cancel", () => {
+              console.log("Call was cancelled")
+              setIsCallActive(false)
+              setCallStatus("idle")
+              setIsMuted(false)
+              toast.info("Call cancelled")
+            })
+            
+            call.on("reject", () => {
+              console.log("Call was rejected")
+              setIsCallActive(false)
+              setCallStatus("idle")
+              setIsMuted(false)
+              toast.error("Call rejected")
+            })
+          }
         })
 
         device.on("disconnect", (call: any) => {
-          logDebugEvent("Device disconnect event fired")
+          console.log("Device disconnect event fired:", call)
           setIsCallActive(false)
           setCallStatus("idle")
           setIsMuted(false)
-          setIsRecording(false)
           toast.info("Call ended")
 
           // Add to call history
@@ -366,16 +353,15 @@ export default function CallingPage() {
         })
 
         device.on("error", (error: any) => {
-          logDebugEvent(`Call error: ${error.message}`)
+          console.error("Call error:", error)
           setIsCallActive(false)
           setCallStatus("idle")
           toast.error(`Call error: ${error.message}`)
         })
 
         device.on("incoming", (call: any) => {
-          logDebugEvent(`Incoming call from ${call.parameters.From}`)
-          setCallStatus("incoming")
           toast.info(`Incoming call from ${call.parameters.From}`)
+          setCallStatus("incoming")
         })
       }
     } catch (error) {
@@ -446,12 +432,11 @@ export default function CallingPage() {
     }
 
     try {
-      logDebugEvent(`Starting call to ${phoneNumber}`)
       setCallStatus("connecting")
       toast.info("Connecting call...")
 
       // Make API call to log the call attempt
-      const apiResponse = await fetch("/api/calling/make-call", {
+      await fetch("/api/calling/make-call", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -461,20 +446,12 @@ export default function CallingPage() {
         }),
       })
 
-      if (!apiResponse.ok) {
-        throw new Error(`API call failed: ${apiResponse.status}`)
-      }
-
-      logDebugEvent("API call logged successfully")
-
       // Make the actual browser call
-      logDebugEvent("Initiating Twilio call")
       await twilioVoiceBrowser.makeCall(phoneNumber)
-      logDebugEvent("Twilio call initiated")
 
       // The actual connection will be handled by the device event listeners
     } catch (error) {
-      logDebugEvent(`Call error: ${error instanceof Error ? error.message : String(error)}`)
+      console.error("Error making call:", error)
       setCallStatus("idle")
       toast.error("Failed to make call. Please check your microphone permissions and try again.")
     }
@@ -672,7 +649,17 @@ export default function CallingPage() {
                 </div>
 
                 <div className="flex space-x-2">
-                  {isCallActive ? (
+                  {!isCallActive && callStatus !== "ending" ? (
+                    <Button
+                      onClick={makeCall}
+                      className="flex-1"
+                      size="lg"
+                      disabled={!isConnected || isInitializing || callStatus === "connecting" || callStatus === "ending"}
+                    >
+                      <PhoneCall className="mr-2 h-4 w-4" />
+                      {callStatus === "connecting" ? "Connecting..." : "Call Now"}
+                    </Button>
+                  ) : (
                     <Button 
                       onClick={endCall} 
                       variant="destructive" 
@@ -682,16 +669,6 @@ export default function CallingPage() {
                     >
                       <PhoneOff className="mr-2 h-4 w-4" />
                       {callStatus === "ending" ? "Ending..." : "End Call"}
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={makeCall}
-                      className="flex-1"
-                      size="lg"
-                      disabled={!isConnected || isInitializing || callStatus === "connecting" || callStatus === "ending"}
-                    >
-                      <PhoneCall className="mr-2 h-4 w-4" />
-                      {callStatus === "connecting" ? "Connecting..." : "Call Now"}
                     </Button>
                   )}
                 </div>
@@ -957,46 +934,14 @@ export default function CallingPage() {
 
               <div className="space-y-2">
                 <Label>Debug Information</Label>
-                <div className="text-xs text-muted-foreground space-y-1 bg-gray-50 p-3 rounded max-h-32 overflow-y-auto">
-                  <p><strong>Current State:</strong></p>
-                  <p>Call Status: <strong>{callStatus}</strong></p>
-                  <p>Is Call Active: <strong>{isCallActive ? "Yes" : "No"}</strong></p>
+                <div className="text-xs text-muted-foreground space-y-1 bg-gray-50 p-3 rounded">
+                  <p>Call Status: {callStatus}</p>
+                  <p>Is Call Active: {isCallActive ? "Yes" : "No"}</p>
                   <p>Is Muted: {isMuted ? "Yes" : "No"}</p>
                   <p>Is Recording: {isRecording ? "Yes" : "No"}</p>
                   <p>Call Duration: {formatDuration(callDuration)}</p>
                   <p>SDK Connected: {isConnected ? "Yes" : "No"}</p>
                   <p>Initializing: {isInitializing ? "Yes" : "No"}</p>
-                                     <p>Twilio Status: <strong>{twilioVoiceBrowser.getCallStatus()}</strong></p>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    onClick={() => {
-                      const status = twilioVoiceBrowser.getCallStatus()
-                      const isActive = twilioVoiceBrowser.isCallActive()
-                      logDebugEvent(`Manual check - Status: ${status}, Active: ${isActive}`)
-                      if (status === "open" && !isCallActive) {
-                        setIsCallActive(true)
-                        setCallStatus("connected")
-                        toast.success("Manual sync: Call is connected!")
-                      }
-                    }}
-                    className="mt-2"
-                  >
-                    Check Call Status
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Recent Events</Label>
-                <div className="text-xs text-muted-foreground bg-gray-50 p-3 rounded max-h-40 overflow-y-auto">
-                  {debugEvents.length === 0 ? (
-                    <p>No events yet...</p>
-                  ) : (
-                    debugEvents.map((event, index) => (
-                      <p key={index} className="mb-1">{event}</p>
-                    ))
-                  )}
                 </div>
               </div>
             </CardContent>
