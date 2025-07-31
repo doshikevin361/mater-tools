@@ -298,14 +298,101 @@ function generateAudioNoise() {
   }
 }
 
+// Get free Indian proxy for enhanced anonymity
+async function getFreeIndianProxy() {
+  try {
+    log('info', '🌐 Fetching free Indian proxy...')
+    
+    // Try GetProxyList API first (supports Indian proxies)
+    const proxyResponse = await axios.get('https://api.getproxylist.com/proxy?country[]=IN&protocol[]=http&protocol[]=https&anonymity[]=anonymous&anonymity[]=high%20anonymity&maxConnectTime=3&minUptime=70', {
+      timeout: 10000,
+      headers: {
+        "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
+        "Accept": "application/json"
+      }
+    })
+    
+    if (proxyResponse.data && proxyResponse.data.ip && proxyResponse.data.port) {
+      log('success', `✅ Got Indian proxy: ${proxyResponse.data.ip}:${proxyResponse.data.port} (${proxyResponse.data.country})`)
+      return {
+        ip: proxyResponse.data.ip,
+        port: proxyResponse.data.port,
+        protocol: proxyResponse.data.protocol || 'http',
+        country: proxyResponse.data.country,
+        uptime: proxyResponse.data.uptime
+      }
+    }
+  } catch (error) {
+    log('warning', `⚠️ GetProxyList failed: ${error.message}`)
+  }
+  
+  try {
+    // Fallback to ProxyKingdom (general proxy)
+    const proxyResponse = await axios.get('https://api.proxykingdom.com/proxy?token=free', {
+      timeout: 10000,
+      headers: {
+        "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
+        "Accept": "application/json"
+      }
+    })
+    
+    if (proxyResponse.data && proxyResponse.data.address && proxyResponse.data.port) {
+      log('success', `✅ Got fallback proxy: ${proxyResponse.data.address}:${proxyResponse.data.port}`)
+      return {
+        ip: proxyResponse.data.address,
+        port: proxyResponse.data.port,
+        protocol: proxyResponse.data.protocol?.toLowerCase() || 'http',
+        country: proxyResponse.data.location?.country || 'Unknown',
+        uptime: proxyResponse.data.uptime || 0
+      }
+    }
+  } catch (error) {
+    log('warning', `⚠️ ProxyKingdom failed: ${error.message}`)
+  }
+  
+  // Try free proxy list as final fallback
+  try {
+    const freeProxyResponse = await axios.get('https://www.proxy-list.download/api/v1/get?type=http&anon=elite&country=IN', {
+      timeout: 10000,
+      headers: {
+        "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)]
+      }
+    })
+    
+    if (freeProxyResponse.data) {
+      const proxies = freeProxyResponse.data.split('\n').filter(p => p.trim())
+      if (proxies.length > 0) {
+        const randomProxy = proxies[Math.floor(Math.random() * proxies.length)]
+        const [ip, port] = randomProxy.split(':')
+        if (ip && port) {
+          log('success', `✅ Got free Indian proxy: ${ip}:${port}`)
+          return {
+            ip: ip.trim(),
+            port: parseInt(port.trim()),
+            protocol: 'http',
+            country: 'IN',
+            uptime: 50
+          }
+        }
+      }
+    }
+  } catch (error) {
+    log('warning', `⚠️ Free proxy list failed: ${error.message}`)
+  }
+  
+  // Return null if no proxy found
+  log('warning', '⚠️ No free Indian proxy available, proceeding without proxy')
+  return null
+}
+
 async function createMaximumStealthBrowser() {
-  log('info', '🎭 Creating MAXIMUM stealth browser (No Proxy Strategy)...')
+  log('info', '🎭 Creating MAXIMUM stealth browser with Indian proxy...')
   
   const deviceProfile = generateDeviceProfile()
+  const proxy = await getFreeIndianProxy()
   
-  const browser = await puppeteer.launch({
-    headless: STEALTH_CONFIG.headlessMode,
-    args: [
+  // Enhanced browser args with proxy support
+  const stealthArgs = [
       // Core flags
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -369,8 +456,15 @@ async function createMaximumStealthBrowser() {
       '--disable-blink-features=AutomationControlled',
       '--exclude-switches=enable-automation',
       '--disable-extensions-http-throttling',
-      '--disable-useragent-freeze'
-    ],
+      '--disable-useragent-freeze',
+      
+      // Add proxy if available
+      ...(proxy && proxy.protocol === 'http' ? [`--proxy-server=${proxy.ip}:${proxy.port}`] : [])
+    ]
+  
+  const browser = await puppeteer.launch({
+    headless: STEALTH_CONFIG.headlessMode,
+    args: stealthArgs,
     ignoreDefaultArgs: [
       '--enable-automation',
       '--enable-blink-features=IdleDetection'
@@ -379,6 +473,13 @@ async function createMaximumStealthBrowser() {
     ignoreHTTPSErrors: true,
     devtools: false,
   })
+  
+  // Log proxy usage
+  if (proxy) {
+    log('success', `🌐 Browser launched with Indian proxy: ${proxy.ip}:${proxy.port} (${proxy.country})`)
+  } else {
+    log('info', '🌐 Browser launched without proxy (direct connection)')
+  }
 
   const pages = await browser.pages()
   const page = pages[0] || await browser.newPage()
