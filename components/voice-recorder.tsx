@@ -356,8 +356,16 @@ export function VoiceRecorder({ onRecordingComplete, maxDuration = 300, classNam
         <CardTitle className="flex items-center space-x-2">
           <Volume2 className="h-5 w-5 text-purple-600" />
           <span>Voice Recording</span>
+          {!navigator.mediaDevices && (
+            <Badge variant="destructive" className="ml-2 text-xs">
+              Not Supported
+            </Badge>
+          )}
         </CardTitle>
-        <CardDescription>Record your voice message or upload an audio file</CardDescription>
+        <CardDescription>
+          Record your voice message or upload an audio file
+          {!navigator.mediaDevices && " (Recording not supported in this browser)"}
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 p-6">
         {/* Recording Controls */}
