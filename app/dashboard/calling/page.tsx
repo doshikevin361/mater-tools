@@ -921,29 +921,6 @@ export default function CallingPage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>Environment Variables Required</Label>
-                <div className="text-xs text-muted-foreground space-y-1 bg-gray-50 p-3 rounded">
-                  <p>TWILIO_ACCOUNT_SID=your_account_sid</p>
-                  <p>TWILIO_API_KEY=your_api_key</p>
-                  <p>TWILIO_API_SECRET=your_api_secret</p>
-                  <p>TWILIO_TWIML_APP_SID=your_twiml_app_sid</p>
-                  <p>TWILIO_PHONE_NUMBER=your_twilio_number</p>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Debug Information</Label>
-                <div className="text-xs text-muted-foreground space-y-1 bg-gray-50 p-3 rounded">
-                  <p>Call Status: {callStatus}</p>
-                  <p>Is Call Active: {isCallActive ? "Yes" : "No"}</p>
-                  <p>Is Muted: {isMuted ? "Yes" : "No"}</p>
-                  <p>Is Recording: {isRecording ? "Yes" : "No"}</p>
-                  <p>Call Duration: {formatDuration(callDuration)}</p>
-                  <p>SDK Connected: {isConnected ? "Yes" : "No"}</p>
-                  <p>Initializing: {isInitializing ? "Yes" : "No"}</p>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </TabsContent>

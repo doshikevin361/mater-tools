@@ -12,18 +12,8 @@ export async function POST(request: NextRequest) {
     const duration = formData.get("CallDuration") as string
     const answeredBy = formData.get("AnsweredBy") as string
 
-    console.log("Voice webhook received:", {
-      callSid,
-      callStatus,
-      to,
-      from,
-      duration,
-      answeredBy,
-    })
 
     const db = await getDatabase()
-
-    // Update message logs with call status
     await db.collection("message_logs").updateOne(
       { messageId: callSid },
       {

@@ -36,7 +36,6 @@ class TwilioService {
       // Create TwiML for text-to-speech
       const twiml = this.createTwiML(message, voiceOptions)
 
-      console.log(`Making voice call to ${cleanNumber} with message: ${message.substring(0, 50)}...`)
 
       const call = await this.client.calls.create({
         to: cleanNumber,
@@ -74,7 +73,6 @@ class TwilioService {
     let successful = 0
     let failed = 0
 
-    console.log(`Starting bulk voice calls to ${contacts.length} contacts`)
 
     for (const contact of contacts) {
       try {
@@ -92,7 +90,6 @@ class TwilioService {
         })
 
         successful++
-        console.log(`✅ Call initiated to ${contact.phone} (${contact.name || "Unknown"})`)
       } catch (error) {
         results.push({
           contact: contact,

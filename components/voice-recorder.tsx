@@ -39,7 +39,6 @@ export function VoiceRecorder({ onRecordingComplete, maxDuration = 300, classNam
         throw new Error("Media recording not supported in this browser")
       }
 
-      console.log("Requesting microphone access...")
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
@@ -48,9 +47,6 @@ export function VoiceRecorder({ onRecordingComplete, maxDuration = 300, classNam
         },
       })
 
-      console.log("Microphone access granted, initializing recorder...")
-      
-      // Check if MediaRecorder is supported
       if (!window.MediaRecorder) {
         throw new Error("MediaRecorder not supported in this browser")
       }
@@ -67,7 +63,6 @@ export function VoiceRecorder({ onRecordingComplete, maxDuration = 300, classNam
         }
       }
 
-      console.log("Using mime type:", mimeType)
 
       const mediaRecorder = new MediaRecorder(stream, { mimeType })
 
@@ -77,29 +72,19 @@ export function VoiceRecorder({ onRecordingComplete, maxDuration = 300, classNam
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
           chunksRef.current.push(event.data)
-          console.log("Audio data chunk received:", event.data.size, "bytes")
         }
       }
 
       mediaRecorder.onstop = async () => {
-        console.log("Recording stopped, processing audio...")
         const blob = new Blob(chunksRef.current, { type: mimeType })
         const localUrl = URL.createObjectURL(blob)
         setAudioBlob(blob)
         setLocalAudioUrl(localUrl)
 
-        console.log("Audio blob created:", {
-          size: blob.size,
-          type: blob.type
-        })
-
-        // Upload to server immediately after recording
         const extension = mimeType.includes("webm") ? "webm" : mimeType.includes("mp4") ? "mp4" : "wav"
         await uploadAudioToServer(blob, `recording-${Date.now()}.${extension}`)
 
-        // Stop all tracks
         stream.getTracks().forEach((track) => track.stop())
-        console.log("All media tracks stopped")
       }
 
       mediaRecorder.onerror = (event) => {
@@ -138,11 +123,6 @@ export function VoiceRecorder({ onRecordingComplete, maxDuration = 300, classNam
       const formData = new FormData()
       formData.append("audio", blob, filename)
 
-      console.log("Uploading audio:", {
-        filename,
-        size: blob.size,
-        type: blob.type,
-      })
 
       // Simulate upload progress
       const progressInterval = setInterval(() => {
@@ -163,13 +143,11 @@ export function VoiceRecorder({ onRecordingComplete, maxDuration = 300, classNam
 
       const result = await response.json()
 
-      console.log("Upload response:", result)
 
       if (result.success && result.audioUrl) {
         setServerAudioUrl(result.audioUrl)
         onRecordingComplete(blob, result.audioUrl)
         toast.success("Audio uploaded successfully!")
-        console.log("Audio uploaded to server:", result.audioUrl)
       } else {
         throw new Error(result.message || "Upload failed - no audio URL returned")
       }
@@ -259,12 +237,6 @@ export function VoiceRecorder({ onRecordingComplete, maxDuration = 300, classNam
 
   // Upload audio file
   const uploadAudioFile = async (file: File) => {
-    console.log("File selected:", {
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      lastModified: file.lastModified,
-    })
 
     // Validate file type
     const allowedTypes = [
@@ -309,7 +281,6 @@ export function VoiceRecorder({ onRecordingComplete, maxDuration = 300, classNam
   const handleFileInput = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
-      console.log("File input changed:", file)
       uploadAudioFile(file)
     }
     // Reset input value to allow selecting the same file again

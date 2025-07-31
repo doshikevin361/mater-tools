@@ -35,16 +35,10 @@ class VoiceService {
   ) {
     try {
       const cleanNumber = this.formatPhoneNumber(toNumber)
-
-      console.log(`Making voice call with audio to ${cleanNumber}`)
-      console.log(`Audio URL: ${audioUrl}`)
-
-      // Validate audio URL
       if (!audioUrl || audioUrl.startsWith("blob:")) {
         throw new Error("Invalid audio URL provided")
       }
 
-      // Test if audio URL is accessible
       try {
         new URL(audioUrl)
       } catch (urlError) {
@@ -59,7 +53,6 @@ class VoiceService {
   <Say voice="alice" language="en-US">Thank you for listening. Have a great day!</Say>
 </Response>`
 
-      console.log(`Generated TwiML for audio call:`, twiml)
 
       const call = await this.client.calls.create({
         to: cleanNumber,
@@ -75,7 +68,6 @@ class VoiceService {
         machineDetectionTimeout: 5,
       })
 
-      console.log(`Call initiated: ${call.sid} with audio: ${audioUrl}`)
 
       return {
         success: true,
@@ -107,10 +99,6 @@ class VoiceService {
     try {
       const cleanNumber = this.formatPhoneNumber(toNumber)
 
-      console.log(`Making TTS voice call to ${cleanNumber}`)
-      console.log(`Message: ${message}`)
-
-      // Create TwiML directly with the message
       const voice = voiceOptions?.voice || "alice"
       const language = voiceOptions?.language || "en-US"
 
@@ -121,7 +109,6 @@ class VoiceService {
   <Say voice="${voice}" language="${language}">Thank you for listening. Have a great day!</Say>
 </Response>`
 
-      console.log(`Generated TwiML for TTS call:`, twiml)
 
       const call = await this.client.calls.create({
         to: cleanNumber,
@@ -136,7 +123,6 @@ class VoiceService {
         machineDetectionTimeout: 5,
       })
 
-      console.log(`TTS call initiated: ${call.sid}`)
 
       return {
         success: true,
@@ -269,7 +255,6 @@ class VoiceService {
     let successful = 0
     let failed = 0
 
-    console.log(`Starting bulk voice calls to ${contacts.length} contacts`)
 
     for (const contact of contacts) {
       try {
@@ -305,7 +290,6 @@ class VoiceService {
         })
 
         successful++
-        console.log(`✅ Call initiated to ${contact.phone} (${contact.name || "Unknown"})`)
       } catch (error) {
         results.push({
           contact: contact,

@@ -3,24 +3,15 @@ import { put } from "@vercel/blob"
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("Audio upload request received")
 
     const formData = await request.formData()
     const audioFile = formData.get("audio") as File
-
     if (!audioFile) {
-      console.log("No audio file provided in request")
       return NextResponse.json({ success: false, message: "No audio file provided" }, { status: 400 })
     }
 
-    console.log("Audio file details:", {
-      name: audioFile.name,
-      size: audioFile.size,
-      type: audioFile.type,
-      lastModified: audioFile.lastModified,
-    })
+   
 
-    // Enhanced file type validation for MP3 and other audio formats
     const allowedTypes = [
       "audio/mpeg",
       "audio/mp3",
@@ -46,14 +37,8 @@ export async function POST(request: NextRequest) {
 
     const isValidType = allowedTypes.includes(audioFile.type) || allowedExtensions.includes(fileExtension || "")
 
-    console.log("File validation:", {
-      type: audioFile.type,
-      extension: fileExtension,
-      isValidType,
-    })
 
     if (!isValidType) {
-      console.log("Invalid file type detected")
       return NextResponse.json(
         {
           success: false,
@@ -71,7 +56,6 @@ export async function POST(request: NextRequest) {
 
     const maxSize = 25 * 1024 * 1024 // 25MB
     if (audioFile.size > maxSize) {
-      console.log("File too large:", audioFile.size)
       return NextResponse.json({ success: false, message: "File too large. Maximum size is 25MB." }, { status: 400 })
     }
 
@@ -81,16 +65,13 @@ export async function POST(request: NextRequest) {
     const originalExtension = fileExtension || "mp3"
     const filename = `voice-${timestamp}-${randomId}.${originalExtension}`
 
-    console.log("Uploading to Vercel Blob:", { filename })
 
-    // Upload to Vercel Blob storage with your specific token
     const blob = await put(filename, audioFile, {
       access: "public",
       addRandomSuffix: false,
       token: "vercel_blob_rw_oUJ4yaaoVoPU9wQE_LtVQCp1WnkzLYQ2Y5AW6smjXLMg9li",
     })
 
-    console.log("File uploaded to Vercel Blob successfully:", blob)
 
     return NextResponse.json({
       success: true,

@@ -8,14 +8,6 @@ try {
   const body = await request.json()
   const { recipients, message, audioUrl, campaignName, userId, voiceOptions, campaignType = "tts" } = body
 
-  console.log("Voice send request:", {
-    recipientsCount: Array.isArray(recipients) ? recipients.length : 1,
-    messageLength: message?.length,
-    audioUrl,
-    campaignType,
-    userId,
-    voiceOptions,
-  })
 
   const actualUserId = userId
 
@@ -37,11 +29,9 @@ try {
 
   const user = await db.collection("users").findOne({ _id: actualUserId })
   if (!user) {
-    console.log("User not found with ID:", actualUserId)
     return NextResponse.json({ success: false, message: "User not found" }, { status: 404 })
   }
 
-  console.log("Found user:", user.firstName, user.lastName, "Balance:", user.balance)
 
   let contactList = []
 
@@ -81,7 +71,6 @@ try {
     }
   }
 
-  console.log(`Final contact list: ${contactList.length} contacts with valid phone numbers`)
 
   if (contactList.length === 0) {
     return NextResponse.json(
@@ -131,9 +120,7 @@ try {
       .collection("campaigns")
       .updateOne({ _id: campaignId }, { $set: { status: "Sending", startedAt: new Date() } })
 
-    console.log("Starting voice calls...")
 
-    // Prepare contacts for voice service
     const voiceContacts = contactList.map((contact) => ({
       phone: contact.phone || contact.mobile,
       name: contact.name,
@@ -142,28 +129,22 @@ try {
       audioUrl: campaignType === "audio" ? audioUrl : undefined,
     }))
 
-    console.log("Voice contacts prepared:", voiceContacts.length)
-    console.log("Audio URL being used:", audioUrl)
-
     const enhancedVoiceOptions = {
       ...voiceOptions,
       statusCallback: `${process.env.NEXT_PUBLIC_BASE_URL || process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000"}/api/voice/webhook`,
       record: voiceOptions?.record || false,
     }
 
-    // Send bulk voice calls
     const voiceResult = await voiceService.makeBulkVoiceCalls(
       voiceContacts,
       campaignType === "tts" ? message : undefined,
       enhancedVoiceOptions,
     )
 
-    console.log("Voice call result:", voiceResult)
 
     const totalSent = voiceResult.successful
     const totalFailed = voiceResult.failed
 
-    // Create detailed results for database
     const detailedResults = voiceResult.results.map((result, index) => ({
       contactId: contactList[index]._id,
       phone: result.contact.phone,

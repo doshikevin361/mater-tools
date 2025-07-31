@@ -41,7 +41,6 @@ export class TwilioVoiceBrowser {
       this.setupDeviceListeners()
 
       this.isInitialized = true
-      console.log("Twilio Voice SDK initialized successfully")
     } catch (error) {
       console.error("Failed to initialize Twilio Voice SDK:", error)
       throw error
@@ -61,7 +60,6 @@ export class TwilioVoiceBrowser {
 
   private setupDeviceListeners() {
     this.device.on("ready", () => {
-      console.log("Twilio Device is ready for connections")
     })
 
     this.device.on("error", (error: any) => {
@@ -69,43 +67,35 @@ export class TwilioVoiceBrowser {
     })
 
     this.device.on("connect", (call: any) => {
-      console.log("Call connected:", call)
       this.activeCall = call
       
       // Set up call-specific event listeners
       if (call) {
         call.on("accept", () => {
-          console.log("Call accepted by remote party")
         })
         
         call.on("ringing", () => {
-          console.log("Call is ringing")
         })
         
         call.on("cancel", () => {
-          console.log("Call was cancelled")
           this.activeCall = null
         })
         
         call.on("disconnect", () => {
-          console.log("Call disconnected from call object")
           this.activeCall = null
         })
         
         call.on("reject", () => {
-          console.log("Call was rejected")
           this.activeCall = null
         })
       }
     })
 
     this.device.on("disconnect", (call: any) => {
-      console.log("Device disconnect event:", call)
       this.activeCall = null
     })
 
     this.device.on("incoming", (call: any) => {
-      console.log("Incoming call from:", call.parameters.From)
       this.activeCall = call
     })
   }
@@ -119,7 +109,6 @@ export class TwilioVoiceBrowser {
       // Format Indian phone number
       const formattedNumber = this.formatIndianNumber(phoneNumber)
 
-      console.log("Making call to:", formattedNumber)
 
       const call = await this.device.connect({
         params: {
@@ -142,19 +131,14 @@ export class TwilioVoiceBrowser {
   }
 
   async hangupCall(): Promise<void> {
-    console.log("Hanging up call, activeCall exists:", !!this.activeCall)
     
     if (this.activeCall) {
       try {
-        // Try to disconnect the call
         this.activeCall.disconnect()
-        console.log("Call disconnect initiated")
       } catch (error) {
         console.error("Error during call disconnect:", error)
       } finally {
-        // Always clear the active call reference
         this.activeCall = null
-        console.log("Active call reference cleared")
       }
     } else {
       console.log("No active call to hang up")

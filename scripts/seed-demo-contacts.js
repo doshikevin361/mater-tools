@@ -7,15 +7,12 @@ async function seedDemoData() {
 
   try {
     await client.connect()
-    console.log("Connected to MongoDB")
 
     const db = client.db("brandbuzz")
 
-    // Clear existing data
     await db.collection("users").deleteMany({})
     await db.collection("contacts").deleteMany({})
     await db.collection("campaigns").deleteMany({})
-    console.log("Cleared existing data")
 
     // Create demo user
     const demoUser = {
@@ -34,7 +31,6 @@ async function seedDemoData() {
     }
 
     await db.collection("users").insertOne(demoUser)
-    console.log("Created demo user:", demoUser.firstName, demoUser.lastName)
 
     // Create demo contacts with your email and proper phone formatting
     const demoContacts = [
@@ -161,7 +157,6 @@ async function seedDemoData() {
     ]
 
     await db.collection("contacts").insertMany(demoContacts)
-    console.log(`Created ${demoContacts.length} demo contacts`)
 
     // Create some demo campaigns
     const demoCampaigns = [
@@ -199,12 +194,6 @@ async function seedDemoData() {
     ]
 
     await db.collection("campaigns").insertMany(demoCampaigns)
-    console.log(`Created ${demoCampaigns.length} demo campaigns`)
-
-    console.log("✅ Demo data seeded successfully!")
-    console.log("Demo user created with ID: demo-user-123")
-    console.log("Your email (doshikevin36@gmail.com) is included in contacts")
-    console.log("All phone numbers are formatted with +91 prefix")
   } catch (error) {
     console.error("Error seeding demo data:", error)
   } finally {

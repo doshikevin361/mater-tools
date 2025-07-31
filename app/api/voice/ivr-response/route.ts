@@ -6,7 +6,6 @@ export async function POST(request: NextRequest) {
     const digits = formData.get("Digits") as string
     const callSid = formData.get("CallSid") as string
 
-    console.log("IVR Response received:", { digits, callSid })
 
     let twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>`
