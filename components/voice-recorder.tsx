@@ -190,26 +190,41 @@ export function VoiceRecorder({ onRecordingComplete, maxDuration = 300, classNam
 
   // Start recording
   const startRecording = async () => {
+    console.log("Start recording button clicked")
+    
     const initialized = await initializeRecorder()
-    if (!initialized) return
+    if (!initialized) {
+      console.log("Failed to initialize recorder")
+      return
+    }
 
     if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.start(1000) // Collect data every second
-      setIsRecording(true)
-      setRecordingTime(0)
+      try {
+        console.log("Starting MediaRecorder...")
+        mediaRecorderRef.current.start(1000) // Collect data every second
+        setIsRecording(true)
+        setRecordingTime(0)
 
-      // Start timer
-      timerRef.current = setInterval(() => {
-        setRecordingTime((prev) => {
-          if (prev >= maxDuration) {
-            stopRecording()
-            return prev
-          }
-          return prev + 1
-        })
-      }, 1000)
+        // Start timer
+        timerRef.current = setInterval(() => {
+          setRecordingTime((prev) => {
+            if (prev >= maxDuration) {
+              stopRecording()
+              return prev
+            }
+            return prev + 1
+          })
+        }, 1000)
 
-      toast.success("Recording started!")
+        toast.success("Recording started!")
+        console.log("Recording started successfully")
+      } catch (error) {
+        console.error("Error starting recording:", error)
+        toast.error("Failed to start recording")
+      }
+    } else {
+      console.log("MediaRecorder not available")
+      toast.error("MediaRecorder not available")
     }
   }
 
@@ -350,6 +365,13 @@ export function VoiceRecorder({ onRecordingComplete, maxDuration = 300, classNam
     }
   }, [localAudioUrl])
 
+  // Log component render
+  console.log("VoiceRecorder component rendering", { 
+    hasMediaDevices: !!navigator.mediaDevices,
+    hasGetUserMedia: !!navigator.mediaDevices?.getUserMedia,
+    hasMediaRecorder: !!window.MediaRecorder
+  })
+
   return (
     <Card className={`border border-purple-200 shadow-md overflow-hidden bg-white ${className}`}>
       <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-100">
@@ -361,6 +383,9 @@ export function VoiceRecorder({ onRecordingComplete, maxDuration = 300, classNam
               Not Supported
             </Badge>
           )}
+          <Badge variant="outline" className="ml-2 text-xs bg-blue-50">
+            Component Loaded ✓
+          </Badge>
         </CardTitle>
         <CardDescription>
           Record your voice message or upload an audio file
