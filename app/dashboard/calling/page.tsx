@@ -273,16 +273,10 @@ export default function CallingPage() {
           return newDuration
         })
 
-        // Check call status every second while active
+        // Log current status for debugging
         const currentStatus = twilioVoiceBrowser.getCallStatus()
-        if (currentStatus === "open" && callStatus !== "connected") {
-          logDebugEvent(`Status auto-updated to connected from ${callStatus}`)
-          setCallStatus("connected")
-          toast.success("Call connected!")
-        } else if (currentStatus === "closed" || currentStatus === "idle") {
-          logDebugEvent(`Call ended - status: ${currentStatus}`)
-          setIsCallActive(false)
-          setCallStatus("idle")
+        if (callDuration % 10 === 0) { // Log every 10 seconds
+          logDebugEvent(`Call active - Twilio status: ${currentStatus}, UI status: ${callStatus}`)
         }
       }, 1000)
     } else {
@@ -314,28 +308,46 @@ export default function CallingPage() {
           setCallStatus("connecting")
           setCallDuration(0)
           
-          // Force check call status after a delay to see actual state
-          setTimeout(() => {
-            const status = twilioVoiceBrowser.getCallStatus()
-            logDebugEvent(`Call status after connect: ${status}`)
-            if (status === "open") {
-              setCallStatus("connected")
-              toast.success("Call connected!")
-            } else if (status === "ringing" || status === "connecting") {
+          // Set up call-specific event listeners
+          if (call) {
+            call.on("ringing", () => {
+              logDebugEvent("Call is ringing")
               setCallStatus("ringing")
               toast.info("Phone is ringing...")
-            }
-          }, 1000)
-
-          // Another check after more time
-          setTimeout(() => {
-            const status = twilioVoiceBrowser.getCallStatus()
-            logDebugEvent(`Call status check 2: ${status}`)
-            if (status === "open") {
+            })
+            
+            call.on("accept", () => {
+              logDebugEvent("Call accepted/answered")
               setCallStatus("connected")
               toast.success("Call connected!")
-            }
-          }, 3000)
+            })
+            
+            call.on("disconnect", () => {
+              logDebugEvent("Call disconnected")
+              setIsCallActive(false)
+              setCallStatus("idle")
+              setIsMuted(false)
+              setIsRecording(false)
+            })
+            
+            call.on("cancel", () => {
+              logDebugEvent("Call cancelled")
+              setIsCallActive(false)
+              setCallStatus("idle")
+              setIsMuted(false)
+              setIsRecording(false)
+              toast.info("Call cancelled")
+            })
+            
+            call.on("reject", () => {
+              logDebugEvent("Call rejected")
+              setIsCallActive(false)
+              setCallStatus("idle")
+              setIsMuted(false)
+              setIsRecording(false)
+              toast.error("Call rejected")
+            })
+          }
         })
 
         device.on("disconnect", (call: any) => {
@@ -967,23 +979,46 @@ export default function CallingPage() {
                   <p>SDK Connected: {isConnected ? "Yes" : "No"}</p>
                   <p>Initializing: {isInitializing ? "Yes" : "No"}</p>
                                      <p>Twilio Status: <strong>{twilioVoiceBrowser.getCallStatus()}</strong></p>
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    onClick={() => {
-                      const status = twilioVoiceBrowser.getCallStatus()
-                      const isActive = twilioVoiceBrowser.isCallActive()
-                      logDebugEvent(`Manual check - Status: ${status}, Active: ${isActive}`)
-                      if (status === "open" && !isCallActive) {
+                  <div className="flex gap-2 mt-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => {
+                        const status = twilioVoiceBrowser.getCallStatus()
+                        const isActive = twilioVoiceBrowser.isCallActive()
+                        logDebugEvent(`Manual check - Status: ${status}, Active: ${isActive}`)
+                        if (status === "open" && !isCallActive) {
+                          setIsCallActive(true)
+                          setCallStatus("connected")
+                          toast.success("Manual sync: Call is connected!")
+                        }
+                      }}
+                    >
+                      Check Status
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => {
+                        logDebugEvent("Simulating ringing state")
+                        setIsCallActive(true)
+                        setCallStatus("ringing")
+                      }}
+                    >
+                      Test Ringing
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => {
+                        logDebugEvent("Simulating connected state")
                         setIsCallActive(true)
                         setCallStatus("connected")
-                        toast.success("Manual sync: Call is connected!")
-                      }
-                    }}
-                    className="mt-2"
-                  >
-                    Check Call Status
-                  </Button>
+                      }}
+                    >
+                      Test Connected
+                    </Button>
+                  </div>
                 </div>
               </div>
 

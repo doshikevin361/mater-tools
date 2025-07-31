@@ -71,32 +71,6 @@ export class TwilioVoiceBrowser {
     this.device.on("connect", (call: any) => {
       console.log("Call connected:", call)
       this.activeCall = call
-      
-      // Set up call-specific event listeners
-      if (call) {
-        call.on("accept", () => {
-          console.log("Call accepted by remote party")
-        })
-        
-        call.on("ringing", () => {
-          console.log("Call is ringing")
-        })
-        
-        call.on("cancel", () => {
-          console.log("Call was cancelled")
-          this.activeCall = null
-        })
-        
-        call.on("disconnect", () => {
-          console.log("Call disconnected from call object")
-          this.activeCall = null
-        })
-        
-        call.on("reject", () => {
-          console.log("Call was rejected")
-          this.activeCall = null
-        })
-      }
     })
 
     this.device.on("disconnect", (call: any) => {
