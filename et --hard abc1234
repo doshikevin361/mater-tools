@@ -1,0 +1,151 @@
+[33mf8f27d3678b138d4e6561130735db0a425a0507c[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Revert "Merge pull request #7 from doshikevin361/cursor/fix-broken-call-end-and-recording-features-38be"
+[33m5e8d655637fad1a1ff56c5c1795831823cb22c65[m Revert "Merge pull request #8 from doshikevin361/cursor/fix-broken-call-end-and-recording-features-38be"
+[33m31d2691356e9a3699716e75fe1d58a11b6b29e48[m Merge pull request #8 from doshikevin361/cursor/fix-broken-call-end-and-recording-features-38be
+[33m56a2832ad6100f84982e199bca88fff83be1d84f[m[33m ([m[1;31morigin/cursor/fix-broken-call-end-and-recording-features-38be[m[33m)[m Improve call status handling and add debug logging in Twilio voice integration
+[33m5eeb11199c5e546ae14732a46de8dcd8bf81a6ad[m Merge pull request #7 from doshikevin361/cursor/fix-broken-call-end-and-recording-features-38be
+[33mfc583055d31a3c2776adc0d27a50e48d96b6fd5d[m Enhance call status tracking and add debug logging for Twilio interactions
+[33m896781c90f697f10b0496690cefb59bf44256b1f[m Merge pull request #6 from doshikevin361/cursor/fix-broken-call-end-and-recording-features-38be
+[33m692aa193595e5fe69e6f950534f7d37fc0ab9eb1[m Enhance call status handling and add more detailed call state tracking
+[33mc212918c1eec465989e8b51011c41571ea676161[m Refactor phone number formatting and cleanup unused code in SMM API client
+[33m25f14efa6cfd8c9668a74b667b19f89e3ae4f0ea[m Merge pull request #5 from doshikevin361/cursor/fix-broken-call-end-and-recording-features-38be
+[33m0f40487bea5699f2a3eff38d11f918e49c6a889b[m Improve call handling, recording, and error resilience across voice features
+[33m1c0306533f5e8de1d0fb38d725f59f9da7b1a439[m Merge pull request #4 from doshikevin361/cursor/update-social-media-ui-to-match-whatsapp-voice-sms-email-style-4f76
+[33m1d9ace97e5ed0166e6a6dd59c63256334caf3185[m[33m ([m[1;31morigin/cursor/update-social-media-ui-to-match-whatsapp-voice-sms-email-style-4f76[m[33m)[m Refactor dashboard pages with consistent design and improved UX
+[33mbb2281e86fb3a9d8ca78fa440aa039a4e337bc4e[m Update SMM API key in getSMMClient function
+[33m7e3194fdd74c5166564ad88beb76e0e68454b9fa[m Merge pull request #2 from doshikevin361/cursor/fix-smm-service-integration-across-platforms-6000
+[33mae812fbd83a6ad1d03b676ab565cdc44aede0f3d[m[33m ([m[1;31morigin/cursor/fix-smm-service-integration-across-platforms-6000[m[33m)[m Implement dynamic service selection UI for SMM platforms
+[33m71b7c2e64e0114c46296dbe751d38550cb80648c[m Checkpoint before follow-up message
+[33m84dbb12e83b6fa8646ff32d9bac19075da682a32[m Merge pull request #1 from doshikevin361/cursor/fix-smm-service-integration-across-platforms-6000
+[33mb3873a6c3eb13ebb1bef49664b918f409ba7b06f[m Unify SMM services across platforms with dynamic service loading
+[33mb6493b20976818fe1f6c0c268f8cb4f9a8cd5311[m fix: update globals.css import paths to ensure correct styling application
+[33mba65f8d4ab1897ba271c70e7cda38ba53f49148c[m Refactor Arkose CAPTCHA handling to use 2Captcha API; enhance detection and solving mechanisms; improve authorization step handling; remove unnecessary notifications and debug functions.
+[33m4adb57cdc4401bf4d10bdc98017dae2658c68919[m Implement feature X to enhance user experience and fix bug Y in module Z
+[33mdf11a4e96110e3f9750fbf8a9f1d40d82edc099b[m Remove notification display logic from Facebook, Instagram, and Twitter accounts pages
+[33me6405fba74d9534711c7a5e227fbd98f89b4c6c1[m refactor: remove fallback userId for cleaner code in account fetching
+[33m62a0dfee2ef3669a676d9aa1e078bfc486af14fd[m feat: enhance user data loading and account fetching logic in dashboard pages
+[33m27d66ec5f07ba3445d245fe1dfa3b2890fa46ff2[m Refactor code structure for improved readability and maintainability
+[33mfcd1f8288525ce58a9ddb8d09ae0b35aeecaf8e6[m fix: update callerId in TwiML response to a static number for testing
+[33mceb3430f4fd70e641fc90408eae6ef15f78998d8[m refactor: remove redundant comments and enhance phone number formatting logic
+[33mdce7a69b77aee235a375c2f2d9e2ff9d9b9fbab7[m feat: update headless mode configuration to 'new' for improved browser stealth
+[33md23d393015bf2bcd268312f855d36e63c63ebb6a[m Refactor code structure for improved readability and maintainability
+[33m2ff877db705bf60265c40b169d28e946bcb440ce[m authticate button click on twitter
+[33m2ee7cc2268dd17a8d6b6e59769b9b491e5cada9a[m Refactor dashboard layout and login/signup pages
+[33m9992cf60f7695527896d5e1de6809723964b711b[m Refactor code structure for improved readability and maintainability
+[33m3ab4ad00a036586756fecfb8d745a313c0518161[m feat: add "AI Automation" menu and complete social media automation features
+[33m4979fd5a8b1a6a182868ba484241288a6f2745b0[m fix: prevent frozen-lockfile in Vercel CI installs
+[33m78c4af6abcbea1a5953a033730eed1b85a2fa954[m feat: full Twilio Voice SDK integration
+[33m59551aa7a8e34465218d889d5ae3d07e9bcc5185[m fix: resolve Twilio SDK loading issues and enhance calling system
+[33mbe053ab44b23c0e12b6e73784654daeabd01e8e8[m fix: resolve Twilio SDK CORS issues and enhance calling feature
+[33m527d9beacbec4569e0740a375cc094777a4e47f5[m feat: fix and enhance calling feature
+[33m331a1e9a5d6627dc650b29eee7050c1a1059c2c7[m feat: add "AI Automation" menu and implement full social media automation
+[33m5bd07172b1e8d191b5410de0828fdfd4b79ec7d1[m feat: implement complete voice calling system
+[33m8e3224b14ba113cb9e2448ce794f8b8ee79c4d84[m feat: add browser-based live calling system
+[33m676b7892ec63acb87965d2de630fa6a083f3bd43[m feat: add missing /api/calling/status route
+[33mbd8000122ebf70544883eac7e3e8e6f990414cf4[m feat: enable real Twilio voice call integration
+[33macda3ddf5dcd9f6b92ec82511cdf4ccf2e495ddd[m feat: add "AI Automation" menu and implement social media automation
+[33md57ccb1dea680d3451b8eea75c1cb994bbb1e2d3[m fix: resolve build error with Twilio imports
+[33m9158f62edd9f32ff2dab02169a25b4b8d47c58db[m feat: add named export twilioVoiceBrowser
+[33m45b66da919c613c86aa1a6d961c389aa862f5c4f[m feat: add "AI Automation" menu and implement full social media automation
+[33ma7345be8292c2e1bd8dbf9bce95ae632cb5ae6ca[m feat: add "AI Automation" menu and implement full social media automation
+[33ma27972555c8c4dca09656a198170967a329763ce[m feat: add "AI Automation" menu and implement social media automation
+[33m0744009c405865794135abbf9466e89c488dfed1[m feat: add "AI Automation" menu and implement social media automation
+[33m7d2bc58570fa5c063027c32477cc86ac253d44c3[m feat: add "AI Automation" menu and implement full social media automation
+[33mf773dfb88221a80c5428efe53c6c0c1f167e7291[m feat: add "AI Automation" menu and implement social media automation
+[33m0336a1d8fbab5edc1ce17b97b224680574c1bb5d[m feat: add "AI Automation" menu and implement full social media automation
+[33m0283356424e02dfcee8f7718837c70221caa3e2b[m feat: add "AI Automation" menu and implement social media automation
+[33m3f12b8908af6c7366fd7c81558ccd9ecdda96d61[m feat: add "AI Automation" menu and implement full social media automation
+[33mee57e1eca3a94ba1241d107e6e3f04446d1eb96a[m feat: add "AI Automation" menu and implement full social media automation
+[33m6c7c42407224ace769ebe566ca4882190ec8d54f[m feat: add "AI Automation" menu and implement full social media automation
+[33m6d93242ba2f12fd88d5cf0e7b5ad86250c6deabb[m feat: add "AI Automation" menu and implement social media automation
+[33m8f2eb6974be4dbf679fc36d43da4a3d365b036d9[m feat: add sentiment control buttons and enhancements
+[33m51f5da33c7373e4787df6b06b8dbe4d1c43685ab[m feat: add sentiment control buttons and enhancements
+[33mafde620e873cbc6933a1dba20ae12630cc76636f[m feat: add sentiment control buttons for AI comments
+[33m5b1bd66a6743a1885fe82d977842e28f6bc64c90[m feat: add sentiment control buttons for AI comments
+[33m0d7290a24bd2d59ae78c4b77e62af9d746049e5e[m feat: add Social Automation tab and API
+[33m2560c5c3f3085f72015f5ca0ec85583cf18eaa7b[m feat: add minimal Sidebar component with default export
+[33m4d8d345e5693dea642372fd7d8c5b917ccc291ce[m feat: add Social Automation tab and API
+[33m2ee69ccb35c654304debfa5407ddd9e48b555964[m feat: add Social Automation tab and API
+[33mce74a27cf352e2caed6daef31f229bd52569b332[m feat: add AI Social Media Comment Automation System
+[33mf1d435cb5620e68ccbf5dba2a91ffdd6c9f14ae3[m feat: add comment automation with existing accounts
+[33mf6ffd308750f5334182dc717250e9ca64c378295[m feat: add social media account creation functionality
+[33m12e1a7a8aa451488965b05ab989d8a997e94be9f[m feat: add social media account creation for Instagram, Facebook, and Twitter
+[33m15323bd8de2a97df6d4bb02049805fe36218a547[m feat: add social media account creation for Instagram, Facebook, and Twitter
+[33m774a896d1f64f7cb1c0c4029bbca995001e13a83[m feat: add social media account creation for Instagram, Facebook, and Twitter
+[33ma29ae8571a731e7a07dab15445e5dfb1af7d0e2e[m feat: add social media account creation for Instagram, Facebook, and Twitter
+[33mfbaa97046ca78f72de267791ab7c51ed300048cb[m feat: add social media account creation functionality
+[33mb395ff2fa004143c54b69c226005f79849b48aab[m feat: add social media account creation functionality
+[33mf17aeba7d95a9b891e8f7bf10ef59b8f7be81a72[m feat: add social media account creation for Instagram, Facebook, and Twitter
+[33mfba6d4ba5ebb61d672577ae52654d4280d3a5061[m feat: add complete Social Media Automation system
+[33md9c6f4881198b64686becf816cb69684700e0fb5[m feat: implement social media automation system
+[33mc10d3d2cc4f84815336f592840e52d59f7ad4ec5[m feat: integrate AppSidebar and add account creation pages
+[33mf23fcbd09b6491fd3ba2bc527c43bb762adaa645[m feat: add separate account creation pages and real-time notifications
+[33m1d745b114e465d5e453a98ff19d15fcb4c4ac8cc[m feat: redesign login, home, and signup pages with modern UI
+[33mfa9d26c2c84ecab58bc0bdb11762dc49cf0ad052[m feat: implement Twilio browser-based calling
+[33m93238dda925fb93ae4f625aca9f09157daaf700e[m feat: complete API endpoints and improve error handling
+[33m362eec8502ff222440e08c3f9b1b4b3a2ac62e53[m chore: clean production-ready code for entire project
+[33m14fb98481b70bdd2ff08b970224bd92cf9b95616[m feat: implement Twilio browser-based calling
+[33m008d6836f7ae3688714dea3901daf7cc184f80ee[m feat: complete API endpoints and improve error handling
+[33mfbe02407ba6cbb382e4331a7f8c5651f7d3b0ce9[m feat: remove auto-select option and enhance template handling
+[33m44014de47152e493de2cebd04a6c25d0e91114e2[m fix: resolve syntax error in auto-fill template selection
+[33m4ca3d0b1d778b790481ffb96d44d90041c72c2ea[m fix: resolve syntax error in template auto-fill
+[33mbb28e580abd5fe7680b5cb1135920b5cffbfaac6[m fix: resolve Select component error with empty string values
+[33m25741267bbb343e8f63a9041f81b99d6da81f488[m fix: fix webpack syntax error in JSX
+[33m510c20725457faff01c31a28957c9d40cb016e9b[m fix: resolve build error in template select handler
+[33m99cd2f786683126d37d03521a98ce3c019e96eff[m fix: resolve Select component error with empty string values
+[33mb6719b9d47551445225453f7a5a282abd8b65697[m feat: integrate real WhatsApp Business templates
+[33m5c4138ebb2806e186c7050488c78075236e9a59b[m feat: implement Twilio browser-based calling
+[33mc7d66ba5b16df157c8e46b13a998cea812dd2bda[m feat: complete API endpoints and improve error handling
+[33m0abdf1c07fad2dfdd8aac0c59da01c3b3c33b2ea[m feat: complete API endpoints and fix calling functionality
+[33m4fd93324c24351e8f4420244d52105b65d3bd3d5[m feat: implement Twilio browser-based calling
+[33mb3100dbb1206b46f90f029ee52ee621269714217[m feat: implement Twilio browser-based calling
+[33m9c2904ed5ff63d8373855f87b058ec4af460752a[m feat: implement Twilio browser-based calling
+[33m839717b887cbf5d251a8739cb70d64b97d514843[m feat: add browser-based calling with Twilio Voice SDK
+[33mfcb1870220101d3de2e1188b0a1e2e202f981de7[m feat: add Twilio Voice SDK for browser-based calling
+[33mb5c1ebe599e0538235c6320d3c0204b012f45429[m feat: add Twilio Voice SDK for browser-based calling
+[33mb5ad104f22075eb95d0c21848df1691ac1595928[m fix: switch to Twilio REST API for direct browser calling
+[33m2926e7d4a8c9f1a40e891da9c420c49e28f02089[m fix: remove client-side MongoDB import
+[33m692f8e494a2f4a4e6108d34ec5a5cb169af36343[m feat: add direct WebRTC browser-to-phone calling
+[33me71178128a7723dd0bb2efad11096f072be09a94[m refactor: simplify calling system to browser-only
+[33m27de1c55eb9cd93bcc9761da7c5af2ea327ee2fa[m refactor: remove all debug output and comments
+[33m160d72690c9164ad3c7eda7b4b370e29cc4fffb2[m feat: implement full Twilio calling system
+[33mb46da77a9b5b8a430546bde1b82ced1592a3e004[m feat: add live calling with 2-way audio
+[33mdc2a22e5f996ab31610f089b9fee7c9474cfcd53[m feat: implement 2-way calling with Indian number support
+[33m4371c92d6215dcec4d329cb577fcafaca2575d9a[m feat: add comprehensive calling system
+[33mb2848748cf2a65e2dbe46d946795adcdbd4edf7f[m feat: integrate Twilio with dynamic credentials
+[33mc4b6cdb03ba70e45041dc0ff0a48b04e464dd3d7[m feat: fix Twilio credential usage in calling API
+[33m2039301a71c2c28cfdc4077d75ec31bd352d70ce[m feat: add real Twilio integration with existing design
+[33ma736a81244d852414764e3799481bd5468a24149[m feat: implement full calling system with Twilio
+[33m735e0e8f61f2605ba7e05cb1d68cb749fb9ae12e[m feat: add real Twilio calling functionality
+[33m330cb818eadac4956021af213cd944aa5df2655e[m feat: update phone dialer for Indian number formatting
+[33m2bd31c7f656348b52ff0885db369b1cedc2ad119[m feat: restore original layout and add Calling menu
+[33m20d47702a35a7893e32f07ab9facfd9c6eca16f4[m feat: add inline audio player for call history recordings
+[33mcfd7be92682fedff91d2ae36a6f0ce658fb7077f[m feat: implement full calling system with dashboard updates
+[33m55b3f2b594eae525d4f1c05fa85084369a57d42f[m feat: implement full calling system with dashboard updates
+[33m7038b0e967cea99e3facb12b5d8533d66864120e[m feat: implement full calling feature with Indian number support
+[33ma6f1e2bfb72181f86a5d473ae3f289c0a22e8df6[m feat: implement Indian number default and call history with recordings
+[33m565093081c2bd40ec01709bc78fbdfb5c4011557[m feat: implement complete calling system
+[33m11006c45a8e8ac56efbab6ad6e5f5af22573595e[m feat: add comprehensive calling functionality
+[33meb6f9a7e1f4dbcc8df890d7b79a703e34cee419b[m feat: implement Voice 2 Way feature
+[33md7607ad7e321b129c1babb45ce200b48b2204f7f[m feat: add Voice 2 Way option and page
+[33mc198ba5361a429f3c6d710bd4ff95dbccd65e760[m fix: prevent build failure on missing Twilio env vars
+[33meddc855c43a103d95480abb11a5f5cfc1d1a6c96[m feat: add "Voice 2 Way" feature and remove from original voice page
+[33m74e8cc26ae3146c392fa6c630c485854d4d6bd7b[m feat: add two-way calls and call recording/transcription
+[33m07be4a195eccda71efd5351a006dcde733075296[m feat: major WhatsApp system performance and logic fixes
+[33md89b160a9f326877b3386f4f05886b7c2f001297[m feat: major WhatsApp system overhaul for performance and logic
+[33m2d530832cfba52c339cf899a93a90a6fd48b718f[m feat: major WhatsApp system performance and logic fixes
+[33md68563a24b26e3b990f44279c3a3718af1a63232[m feat: major WhatsApp system performance and logic fixes
+[33m5b0dbb9f15f395c6dd087898819f570c336f972d[m feat: major WhatsApp system performance and logic fixes
+[33mc07d8a0fd1aa947999bc1b805d27c4d09f642ba5[m feat: major WhatsApp system performance and logic fixes
+[33m9010c9d992f597192bc2ff83806c4358bd15d1ac[m feat: major WhatsApp system performance and logic fixes
+[33m9920eff93994520c668d59261f8b2c70d11b41bc[m feat: major WhatsApp system performance and logic fixes
+[33m56e2fcab5150dee0c8247cb8066f86319990e713[m feat: major WhatsApp system overhaul for performance and logic
+[33ma6a2d5c14edaf44cc44d0b53b9231a9b7099f17e[m feat: major WhatsApp system performance and logic fixes
+[33m96171aec9003d2b5d1caf3abaae484a257097a0c[m feat: implement dynamic WhatsApp message sending
+[33m3d7ad023fdff4e80c77b60b7c495b811b701d35f[m feat: implement dynamic WhatsApp message sending
+[33m8b738acc62cb24c4939365042f5cfbd15f3b667f[m feat: update audio upload route with Vercel Blob token
+[33m44b5c9948fc7fa6fca5fe1be121f3002f63ff5eb[m feat: update audio upload route with Vercel Blob token
+[33m322bb9a543977943fb2eb68ac66ef06ccacf82cf[m feat: update voice upload API to Vercel Blob store
+[33m5f0264bb0e2b3ab295d8a1f23921efa1b7edbde7[m feat: modernize contacts page design
+[33mb484ffea04a215ead1a8ad49ca70a1bb38701ce0[m feat: sync main changes to mater-tools
+[33ma643911c7c45a5beae90765b5a878304682f6c6d[m feat: sync new changes from main to mater-tools
+[33ma79d21035100b80c7958d493113df7e53bdec3e9[m Initialized repository for project brandbuzzventures1113
