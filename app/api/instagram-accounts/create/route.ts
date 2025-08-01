@@ -1523,6 +1523,301 @@ async function handleBirthdaySelection(page, profile) {
   }
 }
 
+// Follow 10-12 random accounts
+async function followRandomAccounts(page, username) {
+  log('info', '👥 Starting random account following...')
+  
+  try {
+    // Popular Instagram accounts to follow
+    const popularAccounts = [
+      'instagram', 'selenagomez', 'kyliejenner', 'leomessi', 'cristiano', 
+      'arianagrande', 'therock', 'kimkardashian', 'beyonce', 'justinbieber',
+      'taylorswift', 'neymarjr', 'kendalljenner', 'natgeo', 'nfl',
+      'nike', 'mrbeast', 'khloekardashian', 'jlo', 'nickiminaj',
+      'kourtneykardash', 'ddlovato', 'badgalriri', 'realmadrid', 'fcbarcelona',
+      'championsleague', 'nasa', 'zendaya', 'vancityreynolds', 'vindiesel',
+      'priyankachopra', 'deepikapadukone', 'viratkohli', 'akshaykumar', 'shraddhakapoor'
+    ]
+    
+    // Randomly select 10-12 accounts
+    const targetCount = Math.floor(Math.random() * 3) + 10 // 10-12 accounts
+    const shuffled = popularAccounts.sort(() => 0.5 - Math.random())
+    const accountsToFollow = shuffled.slice(0, targetCount)
+    
+    log('info', `🎯 Will follow ${targetCount} accounts: ${accountsToFollow.join(', ')}`)
+    
+    const followedAccounts = []
+    let successCount = 0
+    
+    for (let i = 0; i < accountsToFollow.length; i++) {
+      const accountToFollow = accountsToFollow[i]
+      
+      try {
+        log('info', `📱 Following account ${i + 1}/${targetCount}: @${accountToFollow}`)
+        
+        // Navigate to the account
+        await page.goto(`https://www.instagram.com/${accountToFollow}/`, {
+          waitUntil: 'networkidle2',
+          timeout: 30000
+        })
+        
+        await humanWait(2000, 4000)
+        
+        // Look for follow button with multiple selectors
+        const followSelectors = [
+          '[data-testid="follow-button"]',
+          'button[type="button"]',
+          'button._acan._acap._acas._aj1-._ap30',
+          'button._acan._acap._acas',
+          'button'
+        ]
+        
+        let followSuccess = false
+        
+        for (const selector of followSelectors) {
+          try {
+            // Get all buttons matching the selector
+            const followButtons = await page.$$(selector)
+            
+            for (const followButton of followButtons) {
+              const buttonText = await page.evaluate(el => el.textContent?.trim(), followButton)
+              
+              if (buttonText && (buttonText.includes('Follow') || buttonText.includes('follow')) && 
+                  !buttonText.includes('Following') && !buttonText.includes('Unfollow')) {
+                
+                // Click the button directly
+                await followButton.click()
+                await humanWait(1000, 2000)
+                
+                followSuccess = true
+                successCount++
+                followedAccounts.push(accountToFollow)
+                
+                log('success', `✅ Successfully followed @${accountToFollow}`)
+                break
+              }
+            }
+            
+            if (followSuccess) break
+            
+          } catch (e) {
+            continue
+          }
+        }
+        
+        if (!followSuccess) {
+          log('verbose', `⚠️ Could not follow @${accountToFollow} (might already be following or button not found)`)
+        }
+        
+        // Random delay between follows (3-8 seconds)
+        await humanWait(3000, 8000)
+        
+        // Occasionally scroll or interact to seem more human
+        if (Math.random() < 0.3) {
+          await page.evaluate(() => {
+            window.scrollBy(0, Math.random() * 300 + 100)
+          })
+          await humanWait(1000, 2000)
+        }
+        
+      } catch (error) {
+        log('error', `❌ Failed to follow @${accountToFollow}: ${error.message}`)
+      }
+    }
+    
+    log('success', `🎉 Follow process completed: ${successCount}/${targetCount} accounts followed`)
+    
+    return {
+      success: successCount > 0,
+      followedCount: successCount,
+      targetCount: targetCount,
+      followedAccounts: followedAccounts
+    }
+    
+  } catch (error) {
+    log('error', `❌ Random following failed: ${error.message}`)
+    return {
+      success: false,
+      followedCount: 0,
+      targetCount: 0,
+      followedAccounts: [],
+      error: error.message
+    }
+  }
+}
+
+// Edit profile bio
+async function editProfileBio(page, username) {
+  log('info', '✏️ Starting bio editing...')
+  
+  try {
+    // Navigate to profile
+    await page.goto(`https://www.instagram.com/${username}/`, {
+      waitUntil: 'networkidle2',
+      timeout: 30000
+    })
+    
+    await humanWait(2000, 4000)
+    
+    // Look for "Edit profile" button
+    const editProfileSelectors = [
+      '[data-testid="edit-profile-button"]',
+      'a[href*="/accounts/edit/"]',
+      'a._acan._acap._acas._aj1-._ap30',
+      'a',
+      'button'
+    ]
+    
+    let editButtonFound = false
+    
+    for (const selector of editProfileSelectors) {
+      try {
+        const editButtons = await page.$$(selector)
+        
+        for (const editButton of editButtons) {
+          const buttonText = await page.evaluate(el => el.textContent?.trim(), editButton)
+          const href = await page.evaluate(el => el.href, editButton)
+          
+          if ((buttonText && (buttonText.includes('Edit profile') || buttonText.includes('Edit'))) ||
+              (href && href.includes('/accounts/edit/'))) {
+            
+            await editButton.click()
+            await humanWait(1000, 2000)
+            
+            editButtonFound = true
+            log('success', '✅ Clicked Edit Profile button')
+            break
+          }
+        }
+        
+        if (editButtonFound) break
+        
+      } catch (e) {
+        continue
+      }
+    }
+    
+    if (!editButtonFound) {
+      throw new Error('Edit profile button not found')
+    }
+    
+    await humanWait(3000, 6000)
+    
+    // Generate a random bio
+    const bioTemplates = [
+      "🌟 Living my best life ✨",
+      "📸 Capturing moments 🎯",
+      "🎨 Creative soul | 🌍 Explorer",
+      "💫 Dream big, work hard ⚡",
+      "🌺 Blessed & grateful 🙏",
+      "🎵 Music lover | 📚 Bookworm",
+      "🏃‍♂️ Fitness enthusiast 💪",
+      "🍕 Food lover | ✈️ Travel addict",
+      "🌈 Spreading positivity ☀️",
+      "🎭 Life is a beautiful journey 🦋",
+      "🔥 Passionate about life 💯",
+      "🌟 Making memories every day 📝",
+      "🎪 Fun-loving | 🎨 Creative",
+      "💝 Grateful for every moment 🌸",
+      "🚀 Chasing dreams ⭐"
+    ]
+    
+    const selectedBio = bioTemplates[Math.floor(Math.random() * bioTemplates.length)]
+    
+    // Look for bio textarea
+    const bioSelectors = [
+      'textarea[placeholder*="Bio"]',
+      'textarea[placeholder*="bio"]',
+      'textarea[name="biography"]',
+      '#pepBio',
+      'textarea[maxlength="150"]'
+    ]
+    
+    let bioEditSuccess = false
+    
+    for (const selector of bioSelectors) {
+      try {
+        const bioField = await page.$(selector)
+        if (bioField) {
+          // Clear existing bio and add new one
+          await humanClickMaxStealth(page, selector)
+          await humanWait(1000, 2000)
+          
+          // Select all and delete
+          await page.keyboard.down('Control')
+          await page.keyboard.press('KeyA')
+          await page.keyboard.up('Control')
+          await humanWait(200, 400)
+          await page.keyboard.press('Backspace')
+          await humanWait(500, 1000)
+          
+          // Type new bio
+          await humanTypeMaxStealth(page, selector, selectedBio)
+          bioEditSuccess = true
+          
+          log('success', `✅ Bio updated: "${selectedBio}"`)
+          break
+        }
+      } catch (e) {
+        continue
+      }
+    }
+    
+    if (!bioEditSuccess) {
+      throw new Error('Bio field not found or could not be edited')
+    }
+    
+    await humanWait(2000, 4000)
+    
+    // Save changes - look for submit button
+    const submitSelectors = [
+      'button[type="submit"]',
+      '[data-testid="save-button"]',
+      'button'
+    ]
+    
+    for (const selector of submitSelectors) {
+      try {
+        const submitButtons = await page.$$(selector)
+        
+        for (const submitButton of submitButtons) {
+          const buttonText = await page.evaluate(el => el.textContent?.trim(), submitButton)
+          const buttonType = await page.evaluate(el => el.type, submitButton)
+          
+          if (buttonType === 'submit' || 
+              (buttonText && (buttonText.includes('Submit') || buttonText.includes('Done') || 
+                             buttonText.includes('Save') || buttonText.includes('submit')))) {
+            
+            await submitButton.click()
+            await humanWait(1000, 2000)
+            
+            log('success', '✅ Bio changes saved')
+            break
+          }
+        }
+        
+      } catch (e) {
+        continue
+      }
+    }
+    
+    await humanWait(2000, 4000)
+    
+    return {
+      success: true,
+      bioText: selectedBio
+    }
+    
+  } catch (error) {
+    log('error', `❌ Bio editing failed: ${error.message}`)
+    return {
+      success: false,
+      bioText: '',
+      error: error.message
+    }
+  }
+}
+
 // Main account creation function
 async function createMaxStealthInstagramAccount(accountData) {
   let browser, page, deviceProfile
@@ -1681,6 +1976,23 @@ async function createMaxStealthInstagramAccount(accountData) {
     
     if (isSuccessful) {
       log('success', '🎉 Account creation successful!')
+      
+      // Add new features: Follow random accounts and edit bio
+      let followResult = { success: false, followedCount: 0, followedAccounts: [] }
+      let bioResult = { success: false, bioText: '' }
+      
+      try {
+        // Follow 10-12 random accounts
+        followResult = await followRandomAccounts(page, accountData.profile.usernames[0])
+        await humanWait(3000, 6000)
+        
+        // Edit bio
+        bioResult = await editProfileBio(page, accountData.profile.usernames[0])
+        
+      } catch (featureError) {
+        log('error', `⚠️ New features failed: ${featureError.message}`)
+      }
+      
       return {
         success: true,
         platform: "instagram",
@@ -1697,6 +2009,8 @@ async function createMaxStealthInstagramAccount(accountData) {
         noProxy: true,
         deviceProfile: deviceProfile.screen.name,
         userAgent: deviceProfile.userAgent.substring(0, 50) + '...',
+        followResult: followResult,
+        bioResult: bioResult,
         accountData: {
           userId: `ig_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           profileUrl: `https://instagram.com/${accountData.profile.usernames[0]}`,
@@ -1833,6 +2147,8 @@ export async function POST(request) {
           passwordDialogHandled: creationResult.passwordDialogHandled || false,
           indianProfile: creationResult.indianProfile || false,
           deviceProfile: creationResult.deviceProfile || null,
+          followResult: creationResult.followResult || { success: false, followedCount: 0, followedAccounts: [] },
+          bioResult: creationResult.bioResult || { success: false, bioText: '' },
           realAccount: true,
           browserAutomation: true,
           emailOnly: true,
@@ -1865,6 +2181,8 @@ export async function POST(request) {
           passwordDialogHandled: creationResult.passwordDialogHandled || false,
           indianProfile: creationResult.indianProfile || false,
           deviceProfile: creationResult.deviceProfile || null,
+          followResult: creationResult.followResult || { success: false, followedCount: 0, followedAccounts: [] },
+          bioResult: creationResult.bioResult || { success: false, bioText: '' },
           realAccount: true,
           emailOnly: true,
           enhanced: true,
@@ -1878,6 +2196,12 @@ export async function POST(request) {
           log('success', `✅ ACCOUNT ${i + 1} CREATED: ${creationResult.username} (${profile.fullName})`)
           if (creationResult.phoneVerificationRequired) {
             log('info', `📱 Phone verification required for complete activation`)
+          }
+          if (creationResult.followResult && creationResult.followResult.success) {
+            log('success', `👥 Followed ${creationResult.followResult.followedCount} accounts: ${creationResult.followResult.followedAccounts.join(', ')}`)
+          }
+          if (creationResult.bioResult && creationResult.bioResult.success) {
+            log('success', `✏️ Bio updated: "${creationResult.bioResult.bioText}"`)
           }
         } else {
           log('error', `❌ ACCOUNT ${i + 1} FAILED: ${creationResult.error}`)
@@ -1926,8 +2250,22 @@ export async function POST(request) {
           "Realistic device profiles",
           "Optimal timing patterns",
           "Canvas & WebGL spoofing",
-          "Audio context protection"
+          "Audio context protection",
+          "Random account following (10-12 accounts)",
+          "Automatic bio editing with random templates"
         ]
+      },
+      newFeatures: {
+        randomFollowing: {
+          enabled: true,
+          description: "Follows 10-12 random popular accounts after account creation",
+          targetRange: "10-12 accounts"
+        },
+        bioEditing: {
+          enabled: true,
+          description: "Automatically adds a random bio from predefined templates",
+          templates: 15
+        }
       },
       realAccounts: true,
       emailOnly: true,
