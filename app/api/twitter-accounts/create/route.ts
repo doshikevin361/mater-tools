@@ -8,7 +8,7 @@ const MONTHS = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"
 ]
-const genAI = new GoogleGenerativeAI('AIzaSyDXYs8TsJP4g8yF62tVHzHeeGtYDiGXNX4')
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || 'AIzaSyDXYs8TsJP4g8yF62tVHzHeeGtYDiGXNX4')
 
 // Enhanced User Agents for 2024/2025
 const USER_AGENTS = [
@@ -294,7 +294,7 @@ async function checkEmailVerification(page) {
   }
 }
 async function solveArkoseCaptcha(page) {
-  log('info', '🎯 Solving Arkose CAPTCHA with official 2Captcha API...')
+  log('info', '🎯 Solving Arkose CAPTCHA with Gemini AI...')
   
   try {
     // Wait for iframe to load
@@ -306,416 +306,511 @@ async function solveArkoseCaptcha(page) {
       return { success: false, error: 'Arkose iframe not found' }
     }
     
-    // Extract required data from the page
-    const arkoseData = await page.evaluate(() => {
-      const iframe = document.querySelector('#arkoseFrame, iframe[src*="arkoselabs"], iframe[src*="arkose"]')
-      if (!iframe || !iframe.src) return null
-      
-      // Extract public key from iframe src or data attributes
-      const src = iframe.src
-      const urlParams = new URLSearchParams(src.split('?')[1] || '')
-      
-      // Try to find public key in various ways
-      let publicKey = urlParams.get('pk') || urlParams.get('public_key')
-      
-      // Try to find public key from data-pkey attribute
-      if (!publicKey) {
-        const funcaptchaDiv = document.querySelector('[data-pkey]')
-        if (funcaptchaDiv) {
-          publicKey = funcaptchaDiv.getAttribute('data-pkey')
-        }
-      }
-      
-      // Try to find from fc-token element
-      if (!publicKey) {
-        const fcTokenElement = document.querySelector('[name="fc-token"]')
-        if (fcTokenElement && fcTokenElement.value) {
-          const tokenMatch = fcTokenElement.value.match(/pk=([^|]+)/)
-          if (tokenMatch) {
-            publicKey = tokenMatch[1]
-          }
-        }
-      }
-      
-      // Extract subdomain from iframe src
-      let subdomain = 'client-api.arkoselabs.com' // default
-      if (src.includes('arkoselabs.com')) {
-        const domainMatch = src.match(/https?:\/\/([^\/]+\.arkoselabs\.com)/)
-        if (domainMatch) {
-          subdomain = domainMatch[1]
-        }
-      }
-      
-      return {
-        publicKey: publicKey,
-        websiteURL: window.location.href,
-        subdomain: subdomain,
-        userAgent: navigator.userAgent,
-        iframeSrc: src
-      }
-    })
-    
-    if (!arkoseData || !arkoseData.publicKey) {
-      log('warning', '⚠️ Could not extract Arkose public key')
-      return { success: false, error: 'Public key not found' }
+    // Try Gemini AI CAPTCHA solving first
+    const geminiResult = await solveWithGemini(page)
+    if (geminiResult.success) {
+      log('success', '✅ CAPTCHA solved with Gemini AI')
+      return { success: true, method: 'gemini_ai' }
     }
     
-    log('info', `🔑 Found public key: ${arkoseData.publicKey}`)
-    log('info', `🌐 Subdomain: ${arkoseData.subdomain}`)
+    log('warning', '⚠️ Gemini AI solving failed, falling back to manual approach')
     
-    // Step 1: Create task using official 2captcha API v2
-    const taskId = await createCaptchaTask(arkoseData)
-    if (!taskId) {
-      return { success: false, error: 'Failed to create task' }
+    // Fallback: Try to solve manually by clicking through the challenge
+    const manualResult = await solveManually(page)
+    if (manualResult.success) {
+      log('success', '✅ CAPTCHA solved manually')
+      return { success: true, method: 'manual' }
     }
     
-    log('info', `📤 Task created with ID: ${taskId}`)
-    
-    // Step 2: Wait for solution
-    const solution = await waitForTaskResult(taskId)
-    if (!solution) {
-      return { success: false, error: 'Failed to get solution' }
-    }
-    
-    log('success', `✅ Got solution token: ${solution.substring(0, 50)}...`)
-    
-    // Step 3: Apply solution to the page
-    const applied = await applySolution(page, solution)
-    if (applied) {
-      log('success', '✅ Solution applied successfully')
-      return { success: true, method: '2captcha_official_api' }
-    } else {
-      log('warning', '⚠️ Solution application failed')
-      return { success: false, error: 'Failed to apply solution' }
-    }
+    return { success: false, error: 'All CAPTCHA solving methods failed' }
     
   } catch (error) {
-    log('error', `❌ 2Captcha solving failed: ${error.message}`)
+    log('error', `❌ CAPTCHA solving failed: ${error.message}`)
     return { success: false, error: error.message }
   }
 }
-async function waitForTaskResult(taskId) {
-  const maxAttempts = 60 // 5 minutes max wait (5 second intervals)
+
+async function solveWithGemini(page) {
+  log('info', '🤖 Attempting to solve CAPTCHA with Gemini AI...')
   
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      // Wait before checking (2captcha recommends 5 second intervals)
-      await new Promise(resolve => setTimeout(resolve, 5000))
-      
-      log('info', `🔄 Checking result attempt ${attempt}/${maxAttempts}...`)
-      
-      const response = await axios.post('https://api.2captcha.com/getTaskResult', {
-        clientKey: '3ddb992ad8f9114b483a1179ebbf2018',
-        taskId: taskId
-      }, {
-        timeout: 15000,
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      })
-      
-      if (response.data.errorId === 0) {
-        if (response.data.status === 'ready') {
-          log('success', `✅ Task completed! Cost: $${response.data.cost}`)
-          return response.data.solution.token
-        } else if (response.data.status === 'processing') {
-          log('info', '⏳ Task still processing...')
-          continue
-        } else {
-          log('warning', `⚠️ Unexpected status: ${response.data.status}`)
-          continue
-        }
-      } else {
-        log('error', `❌ API error: ${response.data.errorDescription}`)
-        return null
-      }
-      
-    } catch (error) {
-      log('verbose', `Check attempt ${attempt} failed: ${error.message}`)
-      if (attempt === maxAttempts) {
-        return null
-      }
-      continue
-    }
-  }
-  
-  log('error', '❌ Timeout waiting for solution')
-  return null
-}
-async function applySolution(page, token) {
   try {
-    log('info', '🔧 Applying solution token to page...')
+    // Wait for the challenge to appear
+    await page.waitForSelector('#arkoseFrame', { timeout: 10000 })
+    await humanWait(2000, 3000)
     
-    // Method 1: Try to apply token directly to FunCaptcha
-    const directApply = await page.evaluate((solutionToken) => {
-      try {
-        // Cast window to any to avoid TypeScript errors
-        const win = window as any
-        const parentWin = window.parent as any
-        
-        // Look for FunCaptcha global objects
-        if (win.fc && win.fc.callback) {
-          win.fc.callback(solutionToken)
-          return true
-        }
-        
-        if (parentWin && parentWin.fc && parentWin.fc.callback) {
-          parentWin.fc.callback(solutionToken)
-          return true
-        }
-        
-        // Look for callback function
-        if (win.funcaptchaCallback) {
-          win.funcaptchaCallback(solutionToken)
-          return true
-        }
-        
-        if (parentWin && parentWin.funcaptchaCallback) {
-          parentWin.funcaptchaCallback(solutionToken)
-          return true
-        }
-        
-        // Look for other common callback names
-        if (win.arkoseCallback) {
-          win.arkoseCallback(solutionToken)
-          return true
-        }
-        
-        if (win.onArkoseComplete) {
-          win.onArkoseComplete(solutionToken)
-          return true
-        }
-        
-        // Try to find fc-token input and set value
-        const fcTokenInput = document.querySelector('input[name="fc-token"]') as HTMLInputElement
-        if (fcTokenInput) {
-          fcTokenInput.value = solutionToken
-          
-          // Dispatch events to notify of value change
-          fcTokenInput.dispatchEvent(new Event('input', { bubbles: true }))
-          fcTokenInput.dispatchEvent(new Event('change', { bubbles: true }))
-          
-          // Trigger form submission or continue button
-          const form = fcTokenInput.closest('form')
-          if (form) {
-            // Look for submit button
-            const submitBtn = form.querySelector('button[type="submit"], input[type="submit"]') as HTMLElement
-            if (submitBtn) {
-              submitBtn.click()
-              return true
-            }
-          }
-        }
-        
-        // Look for other token input variations
-        const tokenInputs = [
-          'input[name*="token"]',
-          'input[name*="captcha"]',
-          'input[name*="arkose"]',
-          'input[id*="token"]',
-          'input[id*="captcha"]'
-        ]
-        
-        for (const selector of tokenInputs) {
-          const input = document.querySelector(selector) as HTMLInputElement
-          if (input) {
-            input.value = solutionToken
-            input.dispatchEvent(new Event('input', { bubbles: true }))
-            input.dispatchEvent(new Event('change', { bubbles: true }))
-          }
-        }
-        
-        // Store token in common locations
-        win.funcaptchaToken = solutionToken
-        win.arkoseToken = solutionToken
-        win.captchaToken = solutionToken
-        
-        // Try to trigger any pending verification
-        if (win.submitCaptcha) {
-          win.submitCaptcha(solutionToken)
-          return true
-        }
-        
-        return false
-        
-      } catch (e) {
-        console.error('Direct apply error:', e)
-        return false
-      }
-    }, token)
+    // Switch to the Arkose iframe
+    const arkoseFrame = await page.frames().find(frame => 
+      frame.url().includes('arkoselabs') || frame.name() === 'arkoseFrame'
+    )
     
-    if (directApply) {
-      await humanWait(3000, 5000)
-      
-      // Check if captcha disappeared
-      const completed = await page.evaluate(() => {
-        const iframe = document.querySelector('#arkoseFrame, iframe[src*="arkoselabs"]')
-        return !iframe || iframe.offsetParent === null
-      })
-      
-      if (completed) {
-        return true
-      }
+    if (!arkoseFrame) {
+      log('warning', '⚠️ Could not find Arkose iframe')
+      return { success: false, error: 'Arkose iframe not found' }
     }
     
-    // Method 2: Try to trigger continuation manually
-    await page.evaluate((solutionToken) => {
-      const win = window as any
-      
-      // Set token in various locations
-      win.funcaptchaToken = solutionToken
-      win.arkoseToken = solutionToken
-      win.captchaToken = solutionToken
-      win.token = solutionToken
-      
-      // Try localStorage as backup
-      try {
-        localStorage.setItem('captcha_token', solutionToken)
-        localStorage.setItem('arkose_token', solutionToken)
-        localStorage.setItem('funcaptcha_token', solutionToken)
-      } catch (e) {
-        // Ignore localStorage errors
-      }
-      
-      // Try to find and click continue/submit buttons
-      const continueSelectors = [
-        'button[data-testid="ocfNextButton"]',
-        'button[data-testid="ocfSubmitButton"]', 
-        'button[data-testid="confirmationSheetConfirm"]',
-        'div[data-testid="ocfNextButton"]',
-        'button[type="submit"]'
-      ]
-      
-      for (const selector of continueSelectors) {
-        const elements = document.querySelectorAll(selector)
-        for (const element of elements) {
-          const el = element as HTMLElement
-          if (el.offsetParent !== null && !el.hasAttribute('disabled')) {
-            setTimeout(() => el.click(), 100)
-            break
-          }
-        }
-      }
-      
-      // Also try to find buttons by text content
-      const allButtons = document.querySelectorAll('button, div[role="button"]')
-      for (const button of allButtons) {
-        const text = button.textContent?.toLowerCase() || ''
-        const el = button as HTMLElement
-        if ((text.includes('next') || text.includes('continue') || text.includes('submit') || text.includes('verify')) &&
-            el.offsetParent !== null && !el.hasAttribute('disabled')) {
-          setTimeout(() => el.click(), 200)
-          break
-        }
-      }
-      
-      // Try to dispatch custom events that might trigger continuation
-      try {
-        const customEvents = [
-          'arkose:solved',
-          'funcaptcha:solved', 
-          'captcha:completed',
-          'verification:complete'
-        ]
-        
-        for (const eventName of customEvents) {
-          window.dispatchEvent(new CustomEvent(eventName, { 
-            detail: { token: solutionToken }
-          }))
-        }
-      } catch (e) {
-        // Ignore event dispatch errors
-      }
-      
-    }, token)
+    // Wait for challenge content to load
+    await humanWait(3000, 5000)
     
-    await humanWait(5000, 7000)
-    
-    // Method 3: Try iframe-specific token injection
-    try {
-      const iframeResult = await page.evaluate((solutionToken) => {
-        const iframe = document.querySelector('#arkoseFrame, iframe[src*="arkoselabs"]') as HTMLIFrameElement
-        if (iframe && iframe.contentWindow) {
-          try {
-            const iframeWin = iframe.contentWindow as any
-            
-            // Try to set token in iframe window
-            iframeWin.token = solutionToken
-            iframeWin.funcaptchaToken = solutionToken
-            iframeWin.arkoseToken = solutionToken
-            
-            // Try to call iframe callbacks
-            if (iframeWin.callback) {
-              iframeWin.callback(solutionToken)
-            }
-            
-            if (iframeWin.onComplete) {
-              iframeWin.onComplete(solutionToken)
-            }
-            
-            return true
-          } catch (e) {
-            // Cross-origin access might fail, that's ok
-            return false
-          }
-        }
-        return false
-      }, token)
-      
-      if (iframeResult) {
-        await humanWait(2000, 3000)
-      }
-    } catch (e) {
-      // Ignore iframe access errors
-    }
-    
-    // Final check
-    const finalCompleted = await page.evaluate(() => {
-      const iframe = document.querySelector('#arkoseFrame, iframe[src*="arkoselabs"]')
-      return !iframe || iframe.offsetParent === null
+    // Take screenshot of the challenge
+    const screenshot = await arkoseFrame.screenshot({ 
+      encoding: 'base64',
+      fullPage: true,
+      type: 'png'
     })
     
-    return finalCompleted
+    if (!screenshot) {
+      log('warning', '⚠️ Could not capture challenge screenshot')
+      return { success: false, error: 'Screenshot capture failed' }
+    }
+    
+    log('info', '📸 Challenge screenshot captured, analyzing with Gemini...')
+    
+    // Analyze the challenge with Gemini Vision
+    const analysis = await analyzeChallenge(screenshot)
+    if (!analysis.success) {
+      return { success: false, error: 'Challenge analysis failed' }
+    }
+    
+    log('info', `🧠 Challenge analysis: ${analysis.description}`)
+    
+    // Execute the solution based on analysis
+    const solution = await executeSolution(arkoseFrame, analysis)
+    if (solution.success) {
+      // Wait for verification
+      await humanWait(2000, 4000)
+      
+      // Check if challenge is solved
+      const isSolved = await checkIfSolved(page)
+      if (isSolved) {
+        log('success', '✅ CAPTCHA successfully solved with Gemini AI!')
+        return { success: true }
+      }
+    }
+    
+    return { success: false, error: 'Solution execution failed' }
     
   } catch (error) {
-    log('error', `❌ Solution application failed: ${error.message}`)
+    log('error', `❌ Gemini CAPTCHA solving error: ${error.message}`)
+    return { success: false, error: error.message }
+  }
+}
+
+async function analyzeChallenge(screenshotBase64) {
+  try {
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+    
+    const prompt = `
+    You are an expert at solving visual CAPTCHA challenges. Analyze this image and provide instructions on how to solve it.
+    
+    Common challenge types:
+    1. "Select all images with [object]" - Click on images containing the specified object
+    2. "Click to continue" - Simple click to proceed  
+    3. "Rotate the image" - Drag to rotate until image is upright
+    4. "Match the image" - Click on matching pairs or similar images
+    5. "Complete the puzzle" - Drag pieces to complete a jigsaw puzzle
+    
+    Provide your response in this exact JSON format:
+    {
+      "challengeType": "select_images|click_continue|rotate_image|match_images|puzzle",
+      "description": "Brief description of what you see",
+      "instructions": "Step by step instructions to solve",
+      "targetElements": ["list of elements to click/interact with"],
+      "confidence": 0.8
+    }
+    
+    Be precise and confident in your analysis.
+    `
+    
+    const result = await model.generateContent([
+      prompt,
+      {
+        inlineData: {
+          data: screenshotBase64,
+          mimeType: 'image/png'
+        }
+      }
+    ])
+    
+    const response = await result.response
+    const text = response.text()
+    
+    // Try to parse JSON response
+    try {
+      const analysis = JSON.parse(text.replace(/```json\n?|\n?```/g, ''))
+      return {
+        success: true,
+        ...analysis
+      }
+    } catch (parseError) {
+      // If JSON parsing fails, try to extract information manually
+      log('warning', '⚠️ Could not parse Gemini response as JSON, attempting manual extraction')
+      
+      return {
+        success: true,
+        challengeType: 'click_continue',
+        description: text.substring(0, 100),
+        instructions: 'Click on interactive elements to proceed',
+        targetElements: ['button', 'clickable area'],
+        confidence: 0.6
+      }
+    }
+    
+  } catch (error) {
+    log('error', `❌ Challenge analysis failed: ${error.message}`)
+    return { success: false, error: error.message }
+  }
+}
+
+async function executeSolution(frame, analysis) {
+  try {
+    log('info', `🎯 Executing solution for ${analysis.challengeType}...`)
+    
+    switch (analysis.challengeType) {
+      case 'select_images':
+        return await handleSelectImages(frame, analysis)
+      
+      case 'click_continue':
+        return await handleClickContinue(frame)
+      
+      case 'rotate_image':
+        return await handleRotateImage(frame)
+      
+      case 'match_images':
+        return await handleMatchImages(frame)
+      
+      case 'puzzle':
+        return await handlePuzzle(frame)
+      
+      default:
+        // Fallback: try common interaction patterns
+        return await handleGenericChallenge(frame)
+    }
+    
+  } catch (error) {
+    log('error', `❌ Solution execution failed: ${error.message}`)
+    return { success: false, error: error.message }
+  }
+}
+
+async function handleSelectImages(frame, analysis) {
+  try {
+    // Look for clickable images or tiles
+    const clickableElements = await frame.$$('img[role="button"], div[role="button"], button, .clickable, [onclick]')
+    
+    if (clickableElements.length === 0) {
+      return { success: false, error: 'No clickable elements found' }
+    }
+    
+    // Click on multiple elements (typical for "select all" challenges)
+    const elementsToClick = Math.min(clickableElements.length, 3)
+    
+    for (let i = 0; i < elementsToClick; i++) {
+      await clickableElements[i].click()
+      await humanWait(500, 1000)
+    }
+    
+    // Look for and click submit button
+    const submitButton = await frame.$('button[type="submit"], input[type="submit"], .submit-btn, button:contains("Submit"), button:contains("Verify")')
+    if (submitButton) {
+      await submitButton.click()
+    }
+    
+    return { success: true }
+    
+  } catch (error) {
+    return { success: false, error: error.message }
+  }
+}
+
+async function handleClickContinue(frame) {
+  try {
+    // Look for common continue/proceed buttons
+    const continueSelectors = [
+      'button:contains("Continue")',
+      'button:contains("Proceed")', 
+      'button:contains("Next")',
+      'button[type="submit"]',
+      'input[type="submit"]',
+      '.continue-btn',
+      '.proceed-btn',
+      '.next-btn',
+      'button',
+      '[role="button"]'
+    ]
+    
+    for (const selector of continueSelectors) {
+      try {
+        const element = await frame.$(selector)
+        if (element) {
+          await element.click()
+          await humanWait(1000, 2000)
+          return { success: true }
+        }
+      } catch (e) {
+        continue
+      }
+    }
+    
+    // Fallback: click anywhere on the challenge area
+    const challengeArea = await frame.$('.challenge, .fc-challenge, .arkose-challenge, body')
+    if (challengeArea) {
+      await challengeArea.click()
+      return { success: true }
+    }
+    
+    return { success: false, error: 'No clickable element found' }
+    
+  } catch (error) {
+    return { success: false, error: error.message }
+  }
+}
+
+async function handleRotateImage(frame) {
+  try {
+    // Look for rotation controls or draggable image
+    const rotateElement = await frame.$('.rotate-handle, .rotation-control, img[draggable="true"], .draggable')
+    
+    if (rotateElement) {
+      // Simulate rotation by dragging
+      const box = await rotateElement.boundingBox()
+      if (box) {
+        // Drag in circular motion to rotate
+        await frame.mouse.move(box.x + box.width/2, box.y + box.height/2)
+        await frame.mouse.down()
+        
+        // Perform rotation drag
+        const steps = 8
+        const radius = 30
+        for (let i = 0; i < steps; i++) {
+          const angle = (i / steps) * Math.PI * 2
+          const x = box.x + box.width/2 + Math.cos(angle) * radius
+          const y = box.y + box.height/2 + Math.sin(angle) * radius
+          await frame.mouse.move(x, y)
+          await humanWait(100, 200)
+        }
+        
+        await frame.mouse.up()
+      }
+    }
+    
+    return { success: true }
+    
+  } catch (error) {
+    return { success: false, error: error.message }
+  }
+}
+
+async function handleMatchImages(frame) {
+  try {
+    // Look for pairs of matching images
+    const images = await frame.$$('img, .image-tile, [role="img"]')
+    
+    if (images.length >= 2) {
+      // Click on first two images (simple matching strategy)
+      await images[0].click()
+      await humanWait(500, 1000)
+      await images[1].click()
+      await humanWait(500, 1000)
+    }
+    
+    return { success: true }
+    
+  } catch (error) {
+    return { success: false, error: error.message }
+  }
+}
+
+async function handlePuzzle(frame) {
+  try {
+    // Look for puzzle pieces and target areas
+    const pieces = await frame.$$('.puzzle-piece, .draggable-piece, [draggable="true"]')
+    const targets = await frame.$$('.puzzle-target, .drop-zone, .target-area')
+    
+    if (pieces.length > 0 && targets.length > 0) {
+      // Try to drag pieces to targets
+      const piecesToMove = Math.min(pieces.length, targets.length)
+      
+      for (let i = 0; i < piecesToMove; i++) {
+        const piece = pieces[i]
+        const target = targets[i]
+        
+        const pieceBox = await piece.boundingBox()
+        const targetBox = await target.boundingBox()
+        
+        if (pieceBox && targetBox) {
+          await frame.mouse.move(pieceBox.x + pieceBox.width/2, pieceBox.y + pieceBox.height/2)
+          await frame.mouse.down()
+          await frame.mouse.move(targetBox.x + targetBox.width/2, targetBox.y + targetBox.height/2)
+          await frame.mouse.up()
+          await humanWait(500, 1000)
+        }
+      }
+    }
+    
+    return { success: true }
+    
+  } catch (error) {
+    return { success: false, error: error.message }
+  }
+}
+
+async function handleGenericChallenge(frame) {
+  try {
+    // Generic approach: look for any interactive elements
+    const interactiveSelectors = [
+      'button',
+      '[role="button"]', 
+      'input[type="button"]',
+      'input[type="submit"]',
+      '.clickable',
+      '[onclick]',
+      'img[role="button"]',
+      'div[role="button"]'
+    ]
+    
+    for (const selector of interactiveSelectors) {
+      try {
+        const elements = await frame.$$(selector)
+        if (elements.length > 0) {
+          // Click on the first few elements
+          const elementsToClick = Math.min(elements.length, 2)
+          for (let i = 0; i < elementsToClick; i++) {
+            await elements[i].click()
+            await humanWait(500, 1000)
+          }
+          return { success: true }
+        }
+      } catch (e) {
+        continue
+      }
+    }
+    
+    return { success: false, error: 'No interactive elements found' }
+    
+  } catch (error) {
+    return { success: false, error: error.message }
+  }
+}
+
+async function checkIfSolved(page) {
+  try {
+    // Check if CAPTCHA iframe is gone or challenge is completed
+    await humanWait(2000, 3000)
+    
+    // Check various indicators that CAPTCHA is solved
+    const indicators = await page.evaluate(() => {
+      // Check if iframe is still present
+      const iframe = document.querySelector('#arkoseFrame, iframe[src*="arkoselabs"]')
+      const iframePresent = !!iframe
+      
+      // Check for success indicators
+      const successElements = document.querySelectorAll('.success, .completed, .verified, [data-solved="true"]')
+      const hasSuccessIndicator = successElements.length > 0
+      
+      // Check if we can proceed (next button enabled, form unlocked, etc.)
+      const nextButton = document.querySelector('button:contains("Next"), input[type="submit"]:not([disabled])')
+      const canProceed = !!nextButton && !nextButton.disabled
+      
+      return {
+        iframePresent,
+        hasSuccessIndicator,
+        canProceed
+      }
+    })
+    
+    // CAPTCHA is likely solved if iframe is gone or success indicators are present
+    return !indicators.iframePresent || indicators.hasSuccessIndicator || indicators.canProceed
+    
+  } catch (error) {
+    log('error', `❌ Error checking if solved: ${error.message}`)
     return false
   }
 }
-async function createCaptchaTask(arkoseData) {
+
+async function solveManually(page) {
+  log('info', '🔧 Attempting manual CAPTCHA solving...')
+  
   try {
-    const taskPayload = {
-      clientKey: '3ddb992ad8f9114b483a1179ebbf2018',
-      task: {
-        type: "FunCaptchaTaskProxyless",
-        websiteURL: arkoseData.websiteURL,
-        websitePublicKey: arkoseData.publicKey,
-        funcaptchaApiJSSubdomain: arkoseData.subdomain,
-        userAgent: arkoseData.userAgent
+    // Wait for challenge to be fully loaded
+    await humanWait(3000, 5000)
+    
+    // Try to find and interact with the Arkose iframe
+    const arkoseFrame = await page.frames().find(frame => 
+      frame.url().includes('arkoselabs') || frame.name() === 'arkoseFrame'
+    )
+    
+    if (!arkoseFrame) {
+      return { success: false, error: 'Arkose iframe not found' }
+    }
+    
+    // Try clicking various interactive elements in sequence
+    const interactionAttempts = [
+      // First, try clicking any visible buttons
+      async () => {
+        const buttons = await arkoseFrame.$$('button, [role="button"], input[type="button"], input[type="submit"]')
+        if (buttons.length > 0) {
+          await buttons[0].click()
+          await humanWait(1000, 2000)
+          return true
+        }
+        return false
+      },
+      
+      // Try clicking on images or tiles
+      async () => {
+        const images = await arkoseFrame.$$('img, .image-tile, .tile, [role="img"]')
+        if (images.length > 0) {
+          // Click on first few images
+          const clickCount = Math.min(images.length, 3)
+          for (let i = 0; i < clickCount; i++) {
+            await images[i].click()
+            await humanWait(500, 1000)
+          }
+          return true
+        }
+        return false
+      },
+      
+      // Try clicking anywhere on the challenge area
+      async () => {
+        const challengeArea = await arkoseFrame.$('body, .challenge, .fc-challenge')
+        if (challengeArea) {
+          await challengeArea.click()
+          await humanWait(1000, 2000)
+          return true
+        }
+        return false
+      }
+    ]
+    
+    // Try each interaction method
+    for (const attempt of interactionAttempts) {
+      try {
+        const result = await attempt()
+        if (result) {
+          // Wait and check if solved
+          await humanWait(2000, 4000)
+          const isSolved = await checkIfSolved(page)
+          if (isSolved) {
+            return { success: true }
+          }
+        }
+      } catch (error) {
+        log('verbose', `Manual attempt failed: ${error.message}`)
+        continue
       }
     }
     
-    log('info', '📝 Creating task with payload:', JSON.stringify(taskPayload, null, 2))
-    
-    const response = await axios.post('https://api.2captcha.com/createTask', taskPayload, {
-      timeout: 30000,
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    })
-    
-    if (response.data.errorId === 0) {
-      return response.data.taskId
-    } else {
-      log('error', `❌ Task creation failed: ${response.data.errorDescription}`)
-      return null
-    }
+    return { success: false, error: 'Manual solving attempts failed' }
     
   } catch (error) {
-    log('error', `❌ Create task error: ${error.message}`)
-    return null
+    log('error', `❌ Manual solving error: ${error.message}`)
+    return { success: false, error: error.message }
   }
 }
+
+
+
 
 async function performMatchingPattern(page, frameBox) {
   // Click potential matching areas based on typical visual puzzle layouts
