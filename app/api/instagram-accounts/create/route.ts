@@ -2,7 +2,6 @@ import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
 import axios from "axios"
 import puppeteer from "puppeteer"
-import { getFreeIndianProxy, getProxyLogInfo, type Proxy } from "@/lib/proxy-service"
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -237,101 +236,78 @@ function generateAudioNoise() {
 }
 
 async function createMaximumStealthBrowser() {
-  log('info', '🎭 Creating MAXIMUM stealth browser with Indian Proxy Strategy...')
-  
-  // Get Indian proxy for Instagram account creation
-  let indianProxy: Proxy | null = null
-  try {
-    indianProxy = await getFreeIndianProxy()
-    if (indianProxy) {
-      log('success', `🇮🇳 Using Indian proxy: ${getProxyLogInfo(indianProxy)}`)
-    } else {
-      log('warning', '⚠️ No Indian proxy available, proceeding without proxy')
-    }
-  } catch (error) {
-    log('warning', `⚠️ Failed to get Indian proxy: ${error.message}, proceeding without proxy`)
-  }
+  log('info', '🎭 Creating MAXIMUM stealth browser (No Proxy Strategy)...')
   
   const deviceProfile = generateDeviceProfile()
   
-  // Configure browser args with proxy if available
-  const browserArgs = [
-    // Core flags
-    '--no-sandbox',
-    '--disable-setuid-sandbox',
-    '--disable-dev-shm-usage',
-    '--disable-accelerated-2d-canvas',
-    '--no-first-run',
-    '--no-zygote',
-    '--disable-gpu',
-    
-    '--disable-blink-features=AutomationControlled',
-    '--disable-web-security',
-    '--disable-features=VizDisplayCompositor',
-    '--disable-features=TranslateUI',
-    '--disable-features=BlinkGenPropertyTrees', 
-    '--disable-ipc-flooding-protection',
-    '--disable-renderer-backgrounding',
-    '--disable-backgrounding-occluded-windows',
-    '--disable-client-side-phishing-detection',
-    '--disable-component-extensions-with-background-pages',
-    '--disable-default-apps',
-    '--disable-extensions',
-    '--disable-features=Translate',
-    '--disable-hang-monitor',
-    '--disable-popup-blocking',
-    '--disable-prompt-on-repost',
-    '--disable-sync',
-    '--disable-translate',
-    '--disable-background-timer-throttling',
-    '--disable-component-update',
-    '--disable-domain-reliability',
-    '--disable-background-downloads',
-    '--disable-add-to-shelf',
-    '--disable-office-editing-component-extension',
-    '--disable-background-media-suspend',
-    '--disable-password-generation',
-    '--disable-password-manager-reauthentication',
-    
-    '--metrics-recording-only',
-    '--no-default-browser-check',
-    '--safebrowsing-disable-auto-update',
-    '--enable-automation=false',
-    '--password-store=basic',
-    '--use-mock-keychain',
-    '--disable-plugins-discovery',
-    '--disable-preconnect',
-    '--disable-prefetch',
-    '--disable-logging',
-    '--disable-extensions-file-access-check',
-    '--disable-extensions-http-throttling',
-    '--disable-component-extensions-with-background-pages',
-    '--disable-background-networking',
-    '--disable-extension-updater',
-    '--disable-print-preview',
-    '--disable-speech-api',
-    '--hide-scrollbars',
-    '--mute-audio',
-    
-    '--memory-pressure-off',
-    '--max_old_space_size=4096',
-    
-    '--disable-blink-features=AutomationControlled',
-    '--exclude-switches=enable-automation',
-    '--disable-extensions-http-throttling',
-    '--disable-useragent-freeze'
-  ]
-
-  // Add proxy configuration if available
-  if (indianProxy) {
-    const proxyUrl = `${indianProxy.protocol}://${indianProxy.ip}:${indianProxy.port}`
-    browserArgs.push(`--proxy-server=${proxyUrl}`)
-    log('info', `🌐 Configured browser with proxy: ${proxyUrl}`)
-  }
-  
   const browser = await puppeteer.launch({
     headless: STEALTH_CONFIG.headlessMode,
-    args: browserArgs,
+    args: [
+      // Core flags
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-accelerated-2d-canvas',
+      '--no-first-run',
+      '--no-zygote',
+      '--disable-gpu',
+      
+      '--disable-blink-features=AutomationControlled',
+      '--disable-web-security',
+      '--disable-features=VizDisplayCompositor',
+      '--disable-features=TranslateUI',
+      '--disable-features=BlinkGenPropertyTrees', 
+      '--disable-ipc-flooding-protection',
+      '--disable-renderer-backgrounding',
+      '--disable-backgrounding-occluded-windows',
+      '--disable-client-side-phishing-detection',
+      '--disable-component-extensions-with-background-pages',
+      '--disable-default-apps',
+      '--disable-extensions',
+      '--disable-features=Translate',
+      '--disable-hang-monitor',
+      '--disable-popup-blocking',
+      '--disable-prompt-on-repost',
+      '--disable-sync',
+      '--disable-translate',
+      '--disable-background-timer-throttling',
+      '--disable-component-update',
+      '--disable-domain-reliability',
+      '--disable-background-downloads',
+      '--disable-add-to-shelf',
+      '--disable-office-editing-component-extension',
+      '--disable-background-media-suspend',
+      '--disable-password-generation',
+      '--disable-password-manager-reauthentication',
+      
+      '--metrics-recording-only',
+      '--no-default-browser-check',
+      '--safebrowsing-disable-auto-update',
+      '--enable-automation=false',
+      '--password-store=basic',
+      '--use-mock-keychain',
+      '--disable-plugins-discovery',
+      '--disable-preconnect',
+      '--disable-prefetch',
+      '--disable-logging',
+      '--disable-extensions-file-access-check',
+      '--disable-extensions-http-throttling',
+      '--disable-component-extensions-with-background-pages',
+      '--disable-background-networking',
+      '--disable-extension-updater',
+      '--disable-print-preview',
+      '--disable-speech-api',
+      '--hide-scrollbars',
+      '--mute-audio',
+      
+      '--memory-pressure-off',
+      '--max_old_space_size=4096',
+      
+      '--disable-blink-features=AutomationControlled',
+      '--exclude-switches=enable-automation',
+      '--disable-extensions-http-throttling',
+      '--disable-useragent-freeze'
+    ],
     ignoreDefaultArgs: [
       '--enable-automation',
       '--enable-blink-features=IdleDetection'
@@ -861,7 +837,7 @@ async function createMaximumStealthBrowser() {
 
   log('success', '✅ Maximum stealth browser created with realistic device profile')
   
-  return { browser, page, deviceProfile, proxy: indianProxy }
+  return { browser, page, deviceProfile }
 }
 
 // Enhanced email creation
@@ -1844,7 +1820,7 @@ async function editProfileBio(page, username) {
 
 // Main account creation function
 async function createMaxStealthInstagramAccount(accountData) {
-  let browser, page, deviceProfile, proxy
+  let browser, page, deviceProfile
   
   log('info', '🚀 Starting MAXIMUM STEALTH Instagram account creation...')
   
@@ -1853,11 +1829,6 @@ async function createMaxStealthInstagramAccount(accountData) {
     browser = browserSetup.browser
     page = browserSetup.page
     deviceProfile = browserSetup.deviceProfile
-    proxy = browserSetup.proxy
-    
-    if (proxy) {
-      log('info', `🇮🇳 Account creation using Indian proxy: ${proxy.ip}:${proxy.port} (${proxy.city || 'Unknown City'})`)
-    }
 
     // Pre-browsing simulation
     await simulatePreBrowsing(page)

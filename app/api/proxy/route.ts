@@ -140,47 +140,7 @@ async function getProxiesViaAPI(): Promise<Proxy[]> {
 
 // Scrape proxies from proxy5.net website
 async function scrapeProxiesFromWebsite(): Promise<Proxy[]> {
-  log('info', '🌐 Scraping Indian proxies from proxy5.net website...')
-  
-  // Hardcoded Indian proxies as primary fallback (from your specification)
-  const fallbackIndianProxies: Proxy[] = [
-    {
-      ip: '103.74.227.130',
-      port: 56417,
-      protocol: 'socks4',
-      anonymity: 'Anonymous',
-      country: 'India',
-      city: 'Lucknow',
-      isp: 'Tachyon Communications Pvt Ltd',
-      latency: 1964,
-      uptime: 100,
-      lastChecked: '37 min'
-    },
-    {
-      ip: '64.227.131.240',
-      port: 1080,
-      protocol: 'socks4',
-      anonymity: 'Anonymous',
-      country: 'India',
-      city: 'Bengaluru',
-      isp: 'DigitalOcean, LLC',
-      latency: 2746,
-      uptime: 100,
-      lastChecked: '36 min'
-    },
-    {
-      ip: '159.89.174.192',
-      port: 35059,
-      protocol: 'socks5',
-      anonymity: 'Anonymous',
-      country: 'India',
-      city: 'Bengaluru',
-      isp: 'DigitalOcean, LLC',
-      latency: 1945,
-      uptime: 100,
-      lastChecked: '31 min'
-    }
-  ]
+  log('info', '🌐 Scraping proxies from proxy5.net website...')
   
   let browser
   try {
@@ -192,8 +152,7 @@ async function scrapeProxiesFromWebsite(): Promise<Proxy[]> {
         '--disable-dev-shm-usage',
         '--disable-gpu',
         '--disable-web-security',
-        '--disable-features=VizDisplayCompositor',
-        '--disable-blink-features=AutomationControlled'
+        '--disable-features=VizDisplayCompositor'
       ]
     })
     
@@ -207,20 +166,20 @@ async function scrapeProxiesFromWebsite(): Promise<Proxy[]> {
       timeout: 30000
     })
     
-    log('info', '📄 Page loaded, extracting Indian proxy data...')
+    log('info', '📄 Page loaded, extracting proxy data...')
     
-    // Extract proxy data from the table with enhanced parsing
+    // Extract proxy data from the table
     const proxies = await page.evaluate(() => {
-      const proxyRows = Array.from(document.querySelectorAll('table tbody tr, .proxy-list tr, .proxy-table tr'))
+      const proxyRows = Array.from(document.querySelectorAll('table tbody tr'))
       const extractedProxies: any[] = []
       
       for (const row of proxyRows) {
         try {
           const cells = Array.from(row.querySelectorAll('td'))
-          if (cells.length >= 6) {
+          if (cells.length >= 8) {
             const ip = cells[0]?.textContent?.trim()
             const port = cells[1]?.textContent?.trim()
-            const protocols = cells[2]?.textContent?.trim()
+            const protocol = cells[2]?.textContent?.trim()
             const anonymity = cells[3]?.textContent?.trim()
             const countryCity = cells[4]?.textContent?.trim()
             const isp = cells[5]?.textContent?.trim()
@@ -229,46 +188,20 @@ async function scrapeProxiesFromWebsite(): Promise<Proxy[]> {
             const lastChecked = cells[8]?.textContent?.trim()
             
             if (ip && port && !isNaN(parseInt(port))) {
-              // Parse country and city
-              let country = 'India'
-              let city = ''
-              if (countryCity) {
-                const parts = countryCity.split('\n').filter(p => p.trim())
-                if (parts.length >= 2) {
-                  country = parts[0].trim()
-                  city = parts[1].trim()
-                } else {
-                  const singleLine = countryCity.trim()
-                  if (singleLine.includes('India')) {
-                    country = 'India'
-                    city = singleLine.replace('India', '').trim()
-                  }
-                }
-              }
+              const [country, city] = countryCity ? countryCity.split(' ') : ['IN', '']
               
-              // Only include Indian proxies
-              if (country.toLowerCase().includes('india') || country.toLowerCase() === 'in') {
-                // Parse protocols (could be multiple like "SOCKS4, SOCKS5")
-                const protocolList = protocols ? protocols.toLowerCase().split(',').map(p => p.trim()) : ['http']
-                
-                // Create proxy entries for each protocol
-                for (const protocol of protocolList) {
-                  const cleanProtocol = protocol.replace(/[^a-z0-9]/g, '') || 'http'
-                  
-                  extractedProxies.push({
-                    ip: ip,
-                    port: parseInt(port),
-                    protocol: cleanProtocol,
-                    anonymity: anonymity || 'unknown',
-                    country: 'India',
-                    city: city || undefined,
-                    isp: isp || undefined,
-                    latency: latency ? parseInt(latency.replace(/[^0-9]/g, '')) : undefined,
-                    uptime: uptime ? parseInt(uptime.replace(/[^0-9]/g, '')) : undefined,
-                    lastChecked: lastChecked || undefined
-                  })
-                }
-              }
+              extractedProxies.push({
+                ip: ip,
+                port: parseInt(port),
+                protocol: protocol?.toLowerCase() || 'http',
+                anonymity: anonymity || 'unknown',
+                country: country || 'IN',
+                city: city || undefined,
+                isp: isp || undefined,
+                latency: latency ? parseInt(latency.replace('ms', '').trim()) : undefined,
+                uptime: uptime ? parseInt(uptime.replace('%', '').trim()) : undefined,
+                lastChecked: lastChecked || undefined
+              })
             }
           }
         } catch (error) {
@@ -280,18 +213,12 @@ async function scrapeProxiesFromWebsite(): Promise<Proxy[]> {
       return extractedProxies
     })
     
-    if (proxies.length > 0) {
-      log('success', `✅ Scraped ${proxies.length} Indian proxies from website`)
-      // Combine scraped proxies with fallback proxies
-      return [...proxies, ...fallbackIndianProxies]
-    } else {
-      log('info', '⚠️ No proxies found via scraping, using fallback Indian proxies')
-      return fallbackIndianProxies
-    }
+    log('success', `✅ Scraped ${proxies.length} proxies from website`)
+    return proxies
     
   } catch (error) {
-    log('error', `❌ Scraping failed: ${error.message}, using fallback Indian proxies`)
-    return fallbackIndianProxies
+    log('error', `❌ Scraping failed: ${error.message}`)
+    return []
   } finally {
     if (browser) {
       await browser.close()
@@ -299,28 +226,8 @@ async function scrapeProxiesFromWebsite(): Promise<Proxy[]> {
   }
 }
 
-// Test proxy connectivity with enhanced validation for Indian proxies
+// Test proxy connectivity
 async function testProxy(proxy: Proxy): Promise<boolean> {
-  try {
-    // Test basic connectivity first
-    const basicTest = await testBasicConnectivity(proxy)
-    if (!basicTest) {
-      return false
-    }
-    
-    // Additional validation for Indian proxies
-    if (proxy.country?.toLowerCase().includes('india')) {
-      return await testIndianProxyForInstagram(proxy)
-    }
-    
-    return basicTest
-  } catch (error) {
-    return false
-  }
-}
-
-// Basic connectivity test
-async function testBasicConnectivity(proxy: Proxy): Promise<boolean> {
   try {
     const testUrl = 'http://httpbin.org/ip'
     const timeout = 10000
@@ -337,132 +244,30 @@ async function testBasicConnectivity(proxy: Proxy): Promise<boolean> {
       }
     })
     
-    // Verify the response shows we're using the proxy IP
-    if (response.status === 200 && response.data && response.data.origin) {
-      const responseIP = response.data.origin.split(',')[0].trim()
-      return responseIP === proxy.ip
-    }
-    
     return response.status === 200
   } catch (error) {
     return false
   }
 }
 
-// Enhanced testing specifically for Indian proxies used with Instagram
-async function testIndianProxyForInstagram(proxy: Proxy): Promise<boolean> {
-  try {
-    log('info', `🇮🇳 Testing Indian proxy for Instagram compatibility: ${proxy.ip}:${proxy.port}`)
-    
-    // Test 1: Basic HTTP connectivity
-    const httpTest = await testBasicConnectivity(proxy)
-    if (!httpTest) {
-      log('verbose', `❌ Indian proxy failed basic HTTP test: ${proxy.ip}:${proxy.port}`)
-      return false
-    }
-    
-    // Test 2: HTTPS connectivity (Instagram uses HTTPS)
-    try {
-      const httpsResponse = await axios.get('https://httpbin.org/ip', {
-        timeout: 15000,
-        proxy: {
-          host: proxy.ip,
-          port: proxy.port,
-          protocol: proxy.protocol
-        },
-        headers: {
-          "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)]
-        }
-      })
-      
-      if (httpsResponse.status !== 200) {
-        log('verbose', `❌ Indian proxy failed HTTPS test: ${proxy.ip}:${proxy.port}`)
-        return false
-      }
-    } catch (error) {
-      log('verbose', `❌ Indian proxy failed HTTPS test: ${proxy.ip}:${proxy.port} - ${error.message}`)
-      return false
-    }
-    
-    // Test 3: Check if proxy can access Instagram-related domains
-    try {
-      const instagramTest = await axios.get('https://www.instagram.com/robots.txt', {
-        timeout: 20000,
-        proxy: {
-          host: proxy.ip,
-          port: proxy.port,
-          protocol: proxy.protocol
-        },
-        headers: {
-          "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
-          "Accept": "text/plain"
-        }
-      })
-      
-      if (instagramTest.status !== 200) {
-        log('verbose', `❌ Indian proxy failed Instagram access test: ${proxy.ip}:${proxy.port}`)
-        return false
-      }
-    } catch (error) {
-      log('verbose', `❌ Indian proxy failed Instagram access test: ${proxy.ip}:${proxy.port} - ${error.message}`)
-      return false
-    }
-    
-    log('success', `✅ Indian proxy passed all tests: ${proxy.ip}:${proxy.port}`)
-    return true
-    
-  } catch (error) {
-    log('verbose', `❌ Indian proxy validation failed: ${proxy.ip}:${proxy.port} - ${error.message}`)
-    return false
-  }
-}
-
-// Filter and validate proxies with priority for Indian proxies
+// Filter and validate proxies
 async function filterWorkingProxies(proxies: Proxy[], maxTests: number = 5): Promise<Proxy[]> {
   log('info', `🔍 Testing ${Math.min(proxies.length, maxTests)} proxies for connectivity...`)
   
-  // Separate Indian and non-Indian proxies
-  const indianProxies = proxies.filter(p => p.country?.toLowerCase().includes('india'))
-  const otherProxies = proxies.filter(p => !p.country?.toLowerCase().includes('india'))
-  
-  log('info', `📊 Found ${indianProxies.length} Indian proxies and ${otherProxies.length} other proxies`)
-  
   const workingProxies: Proxy[] = []
+  const testProxies = proxies.slice(0, maxTests)
   
-  // Test Indian proxies first (priority)
-  const indianToTest = indianProxies.slice(0, Math.min(maxTests, indianProxies.length))
-  log('info', `🇮🇳 Testing ${indianToTest.length} Indian proxies first...`)
-  
-  for (const proxy of indianToTest) {
+  for (const proxy of testProxies) {
     const isWorking = await testProxy(proxy)
     if (isWorking) {
       workingProxies.push(proxy)
-      log('success', `✅ Indian proxy working: ${proxy.ip}:${proxy.port} (${proxy.city || 'Unknown City'})`)
+      log('success', `✅ Proxy working: ${proxy.ip}:${proxy.port}`)
     } else {
-      log('warning', `❌ Indian proxy failed: ${proxy.ip}:${proxy.port}`)
+      log('warning', `❌ Proxy failed: ${proxy.ip}:${proxy.port}`)
     }
   }
   
-  // If we need more proxies and haven't reached maxTests, test other proxies
-  const remainingTests = maxTests - indianToTest.length
-  if (workingProxies.length < maxTests && remainingTests > 0 && otherProxies.length > 0) {
-    log('info', `🌐 Testing ${Math.min(remainingTests, otherProxies.length)} additional proxies...`)
-    
-    const otherToTest = otherProxies.slice(0, remainingTests)
-    for (const proxy of otherToTest) {
-      const isWorking = await testProxy(proxy)
-      if (isWorking) {
-        workingProxies.push(proxy)
-        log('success', `✅ Proxy working: ${proxy.ip}:${proxy.port}`)
-      } else {
-        log('warning', `❌ Proxy failed: ${proxy.ip}:${proxy.port}`)
-      }
-    }
-  }
-  
-  const indianWorkingCount = workingProxies.filter(p => p.country?.toLowerCase().includes('india')).length
-  log('info', `✅ Found ${workingProxies.length} working proxies (${indianWorkingCount} Indian) out of ${Math.min(proxies.length, maxTests)} tested`)
-  
+  log('info', `✅ Found ${workingProxies.length} working proxies out of ${testProxies.length} tested`)
   return workingProxies
 }
 
