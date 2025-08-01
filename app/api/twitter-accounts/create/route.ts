@@ -351,7 +351,7 @@ async function solveWithGemini(page) {
     // Wait for challenge content to load
     await humanWait(3000, 5000)
     
-    // Take screenshot of the challenge
+    // Take screenshot of the iframe content
     const screenshot = await arkoseFrame.screenshot({ 
       encoding: 'base64',
       fullPage: true,
@@ -510,9 +510,23 @@ async function handleSelectImages(frame, analysis) {
     }
     
     // Look for and click submit button
-    const submitButton = await frame.$('button[type="submit"], input[type="submit"], .submit-btn, button:contains("Submit"), button:contains("Verify")')
+    const submitButton = await frame.$('button[type="submit"], input[type="submit"], .submit-btn')
     if (submitButton) {
       await submitButton.click()
+    } else {
+      // Try to find submit button by text content
+      const buttons = await frame.$$('button')
+      for (const button of buttons) {
+        try {
+          const text = await frame.evaluate(el => el.textContent?.toLowerCase() || '', button)
+          if (text.includes('submit') || text.includes('verify')) {
+            await button.click()
+            break
+          }
+        } catch (e) {
+          continue
+        }
+      }
     }
     
     return { success: true }
@@ -526,9 +540,6 @@ async function handleClickContinue(frame) {
   try {
     // Look for common continue/proceed buttons
     const continueSelectors = [
-      'button:contains("Continue")',
-      'button:contains("Proceed")', 
-      'button:contains("Next")',
       'button[type="submit"]',
       'input[type="submit"]',
       '.continue-btn',
@@ -543,6 +554,21 @@ async function handleClickContinue(frame) {
         const element = await frame.$(selector)
         if (element) {
           await element.click()
+          await humanWait(1000, 2000)
+          return { success: true }
+        }
+      } catch (e) {
+        continue
+      }
+    }
+    
+    // Try to find buttons by text content
+    const buttons = await frame.$$('button, [role="button"]')
+    for (const button of buttons) {
+      try {
+        const text = await frame.evaluate(el => el.textContent?.toLowerCase() || '', button)
+        if (text.includes('continue') || text.includes('proceed') || text.includes('next')) {
+          await button.click()
           await humanWait(1000, 2000)
           return { success: true }
         }
@@ -708,8 +734,11 @@ async function checkIfSolved(page) {
       const hasSuccessIndicator = successElements.length > 0
       
       // Check if we can proceed (next button enabled, form unlocked, etc.)
-      const nextButton = document.querySelector('button:contains("Next"), input[type="submit"]:not([disabled])')
-      const canProceed = !!nextButton && !nextButton.disabled
+      const nextButtons = Array.from(document.querySelectorAll('button, input[type="submit"]')).filter(btn => {
+        const text = btn.textContent?.toLowerCase() || ''
+        return text.includes('next') && !btn.disabled
+      })
+      const canProceed = nextButtons.length > 0
       
       return {
         iframePresent,
