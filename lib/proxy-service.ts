@@ -90,10 +90,67 @@ export class ProxyService {
   }
 
   /**
+   * Fetch specifically Indian proxies for Instagram account creation
+   */
+  async fetchIndianProxies(count: number = 5, test: boolean = true): Promise<ProxyResponse> {
+    try {
+      const response = await this.fetchProxies(count * 2, test) // Fetch more to filter for Indian ones
+      
+      if (response.success && response.proxies) {
+        // Filter for Indian proxies only
+        const indianProxies = response.proxies.filter(proxy => 
+          proxy.country?.toLowerCase().includes('india') || 
+          proxy.country?.toLowerCase() === 'in'
+        )
+        
+        // Take only the requested count
+        const limitedProxies = indianProxies.slice(0, count)
+        
+        return {
+          success: true,
+          proxies: limitedProxies,
+          source: response.source,
+          count: limitedProxies.length
+        }
+      }
+      
+      return response
+    } catch (error) {
+      console.error('Failed to fetch Indian proxies:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Get a single working Indian proxy for Instagram
+   */
+  async getSingleIndianProxy(): Promise<Proxy | null> {
+    try {
+      const response = await this.fetchIndianProxies(1, true)
+      
+      if (response.success && response.proxies && response.proxies.length > 0) {
+        return response.proxies[0]
+      }
+      
+      return null
+    } catch (error) {
+      console.error('Failed to get single Indian proxy:', error)
+      return null
+    }
+  }
+
+  /**
    * Get a single working proxy
    */
   async getSingleProxy(): Promise<Proxy | null> {
     try {
+      // Prioritize Indian proxies for Instagram use
+      const indianProxy = await this.getSingleIndianProxy()
+      if (indianProxy) {
+        return indianProxy
+      }
+      
+      // Fallback to any proxy
       const response = await this.fetchProxies(1, true)
       
       if (response.success && response.proxies && response.proxies.length > 0) {
@@ -108,17 +165,43 @@ export class ProxyService {
   }
 
   /**
-   * Get multiple proxies with testing
+   * Get multiple Indian proxies with testing
    */
-  async getMultipleProxies(count: number = 5): Promise<Proxy[]> {
+  async getMultipleIndianProxies(count: number = 5): Promise<Proxy[]> {
     try {
-      const response = await this.fetchProxies(count, true)
+      const response = await this.fetchIndianProxies(count, true)
       
       if (response.success && response.proxies) {
         return response.proxies
       }
       
       return []
+    } catch (error) {
+      console.error('Failed to get multiple Indian proxies:', error)
+      return []
+    }
+  }
+
+  /**
+   * Get multiple proxies with testing
+   */
+  async getMultipleProxies(count: number = 5): Promise<Proxy[]> {
+    try {
+      // Prioritize Indian proxies for Instagram use
+      const indianProxies = await this.getMultipleIndianProxies(count)
+      if (indianProxies.length >= count) {
+        return indianProxies.slice(0, count)
+      }
+      
+      // If not enough Indian proxies, get additional regular proxies
+      const additionalCount = count - indianProxies.length
+      const response = await this.fetchProxies(additionalCount, true)
+      
+      if (response.success && response.proxies) {
+        return [...indianProxies, ...response.proxies.slice(0, additionalCount)]
+      }
+      
+      return indianProxies
     } catch (error) {
       console.error('Failed to get multiple proxies:', error)
       return []
@@ -208,6 +291,14 @@ export const proxyService = new ProxyService()
 
 // Utility functions
 export async function getFreeIndianProxy(): Promise<Proxy | null> {
+  return await proxyService.getSingleIndianProxy()
+}
+
+export async function getWorkingIndianProxies(count: number = 5): Promise<Proxy[]> {
+  return await proxyService.getMultipleIndianProxies(count)
+}
+
+export async function getFreeProxy(): Promise<Proxy | null> {
   return await proxyService.getSingleProxy()
 }
 
