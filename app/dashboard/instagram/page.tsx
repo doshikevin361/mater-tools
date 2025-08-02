@@ -136,7 +136,100 @@ export default function InstagramPage() {
   // Create new campaign
   const handleCreateCampaign = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!user?._id || !selectedService) return
+    if (!user?._id) return
+
+    // Special handling for comments - use social-automation API
+    if (campaignType === "comments") {
+      if (!targetUrl || !targetCount) {
+        toast({
+          title: "Error",
+          description: "Please fill in all required fields for comments",
+          variant: "destructive",
+        })
+        return
+      }
+
+      setLoading(true)
+      try {
+        // Check available Instagram accounts first
+        const accountCheckResponse = await fetch(`/api/social-automation/comment?checkAccounts=true&platform=instagram&count=${targetCount}`)
+        const accountCheck = await accountCheckResponse.json()
+        
+        if (!accountCheck.success) {
+          toast({
+            title: "Error",
+            description: accountCheck.error || "Not enough Instagram accounts available",
+            variant: "destructive",
+          })
+          setLoading(false)
+          return
+        }
+
+        // Start comment automation using social-automation API
+        const response = await fetch("/api/social-automation/comment", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            postUrl: targetUrl,
+            postContent: campaignName, // Use campaign name as post description
+            sentiment: "positive",
+            platforms: ["instagram"],
+            accountCount: Number.parseInt(targetCount),
+          }),
+        })
+
+        const data = await response.json()
+
+        if (data.success) {
+          // Create a campaign record for tracking
+          const commentCampaign: InstagramCampaign = {
+            id: Date.now().toString(),
+            name: campaignName,
+            type: "comments",
+            targetUrl,
+            targetCount: Number.parseInt(targetCount),
+            currentCount: 0,
+            status: "active",
+            cost: 0, // Comments are free using social-automation
+            createdAt: new Date().toISOString(),
+          }
+
+          setCampaigns([commentCampaign, ...campaigns])
+
+          // Reset form
+          setCampaignName("")
+          setTargetUrl("")
+          setTargetCount("")
+          setSelectedService(null)
+
+          toast({
+            title: "Comment Automation Started!",
+            description: `Started commenting with ${data.accountsFound} Instagram accounts. Expected ${data.estimatedComments} comments.`,
+          })
+        } else {
+          toast({
+            title: "Error",
+            description: data.error || "Failed to start comment automation",
+            variant: "destructive",
+          })
+        }
+      } catch (error) {
+        console.error("Error starting comment automation:", error)
+        toast({
+          title: "Error",
+          description: "Failed to start comment automation",
+          variant: "destructive",
+        })
+      } finally {
+        setLoading(false)
+      }
+      return
+    }
+
+    // Original SMM panel logic for other services (followers, likes, views)
+    if (!selectedService) return
 
     setLoading(true)
     try {
@@ -485,7 +578,49 @@ export default function InstagramPage() {
                       <div className="space-y-4">
                         <Label>Step 2: Select {campaignType.charAt(0).toUpperCase() + campaignType.slice(1)} Service</Label>
                         
-                        {getServicesForCategory(campaignType).length === 0 ? (
+                        {campaignType === "comments" ? (
+                          <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                            <div className="flex items-center space-x-3 mb-3">
+                              <MessageCircle className="h-6 w-6 text-blue-600" />
+                              <div>
+                                <h4 className="font-medium text-blue-900">AI-Powered Comment Automation</h4>
+                                <p className="text-sm text-blue-700">Using Social Automation API with real Instagram accounts</p>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                              <div className="flex items-center space-x-2">
+                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                <span className="text-gray-700">AI-Generated Comments</span>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                <span className="text-gray-700">Hindi-English Mix</span>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                <span className="text-gray-700">Real Accounts</span>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                <span className="text-gray-700">Free Service</span>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                <span className="text-gray-700">2-3 sec per comment</span>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                <span className="text-gray-700">Even distribution</span>
+                              </div>
+                            </div>
+                            <div className="mt-3 p-3 bg-white rounded border border-blue-100">
+                              <p className="text-xs text-gray-600">
+                                <strong>How it works:</strong> Enter the number of comments you want. The system will automatically distribute them evenly across available Instagram accounts. 
+                                For example: 10 comments with 2 accounts = 5 comments per account.
+                              </p>
+                            </div>
+                          </div>
+                        ) : getServicesForCategory(campaignType).length === 0 ? (
                           <p className="text-sm text-gray-500 p-4 bg-purple-50 rounded-lg border border-purple-100">No services available for this category</p>
                         ) : (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-64 overflow-y-auto">
@@ -532,20 +667,26 @@ export default function InstagramPage() {
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="targetCount">Target Count</Label>
+                      <Label htmlFor="targetCount">
+                        {campaignType === "comments" ? "Number of Comments" : "Target Count"}
+                      </Label>
                       <Input
                         id="targetCount"
                         type="number"
-                        placeholder="1000"
+                        placeholder={campaignType === "comments" ? "10" : "1000"}
                         value={targetCount}
                         onChange={(e) => setTargetCount(e.target.value)}
                         className="border-purple-200 focus:border-purple-400 focus:ring-purple-400"
                         required
-                        min={selectedService?.min || "1"}
-                        max={selectedService?.max || "100000"}
-                        disabled={!selectedService}
+                        min={campaignType === "comments" ? "1" : (selectedService?.min || "1")}
+                        max={campaignType === "comments" ? "100" : (selectedService?.max || "100000")}
+                        disabled={campaignType !== "comments" && !selectedService}
                       />
-                      {selectedService && (
+                      {campaignType === "comments" ? (
+                        <p className="text-xs text-gray-600">
+                          Comments will be distributed evenly across available Instagram accounts
+                        </p>
+                      ) : selectedService && (
                         <p className="text-xs text-gray-600">
                           Min: {selectedService.min} | Max: {selectedService.max}
                         </p>
@@ -556,28 +697,54 @@ export default function InstagramPage() {
                       <Label>Estimated Cost</Label>
                       <div className="flex items-center space-x-2">
                         <span className="text-2xl font-bold text-green-600">
-                          ₹{selectedService && targetCount ? calculateCost(selectedService, Number.parseInt(targetCount)).toFixed(2) : "0.00"}
+                          {campaignType === "comments" ? "FREE" : 
+                            `₹${selectedService && targetCount ? calculateCost(selectedService, Number.parseInt(targetCount)).toFixed(2) : "0.00"}`
+                          }
                         </span>
-                        {selectedService && (
+                        {campaignType === "comments" ? (
+                          <span className="text-sm text-muted-foreground">(Using Social Automation)</span>
+                        ) : selectedService && (
                           <span className="text-sm text-muted-foreground">(₹{selectedService.rate} per 1000)</span>
                         )}
                       </div>
                     </div>
                   </div>
 
-                  {selectedService && (
+                  {(selectedService || campaignType === "comments") && (
                     <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg border border-purple-200">
                       <div className="space-y-2">
-                        <h4 className="font-medium text-gray-900">Selected Service Details</h4>
-                        <p className="text-sm text-gray-600 font-medium">{selectedService.name}</p>
-                        <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
-                          <div>Rate: ₹{selectedService.rate} per 1000</div>
-                          <div>Delivery: 1-3 days</div>
-                          <div>Min Order: {selectedService.min}</div>
-                          <div>Max Order: {selectedService.max}</div>
-                        </div>
-                        {selectedService.description && (
-                          <p className="text-xs text-gray-500 mt-2">{selectedService.description}</p>
+                        <h4 className="font-medium text-gray-900">
+                          {campaignType === "comments" ? "Comment Automation Details" : "Selected Service Details"}
+                        </h4>
+                        {campaignType === "comments" ? (
+                          <>
+                            <p className="text-sm text-gray-600 font-medium">AI-Powered Instagram Comment Automation</p>
+                            <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                              <div>Rate: FREE</div>
+                              <div>Delivery: Real-time (2-3 sec/comment)</div>
+                              <div>Min Comments: 1</div>
+                              <div>Max Comments: 100</div>
+                              <div>Account Distribution: Automatic</div>
+                              <div>Comment Style: Hindi-English Mix</div>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-2">
+                              Comments are generated using AI and posted through real Instagram accounts. 
+                              The system automatically distributes comments evenly across available accounts.
+                            </p>
+                          </>
+                        ) : selectedService && (
+                          <>
+                            <p className="text-sm text-gray-600 font-medium">{selectedService.name}</p>
+                            <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                              <div>Rate: ₹{selectedService.rate} per 1000</div>
+                              <div>Delivery: 1-3 days</div>
+                              <div>Min Order: {selectedService.min}</div>
+                              <div>Max Order: {selectedService.max}</div>
+                            </div>
+                            {selectedService.description && (
+                              <p className="text-xs text-gray-500 mt-2">{selectedService.description}</p>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
@@ -585,13 +752,18 @@ export default function InstagramPage() {
 
                   <Button
                     type="submit"
-                    disabled={loading || !selectedService || (user?.balance || 0) < (selectedService && targetCount ? calculateCost(selectedService, Number.parseInt(targetCount)) : 0)}
+                    disabled={loading || (campaignType !== "comments" && !selectedService) || (campaignType !== "comments" && (user?.balance || 0) < (selectedService && targetCount ? calculateCost(selectedService, Number.parseInt(targetCount)) : 0))}
                     className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-3 text-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? (
                       <>
                         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                        Creating Campaign...
+                        {campaignType === "comments" ? "Starting Comment Automation..." : "Creating Campaign..."}
+                      </>
+                    ) : campaignType === "comments" ? (
+                      <>
+                        <MessageCircle className="mr-2 h-5 w-5" />
+                        Start Comment Automation (FREE)
                       </>
                     ) : !selectedService ? (
                       "Select a Service First"
@@ -605,14 +777,14 @@ export default function InstagramPage() {
                     )}
                   </Button>
 
-                  {(!selectedService || !targetCount || !campaignName || !targetUrl || (user?.balance || 0) < (selectedService && targetCount ? calculateCost(selectedService, Number.parseInt(targetCount)) : 0)) && (
+                  {((campaignType !== "comments" && !selectedService) || !targetCount || !campaignName || !targetUrl || (campaignType !== "comments" && (user?.balance || 0) < (selectedService && targetCount ? calculateCost(selectedService, Number.parseInt(targetCount)) : 0))) && (
                     <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                       <p className="text-sm text-yellow-800">
-                        {!selectedService && "Please select a service."}
+                        {campaignType !== "comments" && !selectedService && "Please select a service."}
                         {!campaignName && "Please enter a campaign name."}
                         {!targetUrl && "Please enter an Instagram profile URL."}
-                        {!targetCount && "Please enter a target count."}
-                        {(user?.balance || 0) < (selectedService && targetCount ? calculateCost(selectedService, Number.parseInt(targetCount)) : 0) && "Insufficient balance for this campaign."}
+                        {!targetCount && `Please enter ${campaignType === "comments" ? "number of comments" : "target count"}.`}
+                        {campaignType !== "comments" && (user?.balance || 0) < (selectedService && targetCount ? calculateCost(selectedService, Number.parseInt(targetCount)) : 0) && "Insufficient balance for this campaign."}
                       </p>
                     </div>
                   )}
