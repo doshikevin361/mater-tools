@@ -924,28 +924,43 @@ const automateInstagramComments = async (
   postUrl: string, 
   postContent: string, 
   sentiment: string, 
-  accountCount = 3
+  requestedComments = 3
 ) => {
   const results: any[] = [];
   
-  log('info', `🚀 Starting Instagram automation for ${accountCount} accounts with MAXIMUM STEALTH`)
+  log('info', `🚀 Starting Instagram automation for ${requestedComments} comments with MAXIMUM STEALTH`)
 
-  // Get random accounts from your database
-  const accounts = await getRandomActiveAccounts(accountCount);
+  // Get all available accounts from your database
+  const availableAccounts = await getRandomActiveAccounts(50); // Get up to 50 accounts to choose from
   
-  if (accounts.length === 0) {
+  if (availableAccounts.length === 0) {
     throw new Error("No active Instagram accounts found in database");
   }
 
-  log('success', `🎭 Found ${accounts.length} active accounts to use`)
+  // Calculate distribution: how many comments per account
+  const commentsPerAccount = Math.ceil(requestedComments / availableAccounts.length);
+  const accountsNeeded = Math.min(availableAccounts.length, requestedComments);
+  
+  log('success', `🎭 Found ${availableAccounts.length} active accounts. Using ${accountsNeeded} accounts.`)
+  log('info', `📊 Distribution: ${requestedComments} comments across ${accountsNeeded} accounts (${commentsPerAccount} comments per account)`)
 
-  for (let i = 0; i < accounts.length; i++) {
-    const account = accounts[i];
+  // Use only the accounts we need
+  const accountsToUse = availableAccounts.slice(0, accountsNeeded);
+  
+  let totalCommentsPosted = 0;
+
+  for (let i = 0; i < accountsToUse.length && totalCommentsPosted < requestedComments; i++) {
+    const account = accountsToUse[i];
     let browser = null;
     
+    // Calculate how many comments this account should post
+    const remainingComments = requestedComments - totalCommentsPosted;
+    const commentsForThisAccount = Math.min(commentsPerAccount, remainingComments);
+    
     try {
-      log('info', `\n🔄 === PROCESSING ACCOUNT ${i + 1}/${accounts.length} ===`)
+      log('info', `\n🔄 === PROCESSING ACCOUNT ${i + 1}/${accountsToUse.length} ===`)
       log('info', `👤 Account: ${account.username} (${account.profile?.fullName || 'Unknown'})`)
+      log('info', `📝 Will post ${commentsForThisAccount} comment(s) with this account`)
 
       // Create maximum stealth browser for each account using your system
       const browserSetup = await createMaximumStealthBrowser();
@@ -960,7 +975,9 @@ const automateInstagramComments = async (
           account: account.username,
           status: "failed",
           message: `Login failed: ${loginResult.message}`,
-          comment: null
+          comment: null,
+          commentsRequested: commentsForThisAccount,
+          commentsPosted: 0
         });
         continue;
       }
@@ -972,49 +989,70 @@ const automateInstagramComments = async (
           account: account.username,
           status: "failed",
           message: `Navigation failed: ${navResult.message}`,
-          comment: null
+          comment: null,
+          commentsRequested: commentsForThisAccount,
+          commentsPosted: 0
         });
         continue;
       }
 
-      // Generate AI-powered Hindi-English comment for each account
-      log('info', `🤖 Generating AI comment for account ${i + 1}...`)
-      const commentText = await generateAIComment(postContent || "Instagram post", sentiment, i);
-      log('info', `💬 Generated comment: "${commentText}"`)
+      // Post multiple comments with this account if needed
+      let accountCommentsPosted = 0;
+      const accountComments = [];
+      
+      for (let commentIndex = 0; commentIndex < commentsForThisAccount; commentIndex++) {
+        // Generate AI-powered Hindi-English comment for each comment
+        log('info', `🤖 Generating AI comment ${commentIndex + 1}/${commentsForThisAccount} for account ${account.username}...`)
+        const commentText = await generateAIComment(postContent || "Instagram post", sentiment, totalCommentsPosted + commentIndex);
+        log('info', `💬 Generated comment: "${commentText}"`)
 
-      // Comment on post using your human-like system
-      const commentResult = await commentOnPost(page, commentText);
+        // Comment on post using your human-like system
+        const commentResult = await commentOnPost(page, commentText);
+        
+        if (commentResult.status) {
+          accountCommentsPosted++;
+          totalCommentsPosted++;
+          accountComments.push(commentText);
+          log('success', `✅ COMMENT ${commentIndex + 1} SUCCESS: ${account.username} - "${commentText}"`)
+          
+          // Update account usage
+          const { db } = await connectToDatabase();
+          await db.collection("social_accounts").updateOne(
+            { username: account.username },
+            { 
+              $set: { lastUsed: new Date() },
+              $inc: { commentCount: 1 }
+            }
+          );
+        } else {
+          log('error', `❌ COMMENT ${commentIndex + 1} FAILED: ${account.username} - ${commentResult.message}`)
+        }
+
+        // Short delay between comments from same account (1-2 seconds)
+        if (commentIndex < commentsForThisAccount - 1) {
+          const delay = 1000 + Math.random() * 1000; // 1-2 seconds
+          log('info', `⏳ Short delay: ${Math.round(delay / 1000)} seconds until next comment...`)
+          await new Promise(resolve => setTimeout(resolve, delay))
+        }
+      }
       
       results.push({
         account: account.username,
         accountId: account._id,
-        status: commentResult.status ? "success" : "failed",
-        message: commentResult.message,
-        comment: commentText,
+        status: accountCommentsPosted > 0 ? "success" : "failed",
+        message: accountCommentsPosted > 0 ? `Posted ${accountCommentsPosted} comments successfully` : "Failed to post any comments",
+        comments: accountComments,
+        commentsRequested: commentsForThisAccount,
+        commentsPosted: accountCommentsPosted,
         deviceProfile: deviceProfile.screen.name,
         userAgent: deviceProfile.userAgent.substring(0, 50) + '...',
         maxStealth: true
       });
 
-      // Update account usage if successful
-      if (commentResult.status) {
-        const { db } = await connectToDatabase();
-        await db.collection("social_accounts").updateOne(
-          { username: account.username },
-          { 
-            $set: { lastUsed: new Date() },
-            $inc: { commentCount: 1 }
-          }
-        );
-        log('success', `✅ ACCOUNT ${i + 1} SUCCESS: ${account.username} - "${commentText}"`)
-      } else {
-        log('error', `❌ ACCOUNT ${i + 1} FAILED: ${account.username} - ${commentResult.message}`)
-      }
-
-      // Simple 2-3 second delay between accounts for commenting (not 30 minutes!)
-      if (i < accounts.length - 1) {
+      // Delay between accounts (2-3 seconds)
+      if (i < accountsToUse.length - 1 && totalCommentsPosted < requestedComments) {
         const delay = calculateCommentingDelay();
-        log('info', `⏳ COMMENTING DELAY: ${Math.round(delay / 1000)} seconds until next account...`)
+        log('info', `⏳ ACCOUNT DELAY: ${Math.round(delay / 1000)} seconds until next account...`)
         await new Promise(resolve => setTimeout(resolve, delay))
       }
 
@@ -1024,7 +1062,9 @@ const automateInstagramComments = async (
         account: account.username,
         status: "failed",
         message: `Automation error: ${error.message}`,
-        comment: null
+        comments: [],
+        commentsRequested: commentsForThisAccount,
+        commentsPosted: 0
       });
       
       // Update account status if it seems to be banned/blocked
@@ -1046,22 +1086,28 @@ const automateInstagramComments = async (
 
   // Log results to database using your system
   const { db } = await connectToDatabase();
+  const totalSuccessfulComments = results.reduce((sum, r) => sum + (r.commentsPosted || 0), 0);
+  const totalFailedComments = requestedComments - totalSuccessfulComments;
+  
   await db.collection("comment_automation_logs").insertOne({
     postUrl,
     postContent,
     sentiment,
-    accountCount: accounts.length,
+    requestedComments,
+    accountCount: accountsToUse.length,
     results,
     timestamp: new Date(),
-    successCount: results.filter(r => r.status === "success").length,
-    failureCount: results.filter(r => r.status === "failed").length,
-    strategy: "maximum_stealth_hindi_english_comments",
+    successCount: totalSuccessfulComments,
+    failureCount: totalFailedComments,
+    accountsUsed: results.filter(r => r.status === "success").length,
+    strategy: "maximum_stealth_hindi_english_comments_distributed",
     maxStealth: true,
     realAccounts: true,
-    enhanced: true
+    enhanced: true,
+    distributed: true
   });
 
-  log('success', `🎉 AUTOMATION COMPLETED: ${results.filter(r => r.status === "success").length}/${results.length} successful with MAXIMUM STEALTH`)
+  log('success', `🎉 AUTOMATION COMPLETED: ${totalSuccessfulComments}/${requestedComments} comments posted across ${accountsToUse.length} accounts with MAXIMUM STEALTH`)
   return results;
 };
 
@@ -1192,8 +1238,40 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const limit = Number.parseInt(searchParams.get("limit") || "50")
+    const checkAccounts = searchParams.get("checkAccounts") === "true"
+    const platform = searchParams.get("platform")
+    const count = Number.parseInt(searchParams.get("count") || "3")
 
     const { db } = await connectToDatabase()
+
+    // Handle account availability check
+    if (checkAccounts && platform) {
+      const availableAccounts = await db
+        .collection("social_accounts")
+        .countDocuments({ 
+          platform: platform,
+          status: "active"
+        })
+
+      if (availableAccounts === 0) {
+        return NextResponse.json({ 
+          success: false, 
+          error: `No active ${platform} accounts available` 
+        }, { status: 400 })
+      }
+
+      // Calculate how comments will be distributed
+      const commentsPerAccount = Math.ceil(count / availableAccounts)
+      
+      return NextResponse.json({
+        success: true,
+        availableAccounts,
+        requestedComments: count,
+        commentsPerAccount,
+        distribution: `${count} comments across ${availableAccounts} accounts (${commentsPerAccount} comments per account)`,
+        message: `Found ${availableAccounts} active ${platform} accounts. Each account will post approximately ${commentsPerAccount} comments.`
+      })
+    }
 
     // Get recent automation logs
     const logs = await db.collection("automation_logs").find({}).sort({ timestamp: -1 }).limit(limit).toArray()
