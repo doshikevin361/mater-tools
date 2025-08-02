@@ -287,7 +287,7 @@ async function createMaximumStealthBrowser() {
   const deviceProfile = generateDeviceProfile()
   
   const browser = await puppeteer.launch({
-    headless: 'new',
+    headless: 'shell',
     args: [
       // Core flags
       '--no-sandbox',

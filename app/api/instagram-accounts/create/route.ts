@@ -322,12 +322,9 @@ async function createMaximumStealthBrowser() {
 
   log('info', '🛡️ Applying MAXIMUM stealth measures...')
 
-  // COMPREHENSIVE stealth injection
   await page.evaluateOnNewDocument((profile) => {
-    // === COMPLETE AUTOMATION TRACE REMOVAL ===
     Object.defineProperty(navigator, 'webdriver', { get: () => undefined })
     
-    // Remove ALL possible automation indicators
     const automationProps = [
       '__webdriver_script_fn', '__webdriver_script_func', '__webdriver_script_function',
       '__fxdriver_id', '__driver_evaluate', '__webdriver_evaluate', '__selenium_evaluate',
@@ -1831,7 +1828,7 @@ async function createMaxStealthInstagramAccount(accountData) {
     deviceProfile = browserSetup.deviceProfile
 
     // Pre-browsing simulation
-    await simulatePreBrowsing(page)
+   // await simulatePreBrowsing(page)
 
     // Navigate to Instagram
     log('info', '🌐 Navigating to Instagram signup...')
