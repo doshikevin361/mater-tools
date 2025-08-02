@@ -684,22 +684,32 @@ const createEnhancedPrompt = (postDescription: string, sentiment: string, accoun
     - 5-15 words maximum
     - Mix Hindi and English naturally (like: "Aap ki post bohot achi hai! Very nice")
     - Sound like a real Indian person commenting
-    - Include appropriate emojis
+    - Include appropriate emojis (1-2 maximum)
     - Be supportive and enthusiastic
-    - Make it unique (account ${accountIndex})
+    - Make it unique and relevant to the post content
+    - Reference the post content naturally
+    - Make it unique for account ${accountIndex + 1}
     
-    Examples: "Waah bhai! Amazing content 🔥", "Bohot khoob! Keep it up 💯", "Ekdum zabardast yaar! Love it ❤️"`,
+    Examples based on content: 
+    - For photos: "Waah bhai! Amazing shot 🔥", "Bohot sundar! Keep posting 💯"
+    - For quotes: "Bilkul sahi baat! Inspiring words ❤️", "True hai yaar! Thanks for sharing 🙏"
+    - For food: "Dekh kar bhookh lag gayi! Looks delicious 😋", "Kahan se hai yeh? Amazing food 🤤"`,
     
     negative: `Generate a mildly critical but constructive comment in Hindi-English mix (Hinglish) for this Instagram post: "${postDescription}". 
     Requirements:
     - 5-15 words maximum
     - Mix Hindi and English naturally
     - Sound like a real Indian person commenting
-    - Be constructive, not harsh
-    - Include appropriate emojis if needed
-    - Make it unique (account ${accountIndex})
+    - Be constructive, not harsh or offensive
+    - Include appropriate emojis if needed (1 maximum)
+    - Make it unique and relevant to the post content
+    - Reference the post content naturally
+    - Make it unique for account ${accountIndex + 1}
     
-    Examples: "Thoda aur mehnat kar sakte hain 🤔", "Expected better yaar 😐", "Content improve karna chahiye I think"`,
+    Examples based on content:
+    - For photos: "Thoda aur clear hota toh better 🤔", "Angle change kar sakte the maybe"
+    - For content: "Expected more detail yaar 😐", "Thoda short laga, elaborate karo"
+    - General: "Good attempt but improvement possible", "Next time better hoga surely"`,
     
     neutral: `Generate a neutral, informative comment in Hindi-English mix (Hinglish) for this Instagram post: "${postDescription}". 
     Requirements:
@@ -707,10 +717,15 @@ const createEnhancedPrompt = (postDescription: string, sentiment: string, accoun
     - Mix Hindi and English naturally
     - Sound like a real Indian person commenting
     - Be informative or acknowledging
-    - Include appropriate emojis
-    - Make it unique (account ${accountIndex})
+    - Include appropriate emojis (1 maximum)
+    - Make it unique and relevant to the post content
+    - Reference the post content naturally
+    - Make it unique for account ${accountIndex + 1}
     
-    Examples: "Nice information! Thanks for sharing 👍", "Noted bhai! Helpful content 📚", "Good to know! Appreciated 💯"`
+    Examples based on content:
+    - For information: "Nice information! Thanks for sharing 👍", "Noted bhai! Helpful content 📚"
+    - For photos: "Good capture! Nice timing", "Interesting perspective! Well done"
+    - General: "Thanks for posting yaar", "Good to know! Appreciated 💯"`
   };
   
   return basePrompts[sentiment as keyof typeof basePrompts] || basePrompts.positive;

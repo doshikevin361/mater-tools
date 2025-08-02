@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -51,6 +52,10 @@ export default function InstagramPage() {
   const [targetUrl, setTargetUrl] = useState("")
   const [targetCount, setTargetCount] = useState("")
   const [campaignName, setCampaignName] = useState("")
+  
+  // Comment-specific states
+  const [commentDescription, setCommentDescription] = useState("")
+  const [commentSentiment, setCommentSentiment] = useState<string>("positive")
 
   // Get user info from localStorage
   const getUserInfo = () => {
@@ -140,10 +145,10 @@ export default function InstagramPage() {
 
     // Special handling for comments - use social-automation API
     if (campaignType === "comments") {
-      if (!targetUrl || !targetCount) {
+      if (!targetUrl || !targetCount || !commentDescription.trim()) {
         toast({
           title: "Error",
-          description: "Please fill in all required fields for comments",
+          description: "Please fill in all required fields for comments including post description",
           variant: "destructive",
         })
         return
@@ -173,8 +178,8 @@ export default function InstagramPage() {
           },
           body: JSON.stringify({
             postUrl: targetUrl,
-            postContent: campaignName, // Use campaign name as post description
-            sentiment: "positive",
+            postContent: commentDescription || campaignName, // Use description if provided, otherwise campaign name
+            sentiment: commentSentiment,
             platforms: ["instagram"],
             accountCount: Number.parseInt(targetCount),
           }),
@@ -203,6 +208,8 @@ export default function InstagramPage() {
           setTargetUrl("")
           setTargetCount("")
           setSelectedService(null)
+          setCommentDescription("")
+          setCommentSentiment("positive")
 
           toast({
             title: "Comment Automation Started!",
@@ -579,45 +586,129 @@ export default function InstagramPage() {
                         <Label>Step 2: Select {campaignType.charAt(0).toUpperCase() + campaignType.slice(1)} Service</Label>
                         
                         {campaignType === "comments" ? (
-                          <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
-                            <div className="flex items-center space-x-3 mb-3">
-                              <MessageCircle className="h-6 w-6 text-blue-600" />
-                              <div>
-                                <h4 className="font-medium text-blue-900">AI-Powered Comment Automation</h4>
-                                <p className="text-sm text-blue-700">Using Social Automation API with real Instagram accounts</p>
+                          <div className="space-y-4">
+                            <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                              <div className="flex items-center space-x-3 mb-3">
+                                <MessageCircle className="h-6 w-6 text-blue-600" />
+                                <div>
+                                  <h4 className="font-medium text-blue-900">AI-Powered Comment Automation</h4>
+                                  <p className="text-sm text-blue-700">Using Social Automation API with real Instagram accounts</p>
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                                <div className="flex items-center space-x-2">
+                                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                  <span className="text-gray-700">AI-Generated Comments</span>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                  <span className="text-gray-700">Hindi-English Mix</span>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                  <span className="text-gray-700">Real Accounts</span>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                  <span className="text-gray-700">Free Service</span>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                  <span className="text-gray-700">2-3 sec per comment</span>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                  <span className="text-gray-700">Even distribution</span>
+                                </div>
+                              </div>
+                              <div className="mt-3 p-3 bg-white rounded border border-blue-100">
+                                <p className="text-xs text-gray-600">
+                                  <strong>How it works:</strong> Enter the number of comments you want. The system will automatically distribute them evenly across available Instagram accounts. 
+                                  For example: 10 comments with 2 accounts = 5 comments per account.
+                                </p>
                               </div>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                              <div className="flex items-center space-x-2">
-                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                <span className="text-gray-700">AI-Generated Comments</span>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                <span className="text-gray-700">Hindi-English Mix</span>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                <span className="text-gray-700">Real Accounts</span>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                <span className="text-gray-700">Free Service</span>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                <span className="text-gray-700">2-3 sec per comment</span>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                <span className="text-gray-700">Even distribution</span>
-                              </div>
-                            </div>
-                            <div className="mt-3 p-3 bg-white rounded border border-blue-100">
+                            
+                            {/* Comment Description Field */}
+                            <div className="space-y-2">
+                              <Label htmlFor="commentDescription">Post Description for AI Comments</Label>
+                              <Textarea
+                                id="commentDescription"
+                                placeholder="Describe the Instagram post content to help AI generate relevant comments... e.g., 'Beautiful sunset photo at the beach with inspirational quote about life'"
+                                value={commentDescription}
+                                onChange={(e) => setCommentDescription(e.target.value)}
+                                className="border-blue-200 focus:border-blue-400 focus:ring-blue-400"
+                                rows={3}
+                              />
                               <p className="text-xs text-gray-600">
-                                <strong>How it works:</strong> Enter the number of comments you want. The system will automatically distribute them evenly across available Instagram accounts. 
-                                For example: 10 comments with 2 accounts = 5 comments per account.
+                                This description helps AI generate more relevant and contextual comments based on your post content.
                               </p>
+                            </div>
+
+                            {/* Comment Sentiment Selection */}
+                            <div className="space-y-3">
+                              <Label className="text-base font-medium">Comment Sentiment</Label>
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div
+                                  className={`p-3 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
+                                    commentSentiment === "positive"
+                                      ? 'border-green-500 bg-green-50 shadow-md'
+                                      : 'border-gray-200 hover:border-green-300'
+                                  }`}
+                                  onClick={() => setCommentSentiment("positive")}
+                                >
+                                  <div className="flex items-center space-x-2 mb-2">
+                                    <Heart className="h-5 w-5 text-green-600" />
+                                    <span className="font-medium text-green-900">Positive</span>
+                                  </div>
+                                  <p className="text-xs text-gray-600">
+                                    Generate supportive, encouraging, and positive comments
+                                  </p>
+                                  <div className="mt-2 text-xs text-green-700 font-medium">
+                                    Examples: "Waah bhai! Amazing 🔥", "Bohot khoob! Keep it up 💯"
+                                  </div>
+                                </div>
+
+                                <div
+                                  className={`p-3 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
+                                    commentSentiment === "negative"
+                                      ? 'border-red-500 bg-red-50 shadow-md'
+                                      : 'border-gray-200 hover:border-red-300'
+                                  }`}
+                                  onClick={() => setCommentSentiment("negative")}
+                                >
+                                  <div className="flex items-center space-x-2 mb-2">
+                                    <MessageCircle className="h-5 w-5 text-red-600" />
+                                    <span className="font-medium text-red-900">Negative</span>
+                                  </div>
+                                  <p className="text-xs text-gray-600">
+                                    Generate critical, questioning, or constructive feedback
+                                  </p>
+                                  <div className="mt-2 text-xs text-red-700 font-medium">
+                                    Examples: "Thoda aur mehnat kar sakte hain 🤔", "Expected better yaar 😐"
+                                  </div>
+                                </div>
+
+                                <div
+                                  className={`p-3 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
+                                    commentSentiment === "neutral"
+                                      ? 'border-gray-500 bg-gray-50 shadow-md'
+                                      : 'border-gray-200 hover:border-gray-300'
+                                  }`}
+                                  onClick={() => setCommentSentiment("neutral")}
+                                >
+                                  <div className="flex items-center space-x-2 mb-2">
+                                    <MessageCircle className="h-5 w-5 text-gray-600" />
+                                    <span className="font-medium text-gray-900">Neutral</span>
+                                  </div>
+                                  <p className="text-xs text-gray-600">
+                                    Generate balanced, informative, and objective comments
+                                  </p>
+                                  <div className="mt-2 text-xs text-gray-700 font-medium">
+                                    Examples: "Nice information! Thanks 👍", "Good to know! Helpful 📚"
+                                  </div>
+                                </div>
+                              </div>
                             </div>
                           </div>
                         ) : getServicesForCategory(campaignType).length === 0 ? (
@@ -777,13 +868,14 @@ export default function InstagramPage() {
                     )}
                   </Button>
 
-                  {((campaignType !== "comments" && !selectedService) || !targetCount || !campaignName || !targetUrl || (campaignType !== "comments" && (user?.balance || 0) < (selectedService && targetCount ? calculateCost(selectedService, Number.parseInt(targetCount)) : 0))) && (
+                  {((campaignType !== "comments" && !selectedService) || !targetCount || !campaignName || !targetUrl || (campaignType === "comments" && !commentDescription.trim()) || (campaignType !== "comments" && (user?.balance || 0) < (selectedService && targetCount ? calculateCost(selectedService, Number.parseInt(targetCount)) : 0))) && (
                     <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
                       <p className="text-sm text-yellow-800">
                         {campaignType !== "comments" && !selectedService && "Please select a service."}
                         {!campaignName && "Please enter a campaign name."}
                         {!targetUrl && "Please enter an Instagram profile URL."}
                         {!targetCount && `Please enter ${campaignType === "comments" ? "number of comments" : "target count"}.`}
+                        {campaignType === "comments" && !commentDescription.trim() && "Please provide a post description for AI comment generation."}
                         {campaignType !== "comments" && (user?.balance || 0) < (selectedService && targetCount ? calculateCost(selectedService, Number.parseInt(targetCount)) : 0) && "Insufficient balance for this campaign."}
                       </p>
                     </div>
