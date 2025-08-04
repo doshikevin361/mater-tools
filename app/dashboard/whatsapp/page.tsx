@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import { ContactSelector } from "@/components/contact-selector"
+import { ContactImport } from "@/components/contact-import"
 import { MessageSquare, Send, Users, BarChart3, FileText, ImageIcon, Link } from "lucide-react"
 import { toast } from "sonner"
 
@@ -53,6 +54,7 @@ export default function WhatsAppPage() {
   const [mediaUrl, setMediaUrl] = useState("")
   const [mediaType, setMediaType] = useState<"image" | "document" | "none">("none")
   const [selectedTemplate, setSelectedTemplate] = useState<string>("")
+  const [showImport, setShowImport] = useState(false)
   const [templates, setTemplates] = useState<Template[]>([
     {
       id: "1",
@@ -160,6 +162,11 @@ export default function WhatsAppPage() {
       setMediaType("none")
       setMediaUrl("")
     }
+  }
+
+  const handleContactsImported = (contacts: Contact[]) => {
+    setSelectedContacts([...selectedContacts, ...contacts])
+    setShowImport(false)
   }
 
   const calculateCost = () => {
@@ -420,13 +427,30 @@ export default function WhatsAppPage() {
               {/* Contact Selection */}
               <Card className="border border-green-200 shadow-md overflow-hidden bg-white">
                 <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-100">
-                  <CardTitle className="flex items-center space-x-2">
-                    <Users className="h-5 w-5 text-green-600" />
-                    <span>Select Recipients</span>
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Users className="h-5 w-5 text-green-600" />
+                      <span>Select Recipients</span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowImport(!showImport)}
+                      className="border-green-200 text-green-600 hover:bg-green-50"
+                    >
+                      {showImport ? "Hide Import" : "Import Contacts"}
+                    </Button>
                   </CardTitle>
                   <CardDescription>Choose contacts to receive your WhatsApp campaign</CardDescription>
                 </CardHeader>
-                <CardContent className="p-6">
+                <CardContent className="p-6 space-y-4">
+                  {showImport && (
+                    <ContactImport
+                      onContactsImported={handleContactsImported}
+                      platform="whatsapp"
+                      existingContacts={selectedContacts}
+                    />
+                  )}
                   <ContactSelector
                     selectedContacts={selectedContacts}
                     onContactsChange={setSelectedContacts}

@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import { ContactSelector } from "@/components/contact-selector"
+import { ContactImport } from "@/components/contact-import"
 import { MessageCircle, Send, Users, BarChart3, FileText } from "lucide-react"
 import { toast } from "sonner"
 
@@ -50,6 +51,7 @@ export default function SMSPage() {
   const [campaignName, setCampaignName] = useState("")
   const [senderId, setSenderId] = useState("FSTSMS")
   const [selectedTemplate, setSelectedTemplate] = useState<string>("")
+  const [showImport, setShowImport] = useState(false)
   const [templates, setTemplates] = useState<Template[]>([
     {
       id: "1",
@@ -137,6 +139,11 @@ export default function SMSPage() {
     } else {
       setSelectedTemplate("")
     }
+  }
+
+  const handleContactsImported = (contacts: Contact[]) => {
+    setSelectedContacts([...selectedContacts, ...contacts])
+    setShowImport(false)
   }
 
   const calculateCost = () => {
@@ -358,13 +365,30 @@ export default function SMSPage() {
               {/* Contact Selection */}
               <Card className="border border-orange-200 shadow-md overflow-hidden bg-white">
                 <CardHeader className="bg-gradient-to-r from-orange-50 to-red-50 border-b border-orange-100">
-                  <CardTitle className="flex items-center space-x-2">
-                    <Users className="h-5 w-5 text-orange-600" />
-                    <span>Select Recipients</span>
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Users className="h-5 w-5 text-orange-600" />
+                      <span>Select Recipients</span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowImport(!showImport)}
+                      className="border-orange-200 text-orange-600 hover:bg-orange-50"
+                    >
+                      {showImport ? "Hide Import" : "Import Contacts"}
+                    </Button>
                   </CardTitle>
                   <CardDescription>Choose contacts to receive your SMS campaign</CardDescription>
                 </CardHeader>
-                <CardContent className="p-6">
+                <CardContent className="p-6 space-y-4">
+                  {showImport && (
+                    <ContactImport
+                      onContactsImported={handleContactsImported}
+                      platform="sms"
+                      existingContacts={selectedContacts}
+                    />
+                  )}
                   <ContactSelector
                     selectedContacts={selectedContacts}
                     onContactsChange={setSelectedContacts}

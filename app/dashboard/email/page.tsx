@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import { ContactSelector } from "@/components/contact-selector"
+import { ContactImport } from "@/components/contact-import"
 import { RichTextEditor } from "@/components/rich-text-editor"
 import { Mail, Send, Users, FileText, BarChart3, Palette, Eye } from "lucide-react"
 import { toast } from "sonner"
@@ -88,6 +89,7 @@ export default function EmailPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [userBalance, setUserBalance] = useState(0)
   const [previewMode, setPreviewMode] = useState(false)
+  const [showImport, setShowImport] = useState(false)
 
   // Load user data and campaigns
   useEffect(() => {
@@ -145,6 +147,11 @@ export default function EmailPage() {
     } else {
       setSelectedTemplate("custom")
     }
+  }
+
+  const handleContactsImported = (contacts: Contact[]) => {
+    setSelectedContacts([...selectedContacts, ...contacts])
+    setShowImport(false)
   }
 
   const calculateCost = () => {
@@ -361,13 +368,30 @@ export default function EmailPage() {
               {/* Contact Selection */}
               <Card className="border border-blue-200 shadow-md overflow-hidden bg-white">
                 <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
-                  <CardTitle className="flex items-center space-x-2">
-                    <Users className="h-5 w-5 text-blue-600" />
-                    <span>Select Recipients</span>
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Users className="h-5 w-5 text-blue-600" />
+                      <span>Select Recipients</span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowImport(!showImport)}
+                      className="border-blue-200 text-blue-600 hover:bg-blue-50"
+                    >
+                      {showImport ? "Hide Import" : "Import Contacts"}
+                    </Button>
                   </CardTitle>
                   <CardDescription>Choose contacts to receive your email campaign</CardDescription>
                 </CardHeader>
-                <CardContent className="p-6">
+                <CardContent className="p-6 space-y-4">
+                  {showImport && (
+                    <ContactImport
+                      onContactsImported={handleContactsImported}
+                      platform="email"
+                      existingContacts={selectedContacts}
+                    />
+                  )}
                   <ContactSelector
                     selectedContacts={selectedContacts}
                     onContactsChange={setSelectedContacts}
