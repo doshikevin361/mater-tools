@@ -685,6 +685,26 @@ async function sendMessagesWithTemplate(
       await updateRateLimit(db, userId, "MESSAGE_SENDING", session)
     }
 
+    // Create message logs for each recipient
+    const messageLogs = results.map((result) => ({
+      campaignId: campaignId.toString(),
+      userId: userId,
+      contactId: result.contactId,
+      contactName: result.name,
+      contactPhone: result.phone,
+      message: "WhatsApp template message",
+      status: result.success ? "delivered" : "failed",
+      timestamp: result.timestamp,
+      error: result.success ? null : result.error,
+      messageId: result.messageId || null,
+      templateUsed: result.templateUsed || templateName,
+      serviceResponse: result,
+    }))
+
+    if (messageLogs.length > 0) {
+      await db.collection("message_logs").insertMany(messageLogs, { session })
+    }
+
     // Update campaign with final results
     await db.collection("campaigns").updateOne(
       { _id: campaignId },

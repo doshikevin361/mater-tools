@@ -12,7 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import { ContactSelector } from "@/components/contact-selector"
 import { ContactImport } from "@/components/contact-import"
-import { MessageSquare, Send, Users, BarChart3, FileText, ImageIcon, Link } from "lucide-react"
+import { CampaignDetailsModal } from "@/components/campaign-details-modal"
+import { MessageSquare, Send, Users, BarChart3, FileText, ImageIcon, Link, Eye } from "lucide-react"
 import { toast } from "sonner"
 
 interface Contact {
@@ -98,6 +99,8 @@ export default function WhatsAppPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [userBalance, setUserBalance] = useState(0)
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>("")
+  const [showCampaignDetails, setShowCampaignDetails] = useState(false)
 
   // Load user data and campaigns
   useEffect(() => {
@@ -167,6 +170,11 @@ export default function WhatsAppPage() {
   const handleContactsImported = (contacts: Contact[]) => {
     setSelectedContacts([...selectedContacts, ...contacts])
     setShowImport(false)
+  }
+
+  const handleViewCampaignDetails = (campaignId: string) => {
+    setSelectedCampaignId(campaignId)
+    setShowCampaignDetails(true)
   }
 
   const calculateCost = () => {
@@ -597,6 +605,15 @@ export default function WhatsAppPage() {
                                 Media
                               </Badge>
                             )}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleViewCampaignDetails(campaign._id)}
+                              className="border-green-200 text-green-600 hover:bg-green-50"
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
+                            </Button>
                           </div>
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
@@ -635,6 +652,14 @@ export default function WhatsAppPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Campaign Details Modal */}
+      <CampaignDetailsModal
+        isOpen={showCampaignDetails}
+        onClose={() => setShowCampaignDetails(false)}
+        campaignId={selectedCampaignId}
+        platform="whatsapp"
+      />
     </div>
   )
 }

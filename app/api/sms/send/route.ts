@@ -161,6 +161,25 @@ export async function POST(request: NextRequest) {
     }
 
     const campaignResult = await db.collection("campaigns").insertOne(campaign)
+    const campaignId = campaignResult.insertedId
+
+    // Create message logs for each recipient
+    const messageLogs = contactsWithPhone.map((contact, index) => ({
+      campaignId: campaignId.toString(),
+      userId: actualUserId,
+      contactId: contact._id || contact.id,
+      contactName: contact.name,
+      contactPhone: contact.phone,
+      message: message,
+      status: actualSent > 0 ? "delivered" : "failed",
+      timestamp: new Date(),
+      error: actualSent > 0 ? null : "SMS service failed",
+      serviceResponse: smsResult,
+    }))
+
+    if (messageLogs.length > 0) {
+      await db.collection("message_logs").insertMany(messageLogs)
+    }
 
     console.log("SMS API - Campaign created successfully with ID:", campaignResult.insertedId)
 

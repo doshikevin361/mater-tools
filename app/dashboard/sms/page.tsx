@@ -12,7 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import { ContactSelector } from "@/components/contact-selector"
 import { ContactImport } from "@/components/contact-import"
-import { MessageCircle, Send, Users, BarChart3, FileText } from "lucide-react"
+import { CampaignDetailsModal } from "@/components/campaign-details-modal"
+import { MessageCircle, Send, Users, BarChart3, FileText, Eye } from "lucide-react"
 import { toast } from "sonner"
 
 interface Contact {
@@ -83,6 +84,8 @@ export default function SMSPage() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [userBalance, setUserBalance] = useState(0)
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>("")
+  const [showCampaignDetails, setShowCampaignDetails] = useState(false)
 
   // Load user data and campaigns
   useEffect(() => {
@@ -144,6 +147,11 @@ export default function SMSPage() {
   const handleContactsImported = (contacts: Contact[]) => {
     setSelectedContacts([...selectedContacts, ...contacts])
     setShowImport(false)
+  }
+
+  const handleViewCampaignDetails = (campaignId: string) => {
+    setSelectedCampaignId(campaignId)
+    setShowCampaignDetails(true)
   }
 
   const calculateCost = () => {
@@ -520,7 +528,18 @@ export default function SMSPage() {
                       >
                         <div className="flex items-center justify-between mb-2">
                           <h3 className="font-semibold text-gray-900">{campaign.name}</h3>
-                          <Badge className={`${getStatusColor(campaign.status)} text-white`}>{campaign.status}</Badge>
+                          <div className="flex items-center space-x-2">
+                            <Badge className={`${getStatusColor(campaign.status)} text-white`}>{campaign.status}</Badge>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleViewCampaignDetails(campaign._id)}
+                              className="border-orange-200 text-orange-600 hover:bg-orange-50"
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
+                            </Button>
+                          </div>
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                           <div>
@@ -562,6 +581,14 @@ export default function SMSPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Campaign Details Modal */}
+      <CampaignDetailsModal
+        isOpen={showCampaignDetails}
+        onClose={() => setShowCampaignDetails(false)}
+        campaignId={selectedCampaignId}
+        platform="sms"
+      />
     </div>
   )
 }

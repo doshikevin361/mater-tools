@@ -12,6 +12,7 @@ import { Progress } from "@/components/ui/progress"
 import { ContactSelector } from "@/components/contact-selector"
 import { ContactImport } from "@/components/contact-import"
 import { RichTextEditor } from "@/components/rich-text-editor"
+import { CampaignDetailsModal } from "@/components/campaign-details-modal"
 import { Mail, Send, Users, FileText, BarChart3, Palette, Eye } from "lucide-react"
 import { toast } from "sonner"
 
@@ -90,6 +91,8 @@ export default function EmailPage() {
   const [userBalance, setUserBalance] = useState(0)
   const [previewMode, setPreviewMode] = useState(false)
   const [showImport, setShowImport] = useState(false)
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>("")
+  const [showCampaignDetails, setShowCampaignDetails] = useState(false)
 
   // Load user data and campaigns
   useEffect(() => {
@@ -152,6 +155,11 @@ export default function EmailPage() {
   const handleContactsImported = (contacts: Contact[]) => {
     setSelectedContacts([...selectedContacts, ...contacts])
     setShowImport(false)
+  }
+
+  const handleViewCampaignDetails = (campaignId: string) => {
+    setSelectedCampaignId(campaignId)
+    setShowCampaignDetails(true)
   }
 
   const calculateCost = () => {
@@ -560,7 +568,18 @@ export default function EmailPage() {
                       >
                         <div className="flex items-center justify-between mb-2">
                           <h3 className="font-semibold text-gray-900">{campaign.name}</h3>
-                          <Badge className={`${getStatusColor(campaign.status)} text-white`}>{campaign.status}</Badge>
+                          <div className="flex items-center space-x-2">
+                            <Badge className={`${getStatusColor(campaign.status)} text-white`}>{campaign.status}</Badge>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleViewCampaignDetails(campaign._id)}
+                              className="border-blue-200 text-blue-600 hover:bg-blue-50"
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              View
+                            </Button>
+                          </div>
                         </div>
                         <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                           <div>
@@ -602,6 +621,14 @@ export default function EmailPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Campaign Details Modal */}
+      <CampaignDetailsModal
+        isOpen={showCampaignDetails}
+        onClose={() => setShowCampaignDetails(false)}
+        campaignId={selectedCampaignId}
+        platform="email"
+      />
     </div>
   )
 }

@@ -102,6 +102,25 @@ export async function POST(request: NextRequest) {
         totalFailed = contactsWithEmail.length
       }
 
+      // Create message logs for each recipient
+      const messageLogs = contactsWithEmail.map((contact) => ({
+        campaignId: campaignId.toString(),
+        userId: actualUserId,
+        contactId: contact._id || contact.id,
+        contactName: contact.name,
+        contactEmail: contact.email,
+        subject: subject,
+        message: content,
+        status: totalSent > 0 ? "delivered" : "failed",
+        timestamp: new Date(),
+        error: totalSent > 0 ? null : "Email service failed",
+        serviceResponse: emailResult,
+      }))
+
+      if (messageLogs.length > 0) {
+        await db.collection("message_logs").insertMany(messageLogs)
+      }
+
       // Update campaign
       await db.collection("campaigns").updateOne(
         { _id: campaignId },
