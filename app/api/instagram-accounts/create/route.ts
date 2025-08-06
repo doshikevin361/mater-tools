@@ -1,7 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { connectToDatabase } from "@/lib/mongodb"
+import puppeteer from "puppeteer-extra"
+import StealthPlugin from "puppeteer-extra-plugin-stealth"
 import axios from "axios"
-import puppeteer from "puppeteer"
+
+// Apply stealth plugin
+puppeteer.use(StealthPlugin())
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -116,7 +120,7 @@ const STEALTH_CONFIG = {
   simulateTypos: true,
   humanMouseMovements: true,
   realTimingPatterns: true,
-  headlessMode: 'new', 
+  headlessMode: 'shell', 
 }
 
 function log(level, message, data = null) {
@@ -241,11 +245,11 @@ async function createMaximumStealthBrowser() {
   const deviceProfile = generateDeviceProfile()
   
   const browser = await puppeteer.launch({
-    headless: 'shell',
+    headless: false,
     args: [
       // Core flags
       '--no-sandbox',
-      '--disable-setuid-sandbox',
+      '--disable-setuid-sandbox', 
       '--disable-dev-shm-usage',
       '--disable-accelerated-2d-canvas',
       '--no-first-run',
@@ -1707,7 +1711,7 @@ async function editProfileBio(page, username) {
       "🎨 Creative soul | 🌍 Explorer",
       "💫 Dream big, work hard ⚡",
       "🌺 Blessed & grateful 🙏",
-      "🎵 Music lover | 📚 Bookworm",
+      "🎵 Music lover | �� Bookworm",
       "🏃‍♂️ Fitness enthusiast 💪",
       "🍕 Food lover | ✈️ Travel addict",
       "🌈 Spreading positivity ☀️",
@@ -1940,6 +1944,12 @@ async function createMaxStealthInstagramAccount(accountData) {
             await humanWait(1000, 2000)
             await page.keyboard.press('Enter')
             await humanWait(5000, 8000)
+            
+            // Wait 20 seconds after OTP submission before proceeding
+            log('info', '⏳ Waiting 20 seconds after OTP submission for account processing...')
+            await new Promise(resolve => setTimeout(resolve, 30000))
+            log('info', '✅ 20-second wait completed, proceeding with account setup...')
+            
           } catch (typeError) {
             log('verbose', 'OTP entry failed, continuing...')
           }
